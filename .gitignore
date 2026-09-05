@@ -1,0 +1,52 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# build output
+.next/
+out/
+dist/
+.turbo/
+*.tsbuildinfo
+
+# env and secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# local database and generated artefacts
+.data/
+packages/db/prisma/generated/
+packages/db/prisma/*/schema.prisma
+
+# terraform — the provider lock file IS committed on purpose (see docs/plan D-33)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+crash.log
+crash.*.log
+
+# test and coverage
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+
+# editors and os
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.obsidian/workspace.json
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

@@ -1,0 +1,34 @@
+{
+  "name": "oneresi",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.13.1",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "bootstrap": "node scripts/bootstrap.mjs",
+    "db:generate": "pnpm --filter @oneresi/db generate",
+    "db:migrate": "pnpm --filter @oneresi/db migrate",
+    "db:seed": "pnpm --filter @oneresi/db seed",
+    "db:reset": "pnpm --filter @oneresi/db reset",
+    "db:checksum": "pnpm --filter @oneresi/db checksum",
+    "db:studio": "pnpm --filter @oneresi/db studio",
+    "typecheck": "tsc --build --verbose",
+    "lint": "eslint .",
+    "check:copy": "node scripts/check-copy.mjs",
+    "check:enums": "node scripts/check-enums.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:parity": "node scripts/run-parity.mjs",
+    "verify": "pnpm typecheck && pnpm lint && pnpm check:copy && pnpm check:enums && pnpm test:parity"
+  },
+  "devDependencies": {
+    "@types/node": "22.14.0",
+    "eslint": "9.24.0",
+    "prettier": "3.5.3",
+    "tsx": "4.19.3",
+    "typescript": "5.8.3",
+    "vitest": "3.1.1"
+  }
+}
