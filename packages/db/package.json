@@ -1,0 +1,33 @@
+{
+  "name": "@oneresi/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./seed": "./src/seed.ts",
+    "./checksum": "./src/checksum.ts",
+    "./generated/sqlite": "./prisma/generated/sqlite/index.js",
+    "./generated/postgresql": "./prisma/generated/postgresql/index.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --build",
+    "schemas": "node scripts/generate-schemas.mjs",
+    "generate": "pnpm schemas && node scripts/prisma.mjs generate",
+    "migrate": "pnpm schemas && node scripts/prisma.mjs migrate deploy",
+    "migrate:dev": "pnpm schemas && node scripts/prisma.mjs migrate dev",
+    "studio": "pnpm schemas && node scripts/prisma.mjs studio",
+    "reset": "node scripts/reset.mjs",
+    "seed": "tsx src/seed.ts",
+    "checksum": "tsx src/checksum.ts"
+  },
+  "dependencies": {
+    "@oneresi/contracts": "workspace:*",
+    "@prisma/client": "6.5.0",
+    "bcryptjs": "3.0.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
+    "prisma": "6.5.0"
+  }
+}

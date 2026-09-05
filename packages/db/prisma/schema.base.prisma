@@ -1,0 +1,500 @@
+// ---------------------------------------------------------------------------
+//  OneResi — base schema. ONE source, TWO providers.
+//
+//  scripts/generate-schemas.mjs emits prisma/sqlite/schema.prisma and
+//  prisma/postgresql/schema.prisma from this file. The ONLY difference between
+//  them is the datasource block below, which is why the following rules are
+//  absolute:
+//
+//    - no `enum` blocks         Prisma cannot express one on SQLite.
+//                               Enumerations live in @oneresi/contracts and are
+//                               stored as String, validated by Zod at the edges.
+//    - no `Decimal`, `Json`,
+//      `Bytes`, or `String[]`   These differ, or do not exist, across the two.
+//    - no `@db.*` attributes    Native types are per-provider by definition.
+//    - money is `Int` paise     See @oneresi/contracts/money.
+//
+//  A test asserts the two generated files differ only in the datasource block.
+//  See docs/plan/02-architecture.md and 05-testing.md.
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/__PROVIDER__"
+}
+
+datasource db {
+  provider = "__PROVIDER__"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================ domain entities
+//
+//  Twelve, exactly as submitted. The ER figure in the report is unchanged.
+//  Infrastructure tables follow further down and are not domain entities.
+
+model Block {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  floors    Int      @default(1)
+  /// UC-18 deactivates rather than deletes.
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  units Unit[]
+
+  @@map("block")
+}
+
+model Unit {
+  id      Int    @id @default(autoincrement())
+  blockId Int
+  /// "A-101", "PLOT-104". Unique within its block.
+  label   String
+  /// UnitType from @oneresi/contracts.
+  type    String
+  /// Snapshotted onto every invoice, never joined at read time.
+  monthlyChargePaise Int
+  active  Boolean @default(true)
+
+  block Block @relation(fields: [blockId], references: [id], onDelete: Restrict)
+
+  residents    ResidentUser[]
+  passes       VisitorPass[]
+  visitorLogs  VisitorLog[]
+  complaints   Complaint[]
+  invoices     Invoice[]
+  bookings     Booking[]
+
+  @@unique([blockId, label])
+  @@index([blockId])
+  @@map("unit")
+}
+
+model ResidentUser {
+  id     Int     @id @default(autoincrement())
+  /// Null for committee and gate accounts.
+  unitId Int?
+  name   String
+  email  String  @unique
+  phone  String
+  /// bcrypt, cost 12. Never selected outside the auth service.
+  passwordHash String
+  /// Role from @oneresi/contracts: R, A, S.
+  role   String  @default("R")
+  /// UserStatus from @oneresi/contracts.
+  status String  @default("PENDING")
+
+  /// Set on every password change. A token issued before this is refused, which is how
+  /// UC-03's session-invalidation postcondition is met (D-23).
+  passwordChangedAt DateTime?
+  /// SHA-256 of the reset token. The token itself is never stored (D-22).
+  resetTokenHash    String?
+  resetExpiresAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit Unit? @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  passesCreated     VisitorPass[]     @relation("PassCreator")
+  walkInsDecided    VisitorLog[]      @relation("WalkInDecider")
+  complaintUpdates  ComplaintUpdate[] @relation("ComplaintUpdater")
+  invoicesRaised    Invoice[]         @relation("InvoiceRaiser")
+  paymentsRecorded  Payment[]         @relation("PaymentRecorder")
+  bookingsDecided   Booking[]         @relation("BookingDecider")
+  announcements     Announcement[]    @relation("AnnouncementAuthor")
+  refreshTokens     RefreshToken[]
+  notifications     Notification[]
+
+  @@index([unitId])
+  @@index([status, role])
+  @@map("resident_user")
+}
+
+model VisitorPass {
+  id          Int    @id @default(autoincrement())
+  unitId      Int
+  /// Attribution. Restrict, not Cascade — removing a staff account must not delete
+  /// gate history (D-47).
+  createdById Int
+  visitorName String
+  purpose     String
+  /// Six digits from crypto.randomInt. Uniquely indexed, so the gate lookup is one seek.
+  code        String @unique
+  /// The day the pass is good for. Date only; stored at UTC midnight.
+  validOn     DateTime
+  /// PassStatus from @oneresi/contracts.
+  status      String @default("ACTIVE")
+  createdAt   DateTime @default(now())
+
+  unit      Unit         @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  createdBy ResidentUser @relation("PassCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  logs      VisitorLog[]
+
+  @@index([unitId])
+  @@index([createdById])
+  @@index([validOn, status])
+  @@map("visitor_pass")
+}
+
+model VisitorLog {
+  id     Int  @id @default(autoincrement())
+  /// Null for a walk-in, which arrives without a pass.
+  passId Int?
+  unitId Int
+
+  walkInName    String?
+  walkInPhone   String?
+  walkInPurpose String?
+
+  /// ApprovalStatus. NOT_REQUIRED when the visitor arrived on a pass.
+  approvalStatus String @default("NOT_REQUIRED")
+  /// Who decided, and when. Added for UC-05 and never written by the previous build (D-21).
+  decidedById    Int?
+  decidedAt      DateTime?
+  /// Set when a guard admits without waiting for the resident. Names itself and is audited.
+  overrideReason String?
+
+  /// Nullable: UC-16 creates the row before entry happens.
+  enteredAt DateTime?
+  exitedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  pass      VisitorPass?  @relation(fields: [passId], references: [id], onDelete: Restrict)
+  unit      Unit          @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  decidedBy ResidentUser? @relation("WalkInDecider", fields: [decidedById], references: [id], onDelete: Restrict)
+
+  @@index([unitId, createdAt])
+  @@index([passId])
+  @@index([approvalStatus])
+  @@map("visitor_log")
+}
+
+model Complaint {
+  id          Int    @id @default(autoincrement())
+  unitId      Int
+  /// ComplaintCategory.
+  category    String
+  /// ComplaintPriority.
+  priority    String @default("MEDIUM")
+  description String
+  /// Up to three S3 object keys, newline separated. The submitted model stores them in one
+  /// column; normalising would add a thirteenth entity, so it stays as specified.
+  photoKeys   String @default("")
+
+  /// ComplaintStatus.
+  status     String    @default("OPEN")
+  /// Set on the transition into RESOLVED and never cleared except by an explicit reopen.
+  /// The previous build nulled it on every other update, destroying the reopen window (D-20).
+  resolvedAt DateTime?
+  reopenCount Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit    Unit              @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  updates ComplaintUpdate[]
+
+  @@index([unitId, createdAt])
+  @@index([status, priority])
+  @@map("complaint")
+}
+
+model ComplaintUpdate {
+  id          Int    @id @default(autoincrement())
+  complaintId Int
+  /// UC-20 step 3 requires the acting identity.
+  updatedById Int
+  /// The status the complaint moved to.
+  statusAfter String
+  note        String
+  createdAt   DateTime @default(now())
+
+  complaint Complaint    @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  updatedBy ResidentUser @relation("ComplaintUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([complaintId, createdAt])
+  @@index([updatedById])
+  @@map("complaint_update")
+}
+
+model Invoice {
+  id     Int @id @default(autoincrement())
+  unitId Int
+  /// Attribution for the billing run.
+  raisedById Int
+  /// YYYY-MM.
+  period String
+  /// Snapshotted at generation. Never joined back to unit.monthlyChargePaise, so a charge
+  /// change in March cannot reprice January.
+  amountPaise Int
+  dueOn       DateTime
+  /// InvoiceStatus.
+  status      String @default("UNPAID")
+  cancelledReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit     Unit         @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  raisedBy ResidentUser @relation("InvoiceRaiser", fields: [raisedById], references: [id], onDelete: Restrict)
+  payments Payment[]
+
+  /// This is what makes UC-21's refusal to run twice for a period a database guarantee rather
+  /// than an application check a concurrent request can slip past. Absent from the previous
+  /// schema, which is why double billing was possible (D-17).
+  @@unique([unitId, period])
+  @@index([unitId])
+  @@index([raisedById])
+  @@index([status, dueOn])
+  @@map("invoice")
+}
+
+model Payment {
+  id        Int @id @default(autoincrement())
+  invoiceId Int
+  /// Set only when a committee member records money received offline. ADR 0002 keeps that path.
+  recordedById Int?
+
+  amountPaise Int
+  /// PaymentMethod.
+  method      String
+  /// Period plus a per-period sequence. Unique by construction (D-37).
+  receiptNo   String @unique
+  /// The reference ADR 0002 retains in place of a gateway order id. Unique, so a repeated
+  /// confirmation cannot create a second row.
+  reference   String @unique
+  paidAt      DateTime @default(now())
+
+  invoice    Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  recordedBy ResidentUser? @relation("PaymentRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([invoiceId])
+  @@index([paidAt])
+  @@map("payment")
+}
+
+model Facility {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String
+  /// HH:MM, zero padded, so lexical order is chronological. Enforced on booking, not merely
+  /// displayed (D-72).
+  opensAt     String
+  closesAt    String
+  hourlyRatePaise Int  @default(0)
+  bookingRules    String @default("")
+  active          Boolean @default(true)
+
+  bookings Booking[]
+
+  @@map("facility")
+}
+
+model Booking {
+  id         Int @id @default(autoincrement())
+  facilityId Int
+  unitId     Int
+  /// UC-23 step 4 requires the approving identity.
+  decidedById Int?
+
+  /// Date only, stored at UTC midnight.
+  bookingDate DateTime
+  startTime   String
+  endTime     String
+  /// BookingStatus.
+  status      String @default("PENDING")
+  decidedAt   DateTime?
+  decisionReason String?
+  /// Charged at request time from facility.hourlyRatePaise and the window length. The previous
+  /// build advertised a rate and billed nothing (D-72).
+  amountPaise Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facility  Facility      @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  unit      Unit          @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  decidedBy ResidentUser? @relation("BookingDecider", fields: [decidedById], references: [id], onDelete: Restrict)
+
+  /// NOTE: the constraint that actually prevents a double booking is a PARTIAL unique index
+  /// over (facilityId, bookingDate, startTime) restricted to PENDING and CONFIRMED. Prisma
+  /// cannot express a filtered index, so it lives in hand-written SQL in the initial migration
+  /// for both providers. ADR 0003 requires it; the previous build had neither it nor a
+  /// migrations directory to put it in (D-18).
+  @@index([facilityId, bookingDate])
+  @@index([unitId])
+  @@index([status])
+  @@map("booking")
+}
+
+model Announcement {
+  id       Int    @id @default(autoincrement())
+  authorId Int
+  title    String
+  body     String
+  /// AnnouncementCategory.
+  category String @default("GENERAL")
+  pinned   Boolean @default(false)
+  attachmentKey String?
+  /// Restored to the model. UC-24 requires announcements to expire and the previous schema
+  /// dropped the column, making it impossible (D-46).
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author ResidentUser @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([authorId])
+  @@index([pinned, createdAt])
+  @@index([expiresAt])
+  @@map("announcement")
+}
+
+// ============================================================ infrastructure
+//
+//  Not domain entities. They do not appear in the submitted ER figure and the entity count
+//  stays at twelve. They exist because the application needs somewhere to keep durable
+//  operational state that was previously held in JSON files on a container disk (D-31).
+
+/// The transactional outbox. A handler writes one of these inside the same transaction as the
+/// change it made, then returns. A worker delivers it — SQS and a Lambda on AWS, an interval
+/// worker locally. This is what makes UC-29 alternative flow 3a a property of the design
+/// rather than a try/catch in every handler (D-29).
+model OutboxEvent {
+  id   Int    @id @default(autoincrement())
+  /// OutboxEventType.
+  type String
+  /// OutboxChannel.
+  channel String
+  /// JSON, as text — Json is not portable across the two providers.
+  payload String
+  /// OutboxStatus.
+  status  String @default("PENDING")
+
+  attempts    Int       @default(0)
+  lastError   String?
+  availableAt DateTime  @default(now())
+  sentAt      DateTime?
+  /// Ties a delivery back to the request that caused it, for log correlation.
+  correlationId String
+
+  createdAt DateTime @default(now())
+
+  mail MailMessage?
+
+  @@index([status, availableAt])
+  @@index([type])
+  @@map("outbox_event")
+}
+
+/// Every message the system has ever sent, as a row. This is what the mail test suite asserts
+/// against and what the committee's mail log reads from. The previous build appended to
+/// .dev_emails.json inside the container, so history was per-task and vanished on every
+/// deploy (D-31), and there was nothing a test could inspect (D-75).
+model MailMessage {
+  id            Int    @id @default(autoincrement())
+  outboxEventId Int?   @unique
+  /// "console" | "ses". Recorded so a test can assert which provider actually ran (D-30).
+  provider      String
+  /// The provider's own id, once it has one.
+  providerMessageId String?
+  template      String
+  toAddress     String
+  fromAddress   String
+  subject       String
+  bodyText      String
+  bodyHtml      String
+  /// JSON of the template variables, as text.
+  variables     String @default("{}")
+
+  status    String    @default("PENDING")
+  error     String?
+  sentAt    DateTime?
+  /// Populated from SES event notifications: DELIVERY, BOUNCE, COMPLAINT.
+  deliveryState String?
+  createdAt DateTime @default(now())
+
+  outboxEvent OutboxEvent? @relation(fields: [outboxEventId], references: [id], onDelete: SetNull)
+
+  @@index([toAddress, createdAt])
+  @@index([template])
+  @@index([status])
+  @@map("mail_message")
+}
+
+/// In-app notifications. Feeds the notification centre and the server-sent event stream, which
+/// is what makes a waiting visitor appear without a reload (D-68).
+model Notification {
+  id     Int    @id @default(autoincrement())
+  userId Int
+  type   String
+  title  String
+  body   String
+  /// Where tapping it goes.
+  href   String?
+  readAt DateTime?
+  createdAt DateTime @default(now())
+
+  user ResidentUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notification")
+}
+
+/// Rotated on use, stored hashed, revocable. Sign-out in the previous build only cleared the
+/// cookie, so a copied token stayed valid for its full seven days (D-24).
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  /// The token this one replaced, so a reuse of an already-rotated token is detectable.
+  replacesId Int?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user ResidentUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("refresh_token")
+}
+
+/// Fixed-window counters. Adequate at one task, and it avoids adding Redis for a requirement
+/// that is really about stopping code enumeration at the gate.
+model RateLimitWindow {
+  id       Int      @id @default(autoincrement())
+  /// "signIn:ashvin@example.com", "gateVerify:10.0.1.5".
+  key      String
+  windowStartedAt DateTime
+  attempts Int      @default(1)
+
+  @@unique([key, windowStartedAt])
+  @@index([windowStartedAt])
+  @@map("rate_limit_window")
+}
+
+/// One row per billing period, holding the next receipt number. Incremented inside the payment
+/// transaction, which is what makes a receipt number unique by construction instead of by luck
+/// (D-37).
+model ReceiptSequence {
+  period String @id
+  next   Int    @default(1)
+
+  @@map("receipt_sequence")
+}
+
+/// Records which migration state the running database is in, beyond Prisma's own table, so the
+/// dev console can show whether local and cloud are on the same schema before a sync.
+model SchemaFingerprint {
+  id        Int      @id @default(autoincrement())
+  /// SHA-256 of the generated schema file.
+  digest    String
+  provider  String
+  appliedAt DateTime @default(now())
+
+  @@map("schema_fingerprint")
+}
