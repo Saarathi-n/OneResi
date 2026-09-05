@@ -16,19 +16,29 @@
     "db:studio": "pnpm --filter @oneresi/db studio",
     "typecheck": "tsc --build --verbose",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "check:copy": "node scripts/check-copy.mjs",
     "check:enums": "node scripts/check-enums.mjs",
+    "check:gates": "node scripts/check-copy.mjs --self-test && node scripts/check-enums.mjs --self-test",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:parity": "node scripts/run-parity.mjs",
     "verify": "pnpm typecheck && pnpm lint && pnpm check:copy && pnpm check:enums && pnpm test:parity"
   },
   "devDependencies": {
+    "@eslint/js": "9.24.0",
+    "@oneresi/contracts": "workspace:*",
+    "@oneresi/db": "workspace:*",
     "@types/node": "22.14.0",
     "eslint": "9.24.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-react": "7.37.5",
+    "globals": "16.0.0",
     "prettier": "3.5.3",
     "tsx": "4.19.3",
     "typescript": "5.8.3",
+    "typescript-eslint": "8.29.1",
     "vitest": "3.1.1"
   }
 }

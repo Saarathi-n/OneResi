@@ -50,3 +50,8 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# stray tsc output beside sources (composite projects without an outDir)
+test/**/*.js
+test/**/*.d.ts
+test/**/*.map

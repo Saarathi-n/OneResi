@@ -1,0 +1,48 @@
+# Build context exclusions for infra/docker/Dockerfile.
+#
+# BuildKit reads `<dockerfile>.dockerignore` in preference to the context root's `.dockerignore`, which
+# is what makes this file effective without touching the repository root — that file belongs to another
+# stream.
+#
+# Excluding node_modules matters more than it looks: pnpm's store holds platform-specific binaries, and
+# shipping a Windows Prisma engine into an Alpine image is a confusing failure. The build installs its
+# own from the committed lockfile.
+
+.git
+.gitattributes
+.gitignore
+node_modules
+**/node_modules
+.pnpm-store
+.next
+**/.next
+**/dist
+**/*.tsbuildinfo
+.turbo
+
+# Local database and generated Prisma artefacts. `pnpm --filter @oneresi/db generate` recreates the
+# schemas and clients inside the image.
+.data
+packages/db/prisma/generated
+packages/db/prisma/*/schema.prisma
+
+# Nothing in the image reads these.
+docs
+.obsidian
+coverage
+test-results
+playwright-report
+blob-report
+*.log
+
+# Terraform state and provider binaries are large and have no business in a container.
+infra/**/.terraform
+infra/**/*.tfstate
+infra/**/*.tfstate.*
+infra/**/*.tfvars
+
+# Secrets, in case one exists locally.
+.env
+.env.*
+!.env.example
+*.pem

@@ -1,0 +1,94 @@
+name: verify
+
+# Every gate that can run without AWS credentials, on every pull request. The deploy side belongs
+# to the infrastructure stream and its IAM role, and is deliberately not here.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · lint · gates · parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # The parity suite is the point of this workflow: the same integration tests run against SQLite
+    # and against PostgreSQL, because in the previous build the engine that had been exercised was
+    # not the engine that would be deployed (D-15, D-16, D-25, D-27).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: oneresi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      CI: 'true'
+      # A throwaway database. Each test file takes its own schema and drops it afterwards.
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/oneresi_test?sslmode=disable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The generated Prisma clients are build output and are not committed, and packages/db/src
+      # imports both of them, so nothing typechecks or runs until this has happened.
+      - name: Bootstrap
+        run: pnpm bootstrap
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      # A gate that scans nothing and exits 0 is D-75 again. These fixtures prove both gates still
+      # bite, whatever state the application source is in.
+      - name: Gate self-tests
+        run: |
+          node scripts/check-copy.mjs --self-test
+          node scripts/check-enums.mjs --self-test
+
+      - name: Copy gate
+        run: pnpm check:copy
+
+      - name: Enumeration gate
+        run: pnpm check:enums
+
+      - name: Parity suite
+        run: pnpm test:parity
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results/
+            .data/parity/
+          if-no-files-found: ignore
+          retention-days: 7
