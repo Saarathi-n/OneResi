@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@oneresi/contracts": "workspace:*",
-    "@oneresi/db": "workspace:*",
     "bcryptjs": "3.0.2",
     "jose": "6.0.10"
   },
