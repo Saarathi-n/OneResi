@@ -128,6 +128,20 @@ data "aws_iam_policy_document" "task" {
     resources = concat(local.ses_identity_arns, [local.ses_configuration_set_arn])
   }
 
+  # The other half of a send: reading back what SES said happened to it. `MailMessage.deliveryState`
+  # comes from this queue, so whatever drains it needs to delete what it has read — otherwise the same
+  # events are reprocessed until they expire.
+  statement {
+    sid = "ReadTheDeliveryEvents"
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:ChangeMessageVisibility",
+    ]
+    resources = [aws_sqs_queue.mail_events.arn]
+  }
+
   statement {
     sid       = "ReadOwnConfiguration"
     actions   = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
@@ -191,7 +205,14 @@ locals {
     { name = "S3_EXPORT_PREFIX", value = local.export_prefix },
     { name = "SNS_TOPIC_ARN", value = aws_sns_topic.domain_events.arn },
     { name = "SES_CONFIGURATION_SET", value = aws_sesv2_configuration_set.main.configuration_set_name },
-    { name = "SES_FROM_ADDRESS", value = local.mail_from_address },
+    # `MAIL_FROM`, not `SES_FROM_ADDRESS`. `packages/mail/src/env.ts` reads this exact name and throws
+    # MailConfigError when it is unset, so an earlier draft's `SES_FROM_ADDRESS` would have failed every
+    # send in production with a message about a variable that nothing sets. One name, spelled the way
+    # the code spells it.
+    { name = "MAIL_FROM", value = local.mail_from_address },
+    # Where SES delivery events land. `sesEventQueueUrl()` requires it, and the third tier of the mail
+    # suite drains this queue to prove a message left AWS rather than merely being accepted.
+    { name = "SES_EVENT_QUEUE_URL", value = aws_sqs_queue.mail_events.id },
     { name = "SSM_PREFIX", value = local.ssm_prefix },
   ]
 
@@ -523,6 +544,15 @@ data "aws_iam_policy_document" "github_actions" {
     sid       = "ReadDeploymentLogs"
     actions   = ["logs:GetLogEvents", "logs:FilterLogEvents", "logs:DescribeLogStreams"]
     resources = ["${aws_cloudwatch_log_group.app.arn}:*"]
+  }
+
+  # The live mail tier of the suite sends a message and drains the delivery events to prove it left AWS.
+  # `ReadOnlyAccess` above covers the receive; deleting what it has read is the part it does not, and a
+  # suite that cannot delete reads the previous run's events on the next one.
+  statement {
+    sid       = "DrainTheMailEventsDuringTheLiveSuite"
+    actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+    resources = [aws_sqs_queue.mail_events.arn]
   }
 
   # An explicit deny outranks every allow, including the read-only attachment above. CI can deploy the

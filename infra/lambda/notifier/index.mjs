@@ -18,7 +18,9 @@
  *   APP_ORIGIN                                            for absolute links in mail
  *   EMAIL_DRIVER=ses, SES_CONFIGURATION_SET               naming the configuration set is what makes
  *                                                         delivery events reach the mail test suite
- *   SES_FROM_ADDRESS                                      the identity this role may send as
+ *   MAIL_FROM                                             the identity this role may send as. Spelled
+ *                                                         the way packages/mail reads it
+ *   SES_EVENT_QUEUE_URL                                   where those delivery events land
  *   NOTIFICATIONS_QUEUE_URL                               the queue this function drains
  *   AWS_USE_DUALSTACK_ENDPOINT=true                       the function is in private subnets with no
  *                                                         IPv4 route out; AWS APIs are reached over

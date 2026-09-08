@@ -186,7 +186,9 @@ variable "allow_developer_db_access" {
   description = <<-EOT
     Makes RDS publicly resolvable and opens 5432 to one address only — yours. This is how `db:pull`
     and `db:push` reach the instance from a laptop without a bastion, a NAT gateway or a VPC
-    endpoint. Off by default; the instance is otherwise reachable only from inside the VPC.
+    endpoint. It also adds a default IPv4 route to the private subnets for as long as it is on,
+    because a public address in a subnet with no route out cannot complete a handshake. Off by
+    default; the instance is otherwise reachable only from inside the VPC.
   EOT
 }
 
@@ -241,6 +243,13 @@ variable "ses_verified_emails" {
   validation {
     condition     = alltrue([for address in var.ses_verified_emails : can(regex("^[^@[:space:]]+@[^@[:space:]]+\\.[a-zA-Z]{2,}$", address))])
     error_message = "Every entry in ses_verified_emails must be a valid email address."
+  }
+
+  # Same reason as notification_email: AWS mails a verification link to each of these and only the
+  # mailbox owner can click it, so a placeholder here is a deployment that cannot send anything.
+  validation {
+    condition     = alltrue([for address in var.ses_verified_emails : !can(regex("(?i)@(example|test|invalid|localhost|domain)\\.", address))])
+    error_message = "ses_verified_emails must be real mailboxes you can open, not example.com placeholders — AWS emails each one a link that only its owner can click."
   }
 }
 

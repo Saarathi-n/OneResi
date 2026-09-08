@@ -66,6 +66,9 @@ resource "aws_vpc_security_group_ingress_rule" "rds_from_lambda" {
 # The developer path. `db:pull` and `db:push` need to reach RDS from a laptop, and there is no
 # bastion, no NAT gateway and no VPC endpoint to reach it through. One security group rule holding
 # one address is the cheapest honest answer, and it is off unless asked for.
+#
+# Two things switch on together, and the path needs both: this rule, and the default IPv4 route in
+# network.tf that lets the instance's reply leave the subnet.
 ########################################################################################################
 
 data "http" "developer_ip" {

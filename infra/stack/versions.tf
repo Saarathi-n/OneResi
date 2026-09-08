@@ -1,8 +1,12 @@
 # Terraform and provider versions, and the remote backend.
 #
-# 1.10 is a hard floor: `use_lockfile` is the S3 backend's native state locking and it does not
-# exist before that release, which is why the plan says upgrade from 1.9.8 rather than adding a
-# DynamoDB table (D-79, D-33).
+# 1.10 is a hard floor: `use_lockfile` is the S3 backend's native state locking and it does not exist
+# before that release, which is why there is no DynamoDB table here (D-33).
+#
+# Nothing needs installing to satisfy that floor. 1.15.8 is already on this machine; a stale 1.9.8 in
+# `~/bin` comes first on PATH and shadows it, so a bare `terraform` fails with "Unsupported Terraform
+# Core version" while the installed binary is fine (D-79). Rename that copy, or put the winget package
+# directory earlier on PATH, or call the newer binary by its full path.
 
 terraform {
   required_version = ">= 1.10.0"

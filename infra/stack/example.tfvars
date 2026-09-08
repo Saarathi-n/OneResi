@@ -11,7 +11,10 @@
 # This is where the $5 budget alarm at 80% actual, the forecast alarm at 100%, and every CloudWatch
 # alarm arrive. The previous stack defaulted this to ashvin@example.com, which meant the only
 # guardrail against runaway cost pointed at nothing.
-notification_email = "you@gmail.com"
+#
+# The value below is deliberately one that fails validation, so a copy of this file cannot be applied
+# unedited. Terraform stops with the reason rather than building a cost guard nobody receives.
+notification_email = "replace-me@example.com"
 
 # REQUIRED — owner/repo, for the trust policy on the IAM role GitHub Actions assumes over OIDC.
 # The workflows are not part of this stack; the role they assume has to be, because only Terraform
@@ -46,9 +49,10 @@ allow_destroy_with_data = true
 
 # Without a domain: verify each mailbox you want to send from or to. AWS emails each address a link
 # that only its owner can click, which is why this is on the manual list. Use real inboxes you control
-# — the seeded accounts' @oneresi.in addresses are not deliverable.
+# — the seeded accounts' @oneresi.in addresses are not deliverable. These two are placeholders and are
+# rejected for the same reason notification_email's is.
 ses_identity_mode   = "emails"
-ses_verified_emails = ["you@gmail.com", "someone.else@gmail.com"]
+ses_verified_emails = ["replace-me@example.com", "and-me@example.com"]
 
 # With a Route 53 domain (~₹1,000/yr plus $0.50/month for the zone): Terraform creates the domain
 # identity and writes the DKIM, MAIL FROM, SPF and DMARC records itself, and the sending identity

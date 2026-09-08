@@ -16,6 +16,8 @@ terraform init
 terraform apply
 ```
 
+`terraform` here has to be 1.10 or later. The copy first on PATH is not — see the last section.
+
 Two resources' worth of plan, no cost. S3 charges by storage and requests; a few hundred kilobytes
 of state and a handful of requests per apply round to zero.
 
@@ -45,5 +47,10 @@ the bucket can be re-adopted with `terraform import aws_s3_bucket.state <bucket-
 ## Why not a DynamoDB lock table
 
 Terraform 1.10 and later lock state in S3 natively with `use_lockfile = true`, so the lock is an
-object in this bucket rather than a table with its own lifecycle. Terraform 1.9.8 cannot do this
-(D-79) — check `terraform version` before you start, and upgrade if it says 1.9.
+object in this bucket rather than a table with its own lifecycle.
+
+Nothing needs installing to get there: 1.15.8 is already on this machine. A stale 1.9.8 in `~/bin`
+comes first on PATH and shadows it, so a bare `terraform` reports 1.9.8 and fails the version
+constraint with "Unsupported Terraform Core version" (D-79). Rename that copy, or put the winget
+package directory ahead of `~/bin` on PATH, or call the newer binary by its full path — which is what
+the commands above mean by `terraform`.

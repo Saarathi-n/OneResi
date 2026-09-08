@@ -79,15 +79,37 @@ resource "aws_route_table_association" "public" {
 # No IPv4 route to anywhere outside the VPC. RDS lives here and nothing in here can be reached from
 # the internet, which is the property the previous stack got by leaving these subnets with no route
 # table of their own rather than by saying so.
+#
+# Its routes are separate resources rather than inline blocks, because one of them is conditional and
+# the provider does not allow a table with inline routes to coexist with an `aws_route` — the two
+# overwrite each other on alternate applies.
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
-  route {
-    ipv6_cidr_block        = "::/0"
-    egress_only_gateway_id = aws_egress_only_internet_gateway.main.id
-  }
-
   tags = { Name = "${local.name_prefix}-private-rt" }
+}
+
+# Free, and the only way out of these subnets: it is how the two Lambdas reach Secrets Manager, SES and
+# CloudWatch at all. See the note at the top of events.tf.
+resource "aws_route" "private_egress_ipv6" {
+  route_table_id              = aws_route_table.private.id
+  destination_ipv6_cidr_block = "::/0"
+  egress_only_gateway_id      = aws_egress_only_internet_gateway.main.id
+}
+
+# `publicly_accessible` on the instance is necessary for the developer path and not sufficient: RDS
+# gives the instance a public address, but a public address in a subnet with no default route is
+# unreachable — the SYN arrives through the internet gateway and the reply has nowhere to go. So the
+# security group rule in database.tf needs this alongside it, and both appear and disappear together.
+#
+# Switching it on exposes nothing else. The instance's own group admits one address, functions attached
+# to a VPC never receive a public address, and nothing else lives in these subnets.
+resource "aws_route" "private_developer_ipv4" {
+  count = var.allow_developer_db_access ? 1 : 0
+
+  route_table_id         = aws_route_table.private.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.main.id
 }
 
 resource "aws_route_table_association" "private" {

@@ -33,7 +33,8 @@ but the provider line. One Prisma client type, one seed, one set of queries.
 installed and no configuration. `cloud` is RDS, and it must be configured explicitly: if
 `DATABASE_URL` is absent, or is not PostgreSQL, or does not carry `sslmode=require`, the process refuses
 to start rather than quietly serving local data. In production the check is stricter — `DB_TARGET` must
-be `cloud`, and the offline adapter is not loadable at all.
+be `cloud`, `JWT_SECRET` at least 32 bytes and `APP_ORIGIN` an https origin, or the process does not
+start, so the SQLite client is never the one that gets constructed.
 
 **Which one is live is visible**, in the development console and in the committee footer outside
 production, because a target you can misidentify is a target you will misidentify.
@@ -45,9 +46,18 @@ Both directions print a row-count table, ask for confirmation, and compare a per
 afterwards.
 
 Two dialect differences would have made this painful, and both are removed by decisions that are better
-anyway: money becomes integer paise, so there is no `Decimal`, and enumerations become validated string
-unions with a `CHECK` constraint on both engines. What remains engine-specific is one partial unique
-index on live bookings, which is a five-line branch in a single migration.
+anyway. Money becomes integer paise, so there is no `Decimal`. Enumerations become string unions in
+`@oneresi/contracts`, stored as `String` and validated by Zod at the edges, because Prisma cannot
+express an `enum` on SQLite — the generator refuses a base schema containing one, along with `Decimal`,
+`Json`, `Bytes`, scalar lists and `@db.*` attributes. No `CHECK` constraint is emitted on either engine:
+the column is text on both, the request boundary is where a bad value is refused, and the enumeration
+gate plus the parity suite are what stop the two lists from drifting.
+
+What stays engine-specific is the generated DDL and nothing that was written by hand. From the same
+models `prisma migrate` emits `TEXT` and `AUTOINCREMENT` on one side and PostgreSQL's own types on the
+other. The single hand-written migration — the partial unique index that makes a double booking
+impossible, which Prisma cannot express in a model — is byte for byte the same file on both targets,
+because SQLite and PostgreSQL spell a partial index identically.
 
 On AWS the same migrations and the same seed are applied by a one-off ECS task inside the VPC, before
 the service scales up — because the alternative is a provisioned database with no tables in it and no

@@ -102,17 +102,19 @@ locals {
   # Everything both functions need to open a database connection and send mail. The password is not
   # here — they read it from Secrets Manager with the role below, exactly as the task does.
   lambda_environment = {
-    NODE_ENV                   = "production"
-    DB_TARGET                  = "cloud"
-    DB_HOST                    = aws_db_instance.main.address
-    DB_PORT                    = tostring(local.db_port)
-    DB_NAME                    = aws_db_instance.main.db_name
-    DB_USER                    = var.db_username
-    DB_SECRET_ARN              = aws_db_instance.main.master_user_secret[0].secret_arn
-    APP_ORIGIN                 = local.app_url
-    EMAIL_DRIVER               = "ses"
-    SES_CONFIGURATION_SET      = aws_sesv2_configuration_set.main.configuration_set_name
-    SES_FROM_ADDRESS           = local.mail_from_address
+    NODE_ENV              = "production"
+    DB_TARGET             = "cloud"
+    DB_HOST               = aws_db_instance.main.address
+    DB_PORT               = tostring(local.db_port)
+    DB_NAME               = aws_db_instance.main.db_name
+    DB_USER               = var.db_username
+    DB_SECRET_ARN         = aws_db_instance.main.master_user_secret[0].secret_arn
+    APP_ORIGIN            = local.app_url
+    EMAIL_DRIVER          = "ses"
+    SES_CONFIGURATION_SET = aws_sesv2_configuration_set.main.configuration_set_name
+    # The name `packages/mail/src/env.ts` actually reads. See the note in compute.tf.
+    MAIL_FROM                  = local.mail_from_address
+    SES_EVENT_QUEUE_URL        = aws_sqs_queue.mail_events.id
     AWS_USE_DUALSTACK_ENDPOINT = "true"
     NODE_OPTIONS               = "--enable-source-maps"
   }
