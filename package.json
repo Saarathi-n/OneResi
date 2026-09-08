@@ -28,6 +28,7 @@
     "check:gates": "node scripts/check-copy.mjs --self-test && node scripts/check-enums.mjs --self-test",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:mail:live": "tsx scripts/mail-live.mjs",
     "test:parity": "node scripts/run-parity.mjs",
     "verify": "pnpm typecheck && pnpm lint && pnpm check:copy && pnpm check:enums && pnpm test:parity"
   },
