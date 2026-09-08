@@ -173,15 +173,32 @@ export interface WaitingVisitorView {
 // ---------------------------------------------------------------- services
 
 export interface AccountsService {
+  /**
+   * Verifies an access token against the live account: signature and expiry, then status, then
+   * the password stamp. This is the per-request check — the token may be structurally valid and
+   * still speak for a session that a password change or a disabling has already killed
+   * (D-23, D-24).
+   */
+  resolveActor(accessToken: string): Promise<Result<Actor>>;
+
   signIn(input: C.SignInInput, meta: RequestMeta): Promise<Result<Session>>;
   signOut(refreshToken: string): Promise<Result<null>>;
   refresh(refreshToken: string, meta: RequestMeta): Promise<Result<Session>>;
   register(input: C.RegisterInput, meta: RequestMeta): Promise<Result<{ personId: number }>>;
-  requestPasswordReset(input: { email: string }, meta: RequestMeta): Promise<Result<null>>;
-  completePasswordReset(input: { token: string; password: string }): Promise<Result<null>>;
+  requestPasswordReset(input: C.RequestPasswordResetInput, meta: RequestMeta): Promise<Result<null>>;
+  completePasswordReset(input: C.CompletePasswordResetInput): Promise<Result<null>>;
   me(actor: Actor): Promise<Result<PersonView>>;
+  /** Kills every session, including the changer's own (D-23). */
+  changePassword(
+    actor: Actor,
+    input: { currentPassword: string; newPassword: string },
+  ): Promise<Result<null>>;
   /** Committee. Approving resolves a unit claim; declining must not leave the unit occupied (D-42). */
-  decideRegistration(actor: Actor, input: { userId: number; decision: 'APPROVE' | 'DECLINE'; reason?: string }): Promise<Result<PersonView>>;
+  decideRegistration(
+    actor: Actor,
+    input: C.DecideRegistrationInput,
+    meta: RequestMeta,
+  ): Promise<Result<PersonView>>;
 }
 
 export interface RequestMeta {

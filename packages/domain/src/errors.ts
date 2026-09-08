@@ -13,6 +13,10 @@ export const errors = {
   unauthenticated: (): Result<never> =>
     fail({ code: 'UNAUTHENTICATED', message: 'Please sign in again.' }),
 
+  /** Sign-in's refusal. Deliberately covers both a wrong email and a wrong password (D-39). */
+  badCredentials: (): Result<never> =>
+    fail({ code: 'UNAUTHENTICATED', message: 'That email and password do not match our records.' }),
+
   forbidden: (what = 'do that'): Result<never> =>
     fail({ code: 'FORBIDDEN', message: `You do not have permission to ${what}.` }),
 
