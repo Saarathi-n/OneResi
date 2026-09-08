@@ -1,8 +1,9 @@
 # 03 — AWS and Terraform
 
 Region `ap-south-1`. Account `215671569291`, IAM user `Ashvin`, keys already configured.
-Terraform 1.9.8 installed — **upgrade to 1.10 or later** before starting, so state can lock in S3
-without a DynamoDB table (D-79). Set the CLI default region to `ap-south-1` (D-78).
+Terraform 1.15.8 is installed via winget — nothing to upgrade. A stale 1.9.8 binary in `~/bin`
+shadows it on PATH, so invoke by full path or remove that copy first (D-79). Set the CLI default
+region to `ap-south-1` (D-78).
 
 Target: `terraform apply` produces a working HTTPS URL with a migrated, seeded database and real
 outbound mail, and `terraform destroy` leaves nothing billing. Your involvement is the two
