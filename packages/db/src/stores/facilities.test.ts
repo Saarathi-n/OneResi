@@ -372,6 +372,56 @@ describe('cancelBooking', () => {
   });
 });
 
+describe('findBookingsForSociety', () => {
+  it('lists the queue newest-date-first, each row naming the facility and the home that asked', async () => {
+    const store = facilitiesStore(db);
+    const hall = await aFacility(db);
+    const first = await aSociety();
+    const second = await aSociety();
+
+    const earlier = await store.createBooking(
+      {
+        facilityId: hall.id,
+        unitId: first.unit.id,
+        bookingDate: onDay('2027-03-10'),
+        startTime: '10:00',
+        endTime: '12:00',
+        amountPaise: C.rupees(300),
+        requestedAt: onDay('2027-03-01'),
+      },
+      () => [],
+    );
+    const later = await store.createBooking(
+      {
+        facilityId: hall.id,
+        unitId: second.unit.id,
+        bookingDate: onDay('2027-03-12'),
+        startTime: '18:00',
+        endTime: '20:00',
+        amountPaise: C.rupees(300),
+        requestedAt: onDay('2027-03-02'),
+      },
+      () => [],
+    );
+    expect(earlier).not.toBeNull();
+    expect(later).not.toBeNull();
+
+    const queue = await store.findBookingsForSociety();
+    const mine = queue.filter((booking) => booking.id === earlier!.id || booking.id === later!.id);
+    // Newest booking date first; the same date would order by start time then id.
+    expect(mine.map((booking) => booking.bookingDate.toISOString().slice(0, 10))).toEqual([
+      '2027-03-12',
+      '2027-03-10',
+    ]);
+    // The desk sees who asked, not just which unit id — facility name and home are joined in.
+    expect(mine[0]?.facilityName).toBe(hall.name);
+    expect(mine[0]?.home.unitId).toBe(second.unit.id);
+    expect(mine[0]?.home.blockName.length ?? 0).toBeGreaterThan(0);
+    expect(mine[1]?.home.unitId).toBe(first.unit.id);
+    expect(mine[1]?.facilityName).toBe(hall.name);
+  });
+});
+
 describe('findCommitteeMembers', () => {
   it('returns ACTIVE committee members only', async () => {
     const store = facilitiesStore(db);

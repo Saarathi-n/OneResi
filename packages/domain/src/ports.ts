@@ -87,6 +87,25 @@ export interface HomeView {
   readonly monthlyChargePaise: C.Paise;
 }
 
+/**
+ * One application awaiting the committee, with the home the applicant described — the queue the
+ * desk works through. Their claim is the words they typed because the unit was not on the list;
+ * the words are shown exactly as given, and resolved only at approval (D-04).
+ */
+export interface ApplicationView {
+  readonly userId: number;
+  readonly name: string;
+  readonly email: string;
+  readonly phone: string;
+  readonly appliedAt: Date;
+  readonly claim: {
+    readonly blockName: string;
+    readonly unitLabel: string;
+    readonly unitType: C.UnitType;
+    readonly note: string | null;
+  } | null;
+}
+
 export interface PassView {
   readonly id: number;
   readonly visitorName: string;
@@ -126,6 +145,11 @@ export interface InvoiceView {
   readonly paidAt: Date | null;
 }
 
+/** The committee's ledger: an invoice with the home it belongs to, so the desk names the payer. */
+export interface SocietyInvoiceView extends InvoiceView {
+  readonly home: HomeView;
+}
+
 export interface ComplaintView {
   readonly id: number;
   readonly category: C.ComplaintCategory;
@@ -153,6 +177,11 @@ export interface BookingView {
   readonly amountPaise: C.Paise;
 }
 
+/** The committee's decision queue: a booking with the home that asked for it. */
+export interface SocietyBookingView extends BookingView {
+  readonly home: HomeView;
+}
+
 export interface NoticeView {
   readonly id: number;
   readonly title: string;
@@ -170,6 +199,27 @@ export interface WaitingVisitorView {
   readonly phone: string | null;
   readonly purpose: string;
   readonly since: Date;
+}
+
+/**
+ * One line of the household's visitor log, as the resident's feed reads it: who came, when, and
+ * who let them in. A pass entry names the visitor from the pass; a walk-in from the words the
+ * guard typed. This is the surface residents in real societies open the app for — and where the
+ * recent names the pass form pre-fills from come back out.
+ */
+export interface EntryLogView {
+  readonly logId: number;
+  readonly kind: 'PASS' | 'WALK_IN';
+  readonly visitorName: string;
+  readonly purpose: string;
+  readonly approvalStatus: C.ApprovalStatus;
+  /** Who answered the door question, when the answer was a person's decision. */
+  readonly decidedByName: string | null;
+  /** A guard's reason for admitting without waiting — the exception names itself (D-21). */
+  readonly overrideReason: string | null;
+  readonly enteredAt: Date | null;
+  readonly exitedAt: Date | null;
+  readonly at: Date;
 }
 
 // ---------------------------------------------------------------- services
@@ -195,6 +245,8 @@ export interface AccountsService {
     actor: Actor,
     input: { currentPassword: string; newPassword: string },
   ): Promise<Result<null>>;
+  /** Committee. The queue of applications awaiting a decision, oldest first. */
+  pendingApplications(actor: Actor): Promise<Result<readonly ApplicationView[]>>;
   /** Committee. Approving resolves a unit claim; declining must not leave the unit occupied (D-42). */
   decideRegistration(
     actor: Actor,
@@ -232,6 +284,8 @@ export interface VisitorsService {
   decideWalkIn(actor: Actor, input: C.DecideWalkInInput): Promise<Result<null>>;
   waitingForHousehold(actor: Actor): Promise<Result<readonly WaitingVisitorView[]>>;
   expectedToday(actor: Actor): Promise<Result<readonly PassView[]>>;
+  /** The household's visitor log, newest first: the feed on a resident's home. */
+  entriesForHousehold(actor: Actor): Promise<Result<readonly EntryLogView[]>>;
 }
 
 export interface ComplaintsService {
@@ -248,6 +302,8 @@ export interface BillingService {
   /** One transaction. Refuses outright if the period already exists, per the architecture. */
   raiseForPeriod(actor: Actor, input: C.RaiseInvoicesInput): Promise<Result<{ raised: number }>>;
   forHousehold(actor: Actor): Promise<Result<readonly InvoiceView[]>>;
+  /** Committee. Every invoice in the society, with the home it belongs to. */
+  forSociety(actor: Actor): Promise<Result<readonly SocietyInvoiceView[]>>;
   /** Scoped to the caller's own unit. Anyone could settle any invoice before (D-07). */
   pay(actor: Actor, input: C.PayInvoiceInput): Promise<Result<InvoiceView>>;
   /** Committee. Money received outside the system — the path ADR 0002 keeps. */
@@ -277,6 +333,8 @@ export interface FacilitiesService {
   availability(actor: Actor, input: { facilityId: number; on: string }): Promise<Result<readonly SlotView[]>>;
   request(actor: Actor, input: C.RequestBookingInput): Promise<Result<BookingView>>;
   forHousehold(actor: Actor): Promise<Result<readonly BookingView[]>>;
+  /** Committee. Every booking in the society, with the home that asked for it. */
+  bookingsForSociety(actor: Actor): Promise<Result<readonly SocietyBookingView[]>>;
   cancel(actor: Actor, input: C.CancelBookingInput): Promise<Result<BookingView>>;
   decide(actor: Actor, input: C.DecideBookingInput): Promise<Result<BookingView>>;
 }

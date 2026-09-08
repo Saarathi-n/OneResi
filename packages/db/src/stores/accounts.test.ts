@@ -472,6 +472,77 @@ describe('family revocation', () => {
   });
 });
 
+describe('listPendingApplications', () => {
+  it('is the committee queue: PENDING only, oldest first, each with its live claim', async () => {
+    const store = accountStore(db);
+    const stamp = onDay('2026-09-08');
+
+    // Noise the queue must skip: an active resident, a rejected applicant, and a pending staff
+    // account queued behind the committee (D-01) — staff applications are the committee's to
+    // decide too, so they ARE listed; the role gate is the service's business, not the store's.
+    await aUser(db, { status: 'ACTIVE' });
+    await aUser(db, { status: 'REJECTED' });
+    const staff = await aUser(db, { role: 'S', status: 'PENDING' });
+
+    const unitless = await store.createAccount(
+      {
+        name: 'First Applicant',
+        email: `queue-a-${eventCounter}@oneresi.test`,
+        phone: '+919876500021',
+        passwordHash: '$2b$12$x',
+        role: 'R',
+        status: 'PENDING',
+        unitId: null,
+        passwordChangedAt: stamp,
+      },
+      null,
+      [],
+    );
+    const claimant = await store.createAccount(
+      {
+        name: 'Second Applicant',
+        email: `queue-b-${eventCounter}@oneresi.test`,
+        phone: '+919876500022',
+        passwordHash: '$2b$12$x',
+        role: 'R',
+        status: 'PENDING',
+        unitId: null,
+        passwordChangedAt: stamp,
+      },
+      { blockName: 'Palm Grove', unitLabel: 'PG-9', unitType: 'VILLA', note: 'by the park' },
+      [],
+    );
+
+    const queue = await store.listPendingApplications();
+    const mine = queue.filter(
+      (application) =>
+        application.userId === unitless.id ||
+        application.userId === claimant.id ||
+        application.userId === staff.id,
+    );
+    // Arrival order: createdAt first, id as the tiebreak when the two share a millisecond.
+    expect(mine.map((application) => application.userId)).toEqual([
+      staff.id,
+      unitless.id,
+      claimant.id,
+    ]);
+
+    const first = mine.find((application) => application.userId === unitless.id);
+    expect(first?.name).toBe('First Applicant');
+    expect(first?.email).toBe(`queue-a-${eventCounter}@oneresi.test`);
+    expect(first?.claim).toBeNull();
+    expect(first?.appliedAt instanceof Date).toBe(true);
+
+    const withClaim = mine.find((application) => application.userId === claimant.id);
+    expect(withClaim?.claim).toEqual({
+      blockName: 'Palm Grove',
+      unitLabel: 'PG-9',
+      unitType: 'VILLA',
+      note: 'by the park',
+    });
+  });
+});
+
 describe('the registration decision', () => {
   it('approves, resolves the claim to a zero-charge home, and writes the event', async () => {
     const store = accountStore(db);

@@ -194,6 +194,24 @@ export interface NewVisitorLog {
   readonly createdAt: Date;
 }
 
+/**
+ * One gate-log row joined for the household's feed: the visitor NAMED, whether the name came from
+ * a pass or the guard's own words, and the decision attributed to a person rather than an id
+ * (D-21). `kind` is `'PASS'` exactly when the row's `passId` is set.
+ */
+export interface StoredVisitorEntry {
+  readonly logId: number;
+  readonly kind: 'PASS' | 'WALK_IN';
+  readonly visitorName: string;
+  readonly purpose: string;
+  readonly approvalStatus: C.ApprovalStatus;
+  readonly decidedByName: string | null;
+  readonly overrideReason: string | null;
+  readonly enteredAt: Date | null;
+  readonly exitedAt: Date | null;
+  readonly createdAt: Date;
+}
+
 export interface StoredBlock {
   readonly id: number;
   readonly name: string;
@@ -426,6 +444,22 @@ export interface AccountStore {
   findClaim(userId: number): Promise<StoredClaim | null>;
 
   /**
+   * PENDING accounts, oldest first, each with its live claim — the committee's queue. The claim
+   * is the LIVE one (`findClaim`'s own rule): a claim already resolved to a unit reads as null,
+   * which for a PENDING account cannot happen but for a re-opened one is the honest answer.
+   */
+  listPendingApplications(): Promise<
+    readonly {
+      readonly userId: number;
+      readonly name: string;
+      readonly email: string;
+      readonly phone: string;
+      readonly appliedAt: Date;
+      readonly claim: StoredClaim | null;
+    }[]
+  >;
+
+  /**
    * The committee's decision, in one transaction. `approve` transitions the account to ACTIVE
    * and, when a claim is supplied, resolves it: find-or-create the block, find-or-create the
    * unit, link the account, clear the claim. Declining transitions to REJECTED and leaves the
@@ -568,6 +602,16 @@ export interface VisitorStore {
   findPendingWalkIns(unitId: number): Promise<readonly StoredVisitorLog[]>;
 
   /**
+   * The household's gate log, newest first, joined so every row names its visitor — the feed on
+   * a resident's home. `limit` is the caller's rule; the store truncates and orders, it does not
+   * decide what "recent" means.
+   */
+  findLogsForUnit(
+    unitId: number,
+    limit: number,
+  ): Promise<readonly StoredVisitorEntry[]>;
+
+  /**
    * One transaction: approvalStatus, decidedById, decidedAt — the attribution UC-05 was missing
    * (D-21) — and the decision's events. Null when the visit is no longer PENDING: a decision is a
    * guarded transition, not an assignment.
@@ -671,6 +715,12 @@ export interface BillingStore {
 
   findInvoiceById(id: number): Promise<StoredInvoice | null>;
   findInvoicesForUnit(unitId: number): Promise<readonly StoredInvoice[]>;
+
+  /**
+   * Every invoice in the society, newest period first, each with its home joined so the
+   * committee's ledger names the payer. One query with its joins, like the household list.
+   */
+  findInvoicesForSociety(): Promise<readonly (StoredInvoice & { home: StoredHome })[]>;
 
   /**
    * One transaction: every invoice for the period, or none. Null when any unit in `units`
@@ -801,6 +851,12 @@ export interface FacilitiesStore {
 
   findBookingById(id: number): Promise<StoredBooking | null>;
   findBookingsForUnit(unitId: number): Promise<readonly StoredBooking[]>;
+
+  /**
+   * Every booking in the society, newest first, each with its home joined — the committee's
+   * decision queue, so the desk sees who asked and not just which unit id.
+   */
+  findBookingsForSociety(): Promise<readonly (StoredBooking & { home: StoredHome })[]>;
 
   /**
    * PENDING and CONFIRMED bookings for one facility on one date — the slots that are held, read

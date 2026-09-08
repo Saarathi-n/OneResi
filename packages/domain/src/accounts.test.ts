@@ -84,6 +84,8 @@ interface AccountRow {
   passwordChangedAt: Date | null;
   resetTokenHash: string | null;
   resetExpiresAt: Date | null;
+  /** Applied-at for the queue; every seeded account shares a fixed instant, the array is the order. */
+  createdAt: Date;
 }
 
 interface UnitRow {
@@ -145,8 +147,16 @@ class MemoryStore implements AccountStore {
     return unitId;
   }
 
-  seedAccount(row: Omit<AccountRow, 'id' | 'resetTokenHash' | 'resetExpiresAt'>): AccountRow {
-    const account: AccountRow = { ...row, id: this.nextAccountId++, resetTokenHash: null, resetExpiresAt: null };
+  seedAccount(
+    row: Omit<AccountRow, 'id' | 'resetTokenHash' | 'resetExpiresAt' | 'createdAt'>,
+  ): AccountRow {
+    const account: AccountRow = {
+      ...row,
+      id: this.nextAccountId++,
+      resetTokenHash: null,
+      resetExpiresAt: null,
+      createdAt: new Date('2026-09-08T09:00:00Z'),
+    };
     this.accounts.push(account);
     return account;
   }
@@ -239,6 +249,7 @@ class MemoryStore implements AccountStore {
       passwordChangedAt: input.passwordChangedAt,
       resetTokenHash: null,
       resetExpiresAt: null,
+      createdAt: new Date('2026-09-08T09:00:00Z'),
     };
     this.accounts.push(account);
     if (claim !== null) this.claims.set(account.id, claim);
@@ -248,6 +259,31 @@ class MemoryStore implements AccountStore {
 
   findClaim(userId: number): Promise<StoredClaim | null> {
     return Promise.resolve(this.claims.get(userId) ?? null);
+  }
+
+  /** The queue: PENDING accounts in arrival order, each with the live claim the fake holds. */
+  listPendingApplications(): Promise<
+    readonly {
+      userId: number;
+      name: string;
+      email: string;
+      phone: string;
+      appliedAt: Date;
+      claim: StoredClaim | null;
+    }[]
+  > {
+    return Promise.resolve(
+      this.accounts
+        .filter((account) => account.status === 'PENDING')
+        .map((account) => ({
+          userId: account.id,
+          name: account.name,
+          email: account.email,
+          phone: account.phone,
+          appliedAt: account.createdAt,
+          claim: this.claims.get(account.id) ?? null,
+        })),
+    );
   }
 
   applyRegistrationDecision(
@@ -1328,5 +1364,52 @@ describe('decideRegistration', () => {
       'LIMIT_REACHED',
     );
     expect(world.store.accounts.find((a) => a.id === applicantId)?.status).toBe('PENDING');
+  });
+});
+
+describe('pendingApplications', () => {
+  it('gives the committee the queue with each claim; a resident and a disabled admin get nothing', async () => {
+    const world = harness();
+    const { residentId, adminId } = seededWorld(world.store);
+    await world.service.register(registerInput({ email: 'waiter@example.com' }), META);
+    await world.service.register(
+      registerInput({
+        email: 'dreamer@example.com',
+        home: {
+          kind: 'claim',
+          blockName: 'Palm Grove',
+          unitLabel: 'pg-3',
+          unitType: 'VILLA',
+        },
+      }),
+      META,
+    );
+
+    const queue = await world.service.pendingApplications(actorFor(world.store, adminId));
+    expect(queue.ok).toBe(true);
+    if (!queue.ok) return;
+    expect(queue.value.map((application) => application.email)).toEqual([
+      'waiter@example.com',
+      'dreamer@example.com',
+    ]);
+    // The words, exactly as given — resolved only at approval (D-04).
+    expect(queue.value[1]?.claim).toMatchObject({
+      blockName: 'Palm Grove',
+      unitLabel: 'PG-3',
+      unitType: 'VILLA',
+    });
+    expect(queue.value[0]?.claim).toBeNull();
+    expect(queue.value[0]?.appliedAt instanceof Date).toBe(true);
+
+    await expectError(
+      world.service.pendingApplications(actorFor(world.store, residentId)),
+      'FORBIDDEN',
+    );
+    // A disabled administrator's token must not read the queue either (D-24).
+    world.store.patchAccount(adminId, { status: 'DISABLED' });
+    await expectError(
+      world.service.pendingApplications(actorFor(world.store, adminId)),
+      'FORBIDDEN',
+    );
   });
 });

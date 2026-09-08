@@ -33,6 +33,12 @@ const RECEIPT_INCLUDE = {
   },
 } satisfies Prisma.PaymentInclude;
 
+/** The society's ledger: the invoice, its settlement, and the home it belongs to. */
+const SOCIETY_INVOICE_INCLUDE = {
+  payments: { orderBy: { id: 'asc' }, take: 1 },
+  unit: { include: unitInclude },
+} satisfies Prisma.InvoiceInclude;
+
 export function billingStore(db: Db): BillingStore {
   const store: BillingStore = {
     ...sharedLookups(db),
@@ -69,6 +75,19 @@ export function billingStore(db: Db): BillingStore {
         orderBy: [{ period: 'desc' }, { id: 'asc' }],
       });
       return rows.map((row) => toInvoice(row, row.payments[0] ?? null));
+    },
+
+    async findInvoicesForSociety() {
+      // Newest period first, like the household list — the desk's own sorting and filtering are
+      // the client's job, not the query's.
+      const rows = await db.invoice.findMany({
+        include: SOCIETY_INVOICE_INCLUDE,
+        orderBy: [{ period: 'desc' }, { id: 'asc' }],
+      });
+      return rows.map((row) => ({
+        ...toInvoice(row, row.payments[0] ?? null),
+        home: toHome(row.unit),
+      }));
     },
 
     async raiseInvoices(input, units, eventsFor) {

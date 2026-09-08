@@ -1,7 +1,14 @@
 import * as C from '@oneresi/contracts';
 import { errors } from './errors.js';
 import type { Clock } from './clock.js';
-import { ok, type Result, type BookingView, type FacilitiesService, type SlotView } from './ports.js';
+import {
+  ok,
+  type Result,
+  type BookingView,
+  type FacilitiesService,
+  type SlotView,
+  type SocietyBookingView,
+} from './ports.js';
 import type { FacilitiesStore, OutboxEventInput, StoredBooking, StoredFacility } from './store.js';
 
 /**
@@ -211,6 +218,23 @@ export function facilitiesService(deps: FacilitiesDeps): FacilitiesService {
       if (actor.unitId === null) return errors.forbidden('view bookings');
       const bookings = await store.findBookingsForUnit(actor.unitId);
       return ok(bookings.map(bookingView));
+    },
+
+    async bookingsForSociety(actor): Promise<Result<readonly SocietyBookingView[]>> {
+      if (actor.role !== 'A') return errors.forbidden('review bookings');
+      const bookings = await store.findBookingsForSociety();
+      return ok(
+        bookings.map((booking) => ({
+          ...bookingView(booking),
+          home: {
+            unitId: booking.home.unitId,
+            blockName: booking.home.blockName,
+            label: booking.home.label,
+            type: booking.home.type,
+            monthlyChargePaise: booking.home.monthlyChargePaise,
+          },
+        })),
+      );
     },
 
     async cancel(actor, input): Promise<Result<BookingView>> {

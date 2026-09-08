@@ -9,6 +9,7 @@ import type {
   RateLimiter,
   RateLimitVerdict,
   StoredHome,
+  StoredVisitorEntry,
   StoredVisitorLog,
   StoredVisitorPass,
   VisitorStore,
@@ -322,6 +323,36 @@ class MemoryVisitorStore implements VisitorStore {
       this.logs
         .filter((l) => l.unitId === unitId && l.approvalStatus === 'PENDING')
         .map((l) => ({ ...l })),
+    );
+  }
+
+  findLogsForUnit(unitId: number, limit: number): Promise<readonly StoredVisitorEntry[]> {
+    // The feed: newest first, joined the way the adapter joins — a pass entry names its visitor
+    // from the pass, a walk-in's decision names the person who made it.
+    const ordered = [...this.logs]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id - a.id)
+      .filter((l) => l.unitId === unitId)
+      .slice(0, limit);
+    return Promise.resolve(
+      ordered.map((log) => {
+        const pass = log.passId === null ? undefined : this.passes.find((p) => p.id === log.passId);
+        const decider =
+          log.decidedById === null
+            ? undefined
+            : this.residents.find((r) => r.id === log.decidedById);
+        return {
+          logId: log.id,
+          kind: log.passId === null ? ('WALK_IN' as const) : ('PASS' as const),
+          visitorName: log.walkInName ?? pass?.visitorName ?? '',
+          purpose: log.walkInPurpose ?? pass?.purpose ?? '',
+          approvalStatus: log.approvalStatus,
+          decidedByName: decider?.name ?? null,
+          overrideReason: log.overrideReason,
+          enteredAt: log.enteredAt,
+          exitedAt: log.exitedAt,
+          createdAt: log.createdAt,
+        };
+      }),
     );
   }
 
@@ -1295,5 +1326,86 @@ describe('waitingForHousehold', () => {
     const world = harness();
     seededWorld(world.store);
     await expectError(world.service.waitingForHousehold(GUARD), 'FORBIDDEN');
+  });
+});
+
+describe('entriesForHousehold', () => {
+  it('is the feed: this home only, newest first, pass entries named from the pass', async () => {
+    const world = harness();
+    const { unitId, otherUnitId, pass } = seededWorld(world.store);
+    const asha = world.store.residents.find((r) => r.unitId === unitId);
+    if (asha === undefined) throw new Error('seed broken');
+
+    // A used pass: checked in and out, decided by nobody in particular.
+    const checkedIn = world.store.seedLog({
+      passId: pass.id,
+      unitId,
+      walkInName: null,
+      walkInPhone: null,
+      walkInPurpose: null,
+      approvalStatus: 'APPROVED',
+      decidedById: asha.id,
+      decidedAt: new Date('2026-09-08T08:00:00Z'),
+      overrideReason: null,
+      enteredAt: new Date('2026-09-08T08:00:00Z'),
+      exitedAt: new Date('2026-09-08T09:30:00Z'),
+    });
+    // A later walk-in, still waiting — the feed's top line.
+    const walkIn = world.store.seedLog({
+      passId: null,
+      unitId,
+      walkInName: 'Suresh the courier',
+      walkInPhone: '9886012345',
+      walkInPurpose: 'Package for B-101',
+      approvalStatus: 'PENDING',
+      decidedById: null,
+      decidedAt: null,
+      overrideReason: null,
+      enteredAt: null,
+      exitedAt: null,
+    });
+    // Another home's traffic is not this feed's business.
+    world.store.seedLog({
+      passId: null,
+      unitId: otherUnitId,
+      walkInName: 'Elsewhere',
+      walkInPhone: null,
+      walkInPurpose: 'Visit',
+      approvalStatus: 'APPROVED',
+      decidedById: null,
+      decidedAt: null,
+      overrideReason: null,
+      enteredAt: null,
+      exitedAt: null,
+    });
+
+    const feed = await expectOk(
+      world.service.entriesForHousehold(residentActor(world.store, unitId)),
+    );
+    expect(feed.map((entry) => entry.logId)).toEqual([walkIn.id, checkedIn.id]);
+
+    expect(feed[0]).toMatchObject({
+      kind: 'WALK_IN',
+      visitorName: 'Suresh the courier',
+      purpose: 'Package for B-101',
+      approvalStatus: 'PENDING',
+      decidedByName: null,
+      enteredAt: null,
+    });
+    expect(feed[1]).toMatchObject({
+      kind: 'PASS',
+      visitorName: 'Ravi Kumar', // from the pass, not the log row
+      purpose: 'Family visit',
+      approvalStatus: 'APPROVED',
+      decidedByName: 'Asha Rao',
+    });
+    expect(feed[1]?.enteredAt?.toISOString()).toBe('2026-09-08T08:00:00.000Z');
+    expect(feed[1]?.exitedAt?.toISOString()).toBe('2026-09-08T09:30:00.000Z');
+  });
+
+  it('refuses anyone without a home', async () => {
+    const world = harness();
+    seededWorld(world.store);
+    await expectError(world.service.entriesForHousehold(GUARD), 'FORBIDDEN');
   });
 });

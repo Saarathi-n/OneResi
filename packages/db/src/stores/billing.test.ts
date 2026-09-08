@@ -167,6 +167,64 @@ describe('raiseInvoices', () => {
   });
 });
 
+describe('findInvoicesForSociety', () => {
+  it('lists the ledger newest-period-first, each row naming its home and settlement', async () => {
+    const store = billingStore(db);
+    const home = await aBillableHome();
+    const other = await aBillableHome();
+
+    const january =
+      (await store.raiseInvoices(
+        { period: '2027-01', dueOn: onDay('2027-02-05'), raisedById: home.committee.id, raisedAt: onDay('2027-01-01') },
+        [
+          { unitId: home.unit.id, amountPaise: C.rupees(3500) },
+          { unitId: other.unit.id, amountPaise: C.rupees(3500) },
+        ],
+        () => [],
+      )) ?? [];
+    expect(january).toHaveLength(2);
+
+    await store.raiseInvoices(
+      { period: '2027-02', dueOn: onDay('2027-03-05'), raisedById: home.committee.id, raisedAt: onDay('2027-02-01') },
+      [{ unitId: home.unit.id, amountPaise: C.rupees(3500) }],
+      () => [],
+    );
+
+    // One household settles its January invoice; the ledger's join must say so (D-26).
+    await store.recordPayment(
+      {
+        invoiceId: january[0]!.id,
+        recordedById: home.committee.id,
+        amountPaise: C.rupees(3500),
+        method: 'UPI',
+        paidAt: onDay('2027-01-15'),
+        reference: 'SOCIETYLEDGER1',
+      },
+      () => [],
+    );
+
+    const ledger = await store.findInvoicesForSociety();
+    // The two fresh periods only — earlier tests' invoices are not this assertion's business.
+    const mine = ledger.filter((invoice) => invoice.period === '2027-01' || invoice.period === '2027-02');
+    // Newest period first, like the household list.
+    expect(mine.map((invoice) => invoice.period)).toEqual(['2027-02', '2027-01', '2027-01']);
+
+    const settled = mine.find(
+      (invoice) => invoice.id === january[0]!.id,
+    );
+    expect(settled?.status).toBe('PAID');
+    expect(settled?.payment?.receiptNo).toBe('REC-2027-01-00001');
+    expect(settled?.home.blockName).toBe(home.block.name);
+    expect(settled?.home.unitId).toBe(home.unit.id);
+
+    const open = mine.find((invoice) => invoice.id === january[1]!.id);
+    expect(open?.status).toBe('UNPAID');
+    expect(open?.payment).toBeNull();
+    expect(open?.home.unitId).toBe(other.unit.id);
+    expect(open?.home.blockName).toBe(other.block.name);
+  });
+});
+
 describe('recordPayment', () => {
   it('settles an invoice and allocates the period receipt numbers in sequence', async () => {
     const store = billingStore(db);

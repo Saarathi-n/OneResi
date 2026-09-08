@@ -1,6 +1,7 @@
 import * as C from '@oneresi/contracts';
 import { ok } from './ports.js';
 import type {
+  EntryLogView,
   GateDecision,
   PassView,
   Result,
@@ -14,6 +15,7 @@ import type {
   OutboxEventInput,
   RateLimiter,
   StoredHome,
+  StoredVisitorEntry,
   StoredVisitorLog,
   StoredVisitorPass,
   VisitorStore,
@@ -103,6 +105,21 @@ function waitingView(log: StoredVisitorLog): WaitingVisitorView {
     phone: log.walkInPhone,
     purpose: log.walkInPurpose ?? '',
     since: log.createdAt,
+  };
+}
+
+function entryView(entry: StoredVisitorEntry): EntryLogView {
+  return {
+    logId: entry.logId,
+    kind: entry.kind,
+    visitorName: entry.visitorName,
+    purpose: entry.purpose,
+    approvalStatus: entry.approvalStatus,
+    decidedByName: entry.decidedByName,
+    overrideReason: entry.overrideReason,
+    enteredAt: entry.enteredAt,
+    exitedAt: entry.exitedAt,
+    at: entry.createdAt,
   };
 }
 
@@ -485,6 +502,14 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
       if (actor.unitId === null) return errors.forbidden('see waiting visitors');
       const logs = await store.findPendingWalkIns(actor.unitId);
       return ok(logs.map(waitingView));
+    },
+
+    async entriesForHousehold(actor): Promise<Result<readonly EntryLogView[]>> {
+      if (actor.unitId === null) return errors.forbidden('see the visitor log');
+      // The feed reads the recent past, not the whole history: a month of gate traffic is more
+      // than any resident scrolls, and the limit keeps the payload phone-sized.
+      const entries = await store.findLogsForUnit(actor.unitId, 30);
+      return ok(entries.map(entryView));
     },
   };
 }

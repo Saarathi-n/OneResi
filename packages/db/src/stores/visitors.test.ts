@@ -21,7 +21,7 @@ interface Fixtures {
   ) => Promise<{ id: number }>;
   readonly aUser: (
     db: Db,
-    overrides?: { role?: string; status?: string; unitId?: number; email?: string },
+    overrides?: { role?: string; status?: string; unitId?: number; email?: string; name?: string },
   ) => Promise<{ id: number }>;
   readonly onDay: (iso: string) => Date;
 }
@@ -520,6 +520,111 @@ describe('the walk-in queue', () => {
 
     // And the decided walk-in is no longer pending.
     expect(await store.findPendingWalkIns(unit.id)).toHaveLength(0);
+  });
+});
+
+describe('findLogsForUnit', () => {
+  it('is the feed: newest-first, one unit only, pass entries named from the pass, decisions named', async () => {
+    const store = visitorStore(db);
+    const { unit, staff } = await aPassContext();
+    const otherUnit = await aUnit(db, (await aBlock(db)).id);
+    const guard = await aUser(db, { role: 'S', status: 'ACTIVE', name: 'Gate Guard' });
+    const event = anEvent('visitor.arrived');
+
+    // A pass entry: the visitor's name and purpose live on the pass, not the log.
+    const pass = await store.createPass(
+      {
+        unitId: unit.id,
+        createdById: staff.id,
+        visitorName: 'Meera Iyer',
+        purpose: 'Family visit',
+        code: `VPASS-FEED-${unit.id}`,
+        validOn: onDay('2027-04-10'),
+        createdAt: onDay('2027-04-08'),
+      },
+      [],
+    );
+    if (pass === null) throw new Error('pass creation failed');
+    const at = onDay('2027-04-10');
+    await store.checkInPass(
+      { passId: pass.id, at, idempotencyKey: `feed-${unit.id}` },
+      {
+        passId: pass.id,
+        unitId: unit.id,
+        walkInName: null,
+        walkInPhone: null,
+        walkInPurpose: null,
+        approvalStatus: 'APPROVED',
+        decidedById: guard.id,
+        decidedAt: at,
+        overrideReason: null,
+        enteredAt: at,
+        createdAt: new Date('2027-04-10T12:00:00Z'),
+      },
+      [event],
+    );
+    const closed = await store.checkOutPass(pass.id, new Date('2027-04-10T15:00:00Z'));
+    expect(closed).not.toBeNull();
+
+    // A later walk-in, still pending — it tops the feed.
+    const walkIn = await store.createWalkInLog(
+      {
+        passId: null,
+        unitId: unit.id,
+        walkInName: 'Plumber',
+        walkInPhone: '+919876500099',
+        walkInPurpose: 'Repair',
+        approvalStatus: 'PENDING',
+        decidedById: null,
+        decidedAt: null,
+        overrideReason: null,
+        enteredAt: null,
+        createdAt: new Date('2027-04-10T16:00:00Z'),
+      },
+      [],
+    );
+    if (walkIn === null) throw new Error('walk-in creation failed');
+
+    // Another unit's entry is not this household's business.
+    await store.createWalkInLog(
+      {
+        passId: null,
+        unitId: otherUnit.id,
+        walkInName: 'Elsewhere',
+        walkInPhone: '+919876500098',
+        walkInPurpose: 'Visit',
+        approvalStatus: 'PENDING',
+        decidedById: null,
+        decidedAt: null,
+        overrideReason: null,
+        enteredAt: null,
+        createdAt: new Date('2027-04-10T16:30:00Z'),
+      },
+      [],
+    );
+
+    const feed = await store.findLogsForUnit(unit.id, 30);
+    expect(feed.map((entry) => entry.logId)).toEqual([walkIn.id, closed!.id]);
+    expect(feed.every((entry) => entry.visitorName.length > 0)).toBe(true);
+
+    const [pending, arrived] = feed;
+    expect(pending?.kind).toBe('WALK_IN');
+    expect(pending?.visitorName).toBe('Plumber');
+    expect(pending?.purpose).toBe('Repair');
+    expect(pending?.approvalStatus).toBe('PENDING');
+    expect(pending?.decidedByName).toBeNull();
+    expect(pending?.enteredAt).toBeNull();
+
+    expect(arrived?.kind).toBe('PASS');
+    expect(arrived?.visitorName).toBe('Meera Iyer'); // from the pass, not the log row
+    expect(arrived?.purpose).toBe('Family visit');
+    expect(arrived?.approvalStatus).toBe('APPROVED');
+    expect(arrived?.decidedByName).toBe('Gate Guard'); // the join the feed is named for
+    expect(arrived?.enteredAt?.toISOString()).toBe(at.toISOString());
+    expect(arrived?.exitedAt?.toISOString()).toBe('2027-04-10T15:00:00.000Z');
+
+    // The limit is a real cap, newest first.
+    expect((await store.findLogsForUnit(unit.id, 1)).map((entry) => entry.logId)).toEqual([walkIn.id]);
   });
 });
 

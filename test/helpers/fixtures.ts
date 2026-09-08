@@ -32,12 +32,12 @@ export async function aUnit(
 
 export async function aUser(
   db: Db,
-  overrides: { role?: string; status?: string; unitId?: number; email?: string } = {},
+  overrides: { role?: string; status?: string; unitId?: number; email?: string; name?: string } = {},
 ) {
   const n = unique();
   return db.residentUser.create({
     data: {
-      name: `Person ${n}`,
+      name: overrides.name ?? `Person ${n}`,
       email: overrides.email ?? `person${n}@oneresi.test`,
       phone: `+9198765${String(10000 + n).slice(-5)}`,
       passwordHash: '$2b$12$notarealhashusedonlyinfixtures.....................',

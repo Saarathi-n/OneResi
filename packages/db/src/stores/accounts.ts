@@ -89,6 +89,31 @@ export function accountStore(db: Db): AccountStore {
       return toClaim(row);
     },
 
+    /**
+     * The committee's queue: PENDING accounts oldest first, each with its live claim. The claim
+     * join is on the account's side, so the queue is one query; a claim already resolved to a
+     * unit reads as null, which is `findClaim`'s own rule applied to a list.
+     */
+    async listPendingApplications() {
+      const rows = await db.residentUser.findMany({
+        where: { status: 'PENDING' },
+        include: { registrationClaims: true },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      });
+      return rows.map((row) => {
+        // One live claim per account by the unique index; the list is the findClaim rule at scale.
+        const live = row.registrationClaims.find((claim) => claim.resolvedUnitId === null);
+        return {
+          userId: row.id,
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          appliedAt: row.createdAt,
+          claim: live === undefined ? null : toClaim(live),
+        };
+      });
+    },
+
     async applyRegistrationDecision(input, events) {
       const wanted: C.UserStatus = input.approve ? 'ACTIVE' : 'REJECTED';
       // The store applies the caller's transition, it does not decide it — but the guard mirrors

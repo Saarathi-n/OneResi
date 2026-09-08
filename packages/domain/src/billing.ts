@@ -5,6 +5,7 @@ import {
   type BillingService,
   type InvoiceView,
   type ReceiptView,
+  type SocietyInvoiceView,
   ok,
   type Result,
   type Actor,
@@ -209,6 +210,23 @@ export function billingService(deps: BillingDeps): BillingService {
       if (actor.unitId === null) return errors.forbidden('view invoices');
       const invoices = await store.findInvoicesForUnit(actor.unitId);
       return ok(invoices.map(invoiceView));
+    },
+
+    async forSociety(actor): Promise<Result<readonly SocietyInvoiceView[]>> {
+      if (actor.role !== 'A') return errors.forbidden('view the ledger');
+      const invoices = await store.findInvoicesForSociety();
+      return ok(
+        invoices.map((invoice) => ({
+          ...invoiceView(invoice),
+          home: {
+            unitId: invoice.home.unitId,
+            blockName: invoice.home.blockName,
+            label: invoice.home.label,
+            type: invoice.home.type,
+            monthlyChargePaise: invoice.home.monthlyChargePaise,
+          },
+        })),
+      );
     },
 
     async pay(actor, input): Promise<Result<InvoiceView>> {

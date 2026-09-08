@@ -2,6 +2,7 @@ import * as C from '@oneresi/contracts';
 import type {
   Actor,
   AccountsService,
+  ApplicationView,
   PersonView,
   RequestMeta,
   Result,
@@ -479,6 +480,38 @@ export function accountsService(deps: AccountsDeps): AccountsService {
       // change kills every session, including the changer's own (D-23).
       await deps.store.applyPasswordChange(account.id, passwordHash, now);
       return { ok: true, value: null };
+    },
+
+    async pendingApplications(actor: Actor): Promise<Result<readonly ApplicationView[]>> {
+      // Committee only, checked against the live account — a disabled administrator's token must
+      // not read the queue either (D-24).
+      const caller = await deps.store.findAccountById(actor.userId);
+      if (caller === null) return errors.unauthenticated();
+      if (caller.role !== 'A' || caller.status !== 'ACTIVE') {
+        return errors.forbidden('review applications');
+      }
+
+      const pending = await deps.store.listPendingApplications();
+      return {
+        ok: true,
+        value: pending.map((row) => ({
+          userId: row.userId,
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          appliedAt: row.appliedAt,
+          // The applicant's words, exactly as given — resolved only at approval (D-04).
+          claim:
+            row.claim === null
+              ? null
+              : {
+                  blockName: row.claim.blockName,
+                  unitLabel: row.claim.unitLabel,
+                  unitType: row.claim.unitType,
+                  note: row.claim.note,
+                },
+        })),
+      };
     },
 
     async decideRegistration(

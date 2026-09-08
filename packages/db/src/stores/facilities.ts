@@ -1,5 +1,5 @@
 import * as C from '@oneresi/contracts';
-import type { Db } from '../client.js';
+import type { Db, Prisma } from '../client.js';
 import type { FacilitiesStore } from '@oneresi/domain';
 import {
   bookingInclude,
@@ -7,6 +7,8 @@ import {
   sharedLookups,
   toBooking,
   toFacility,
+  toHome,
+  unitInclude,
   writeEvents,
 } from './shared.js';
 
@@ -29,6 +31,15 @@ function overlaps(
 ): boolean {
   return minutesOf(a.startTime) < minutesOf(b.endTime) && minutesOf(a.endTime) > minutesOf(b.startTime);
 }
+
+/**
+ * The society's booking queue: the facility name, and the home that asked, joined — the desk
+ * sees who requested and not just which unit id.
+ */
+const SOCIETY_BOOKING_INCLUDE = {
+  facility: { select: { name: true } },
+  unit: { include: unitInclude },
+} satisfies Prisma.BookingInclude;
 
 export function facilitiesStore(db: Db): FacilitiesStore {
   const store: FacilitiesStore = {
@@ -61,6 +72,14 @@ export function facilitiesStore(db: Db): FacilitiesStore {
         orderBy: [{ bookingDate: 'desc' }, { startTime: 'asc' }, { id: 'asc' }],
       });
       return rows.map(toBooking);
+    },
+
+    async findBookingsForSociety() {
+      const rows = await db.booking.findMany({
+        include: SOCIETY_BOOKING_INCLUDE,
+        orderBy: [{ bookingDate: 'desc' }, { startTime: 'asc' }, { id: 'asc' }],
+      });
+      return rows.map((row) => ({ ...toBooking(row), home: toHome(row.unit) }));
     },
 
     async liveBookingsForFacilityOn(facilityId, on) {

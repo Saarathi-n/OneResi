@@ -183,6 +183,20 @@ class MemoryBillingStore implements BillingStore {
     );
   }
 
+  findInvoicesForSociety(): Promise<readonly (StoredInvoice & { home: StoredHome })[]> {
+    // Newest period first, like the household list — and like the adapter, the home is a join:
+    // an invoice whose unit is unknown to the fake has no home line to show, so it is not listed.
+    const ordered = [...this.invoices].sort(
+      (a, b) => b.period.localeCompare(a.period) || a.id - b.id,
+    );
+    return Promise.resolve(
+      ordered.flatMap((invoice) => {
+        const home = this.homeFor(invoice.unitId);
+        return home === null ? [] : [{ ...this.snapshotInvoice(invoice), home }];
+      }),
+    );
+  }
+
   // ---- writes (each one is "a transaction" in the real store)
 
   raiseInvoices(
@@ -796,5 +810,36 @@ describe('flagOverdue', () => {
         daysOverdue: 7,
       }),
     );
+  });
+});
+
+describe('forSociety', () => {
+  it("is the committee's ledger: every invoice with its home, newest period first", async () => {
+    const world = harness();
+    const { unitId, otherUnitId } = seededWorld(world.store);
+    const invoice = world.store.seedInvoice({ unitId, period: '2026-09', amountPaise: 250_000, dueOn: '2026-09-20' });
+    world.store.seedInvoice({ unitId: otherUnitId, period: '2026-09', amountPaise: 180_000, dueOn: '2026-09-20' });
+    world.store.seedInvoice({ unitId, period: '2026-10', amountPaise: 250_000, dueOn: '2026-10-20' });
+
+    // One household settles its September bill — the ledger's join must say so (D-26).
+    await expectOk(
+      world.service.pay(residentActor(world.store, unitId), C.PayInvoiceInput.parse({ invoiceId: invoice.id })),
+    );
+
+    const ledger = await expectOk(world.service.forSociety(ADMIN));
+    expect(ledger.map((entry) => entry.period)).toEqual(['2026-10', '2026-09', '2026-09']);
+
+    const settled = ledger.find((entry) => entry.id === invoice.id);
+    expect(settled?.status).toBe('PAID');
+    expect(settled?.receiptNo).toBe('REC-2026-09-00001');
+    expect(settled?.home).toMatchObject({ unitId, blockName: 'Brindavan', label: 'B-101' });
+
+    const open = ledger.find((entry) => entry.period === '2026-09' && entry.home.unitId === otherUnitId);
+    expect(open?.status).toBe('UNPAID');
+    expect(open?.receiptNo).toBeNull();
+    expect(open?.home.label).toBe('B-102');
+
+    // A resident sees their own list, not the society's (D-42).
+    await expectError(world.service.forSociety(residentActor(world.store, unitId)), 'FORBIDDEN');
   });
 });

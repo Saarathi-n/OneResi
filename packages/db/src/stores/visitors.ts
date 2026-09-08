@@ -1,3 +1,4 @@
+import type * as C from '@oneresi/contracts';
 import type { Db, Prisma } from '../client.js';
 import type { VisitorStore } from '@oneresi/domain';
 import {
@@ -195,6 +196,32 @@ export function visitorStore(db: Db): VisitorStore {
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       });
       return rows.map(toLog);
+    },
+
+    async findLogsForUnit(unitId, limit) {
+      // The feed: newest first, joined so a pass entry names its visitor from the pass and a
+      // walk-in's decision names the person who made it. One query with its joins.
+      const rows = await db.visitorLog.findMany({
+        where: { unitId },
+        include: {
+          pass: { select: { visitorName: true, purpose: true } },
+          decidedBy: { select: { name: true } },
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: limit,
+      });
+      return rows.map((row) => ({
+        logId: row.id,
+        kind: row.passId === null ? ('WALK_IN' as const) : ('PASS' as const),
+        visitorName: row.walkInName ?? row.pass?.visitorName ?? '',
+        purpose: row.walkInPurpose ?? row.pass?.purpose ?? '',
+        approvalStatus: row.approvalStatus as C.ApprovalStatus,
+        decidedByName: row.decidedBy?.name ?? null,
+        overrideReason: row.overrideReason,
+        enteredAt: row.enteredAt,
+        exitedAt: row.exitedAt,
+        createdAt: row.createdAt,
+      }));
     },
 
     async decideWalkInLog(input, events) {
