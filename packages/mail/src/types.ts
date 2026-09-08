@@ -168,11 +168,19 @@ export interface Logger {
   warn(message: string): void;
 }
 
+/**
+ * The default logger. An actual console logger is the one honest use of `console` in this package:
+ * the console provider's delivery line, and the local worker's one-line summary. The `no-console`
+ * rule is disabled on exactly these two lines for that reason and no other — structured, correlated
+ * logging is what every other module owes the operator.
+ */
 export const consoleLogger: Logger = {
   info: (message) => {
+    // eslint-disable-next-line no-console -- the whole point of this logger
     console.info(message);
   },
   warn: (message) => {
+    // eslint-disable-next-line no-console -- the whole point of this logger
     console.warn(message);
   },
 };

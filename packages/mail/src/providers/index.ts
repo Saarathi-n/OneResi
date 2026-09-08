@@ -23,35 +23,56 @@ import type {
  * must not fail because mail is down (D-29).
  */
 
-let cached: { readonly driver: MailDriver; readonly provider: MailProvider } | undefined;
-
 /**
  * Memoised per driver: an SES client holds sockets, so constructing one per message would leak them.
+ *
+ * The cache holds the in-flight *promise*, not the resolved provider — the same shape
+ * `packages/db`'s `client.ts` uses for its connection — and it is published synchronously, before
+ * any `await`, so two callers that arrive while the SES module is still loading share one
+ * construction instead of racing to build two clients. A construction that fails deletes its own
+ * entry rather than leaving a rejection cached, so a fixed environment is picked up on the next
+ * call.
  *
  * The SES module is loaded on demand — the same shape `packages/db` uses for its two Prisma clients —
  * so a local run in console mode never pulls the AWS SDK into the process at all, and the AWS build
  * loads exactly one provider. Callers that want a specific provider synchronously can construct it
  * themselves: `createConsoleProvider()`, or `createSesProvider()` from `@oneresi/mail/providers/ses`.
  */
+const cache: Partial<Record<MailDriver, Promise<MailProvider>>> = {};
+
+function construct(chosen: MailDriver): Promise<MailProvider> {
+  return (async (): Promise<MailProvider> => {
+    if (chosen === 'ses') {
+      const { createSesProvider } = await import('./ses.js');
+      return createSesProvider();
+    }
+    return createConsoleProvider();
+  })();
+}
+
 export async function selectProvider(driver?: MailDriver): Promise<MailProvider> {
   const chosen = driver ?? mailDriver();
-  if (cached !== undefined && cached.driver === chosen) return cached.provider;
 
-  let provider: MailProvider;
-  if (chosen === 'ses') {
-    const { createSesProvider } = await import('./ses.js');
-    provider = createSesProvider();
-  } else {
-    provider = createConsoleProvider();
+  // Lookup and publish are both synchronous — no `await` between them, which is what makes the
+  // publish safe against a concurrent caller reading the same empty slot.
+  let opened = cache[chosen];
+  if (opened === undefined) {
+    opened = construct(chosen);
+    cache[chosen] = opened;
   }
 
-  cached = { driver: chosen, provider };
-  return provider;
+  try {
+    return await opened;
+  } catch (cause) {
+    if (cache[chosen] === opened) delete cache[chosen];
+    throw cause;
+  }
 }
 
 /** For tests that switch drivers inside one process. */
 export function resetProviderCache(): void {
-  cached = undefined;
+  delete cache.ses;
+  delete cache.console;
 }
 
 export interface DeliverInput {

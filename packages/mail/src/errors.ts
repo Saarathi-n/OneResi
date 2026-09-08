@@ -61,6 +61,26 @@ export function isPermanent(error: unknown): boolean {
 const MAX_RECORDED_ERROR = 900;
 
 /**
+ * A non-Error value can still carry something readable: a plain string is itself, an object with a
+ * `message` is almost always a wrapped Error from another boundary, and anything else is shown as
+ * its JSON rather than `[object Object]` — which is what `String()` writes and what the row used to
+ * record when a provider rejected with a plain object.
+ */
+function describeUnknown(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null && 'message' in value) {
+    const message = (value as { readonly message: unknown }).message;
+    if (typeof message === 'string' && message !== '') return message;
+  }
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch {
+    // Circular or a getter that throws — the row still gets one honest line.
+    return String(value);
+  }
+}
+
+/**
  * What goes in `OutboxEvent.lastError` and `MailMessage.error`: one readable line, bounded, with
  * the cause chain flattened. Never a stack — the row is read by a person in the mail log.
  */
@@ -73,7 +93,7 @@ export function describeError(error: unknown): string {
       parts.push(`${current.name}: ${current.message}`);
       current = current.cause;
     } else {
-      parts.push(String(current));
+      parts.push(describeUnknown(current));
       break;
     }
   }
