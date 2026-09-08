@@ -9,6 +9,13 @@ import type { Db } from './client.js';
  * announcements, so a second run duplicated half the data and then threw on a unique receipt
  * number (D-45). That matters here because the cloud deploy runs this on every apply.
  *
+ * Convergence has to mean byte-for-byte, not just row counts: every `update:` block here is
+ * deliberately empty. Prisma still writes the row on the create branch, but on the update branch an
+ * empty update touches nothing — a same-values update would rewrite `passwordHash` (bcrypt salts
+ * every hash differently, so the recomputed value is always "new") and bump `@updatedAt`, and the
+ * run-to-run content digest would never be stable. What is seeded once stays exactly as it was;
+ * changing a seed value means changing it here, which is the point.
+ *
  * Passwords are generated, not hardcoded. The previous build shipped `Password@123` in the client
  * bundle behind one-click admin sign-in buttons (D-01).
  */
@@ -35,7 +42,7 @@ async function seedProperty(db: Db) {
       { name: 'Emerald Block', floors: 10 },
       { name: 'Sapphire Block', floors: 12 },
       { name: 'Gulmohar Phase 1', floors: 1 },
-    ].map((data) => db.block.upsert({ where: { name: data.name }, update: data, create: data })),
+    ].map((data) => db.block.upsert({ where: { name: data.name }, update: {}, create: data })),
   );
 
   const [emerald, sapphire, gulmohar] = blocks;
@@ -66,7 +73,7 @@ async function seedUnits(db: Db, blocks: Awaited<ReturnType<typeof seedProperty>
     };
     const row = await db.unit.upsert({
       where: { blockId_label: { blockId: u.blockId, label: u.label } },
-      update: data,
+      update: {},
       create: data,
     });
     units.set(u.label, row);
@@ -98,7 +105,10 @@ async function seedPeople(db: Db, units: Map<string, { id: number }>) {
     };
     const row = await db.residentUser.upsert({
       where: { email: p.email },
-      update: data,
+      // Empty on purpose: recomputing the bcrypt hash here would rewrite passwordHash on every
+      // bootstrap even when nothing changed, and bump updatedAt with it. The hash is written once,
+      // on the create branch.
+      update: {},
       create: { email: p.email, ...data },
     });
     people.set(p.email, row);
@@ -121,7 +131,7 @@ async function seedFacilities(db: Db) {
       closesAt: f.closesAt,
       hourlyRatePaise: rupees(f.rate),
     };
-    const row = await db.facility.upsert({ where: { name: f.name }, update: data, create: { name: f.name, ...data } });
+    const row = await db.facility.upsert({ where: { name: f.name }, update: {}, create: { name: f.name, ...data } });
     facilities.set(f.name, row);
   }
   return facilities;
@@ -147,7 +157,7 @@ async function seedBilling(
       };
       const invoice = await db.invoice.upsert({
         where: { unitId_period: { unitId: unit.id, period: p } },
-        update: data,
+        update: {},
         create: data,
       });
 
@@ -161,7 +171,7 @@ async function seedBilling(
           reference,
           paidAt: day(-22),
         };
-        await db.payment.upsert({ where: { reference }, update: payment, create: payment });
+        await db.payment.upsert({ where: { reference }, update: {}, create: payment });
       }
     }
   }

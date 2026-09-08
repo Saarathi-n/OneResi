@@ -1,4 +1,4 @@
-import { PrismaClient as PostgresClient } from '../prisma/generated/postgresql/index.js';
+import type { PrismaClient as PostgresClient } from '../prisma/generated/postgresql/index.js';
 import { resolveDatabaseUrl, resolveTarget, type Target } from './env.js';
 
 /**
