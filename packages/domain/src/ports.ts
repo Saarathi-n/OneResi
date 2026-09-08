@@ -10,10 +10,12 @@ import type * as C from '@oneresi/contracts';
 
 /**
  * Who is asking. Resolved from the session by the caller, never trusted from a request body.
- * `unitId` is present only for residents.
+ * `unitId` is present only for residents; `name` is the display name, so services that attribute
+ * a decision or address a notification never need a second lookup.
  */
 export interface Actor {
   readonly userId: number;
+  readonly name: string;
   readonly role: C.Role;
   readonly unitId: number | null;
   readonly email: string;
@@ -223,11 +225,11 @@ export interface VisitorsService {
   /** The gate. Returns a decision, never a row, and throttled — a six-digit code is enumerable. */
   verifyCode(actor: Actor, input: C.VerifyPassInput, meta: RequestMeta): Promise<Result<GateDecision>>;
   /** Idempotent per pass: a second check-in must not create a second log row. */
-  recordEntry(actor: Actor, input: { passId: number; action: 'CHECK_IN' | 'CHECK_OUT'; idempotencyKey?: string }): Promise<Result<null>>;
+  recordEntry(actor: Actor, input: C.RecordEntryInput): Promise<Result<null>>;
 
   logWalkIn(actor: Actor, input: C.LogWalkInInput): Promise<Result<{ logId: number }>>;
   /** Writes decidedById and decidedAt — the columns UC-05 needs and the previous build never set. */
-  decideWalkIn(actor: Actor, input: { logId: number; decision: 'APPROVE' | 'REJECT' }): Promise<Result<null>>;
+  decideWalkIn(actor: Actor, input: C.DecideWalkInInput): Promise<Result<null>>;
   waitingForHousehold(actor: Actor): Promise<Result<readonly WaitingVisitorView[]>>;
   expectedToday(actor: Actor): Promise<Result<readonly PassView[]>>;
 }

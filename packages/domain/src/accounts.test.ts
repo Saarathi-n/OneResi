@@ -502,7 +502,13 @@ async function signInOkWith(
 function actorFor(store: MemoryStore, id: number): Actor {
   const account = store.accounts.find((a) => a.id === id);
   if (account === undefined) throw new Error(`no account ${id}`);
-  return { userId: account.id, role: account.role, unitId: account.unitId, email: account.email };
+  return {
+    userId: account.id,
+    name: account.name,
+    role: account.role,
+    unitId: account.unitId,
+    email: account.email,
+  };
 }
 
 const expectError = async <T>(

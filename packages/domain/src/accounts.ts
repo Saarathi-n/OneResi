@@ -200,6 +200,7 @@ export function accountsService(deps: AccountsDeps): AccountsService {
         ok: true,
         value: {
           userId: account.id,
+          name: account.name,
           role: account.role,
           unitId: account.unitId,
           email: account.email,

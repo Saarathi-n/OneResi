@@ -10,3 +10,5 @@ export * from './passwords.js';
 export * from './access-token.js';
 export * from './deps.js';
 export * from './accounts.js';
+export * from './visitors.js';
+export * from './property.js';
