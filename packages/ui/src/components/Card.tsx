@@ -91,8 +91,7 @@ export function Card({
       {...(label !== undefined ? { 'aria-label': label } : {})}
       variants={controlVariants(motionTokens)}
       initial="rest"
-      whileHover={pending || disabled ? undefined : 'hover'}
-      whileTap={pending || disabled ? undefined : 'press'}
+      {...(pending || disabled ? {} : { whileHover: 'hover', whileTap: 'press' })}
       className={cn(shell, 'focus-ring w-full text-left hover:border-border-strong')}
     >
       {rule}

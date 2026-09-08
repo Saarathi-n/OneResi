@@ -169,7 +169,8 @@ export function OtpInput({
       <div className="flex items-center gap-2" aria-busy={isPending}>
         {digits.map((digit, index) => (
           <input
-            /* Index is the identity here — the boxes are positions, not rows of data. */
+            /* eslint-disable-next-line react/no-array-index-key -- the boxes are fixed
+               positions, not rows of data; the position is the identity. */
             key={index}
             ref={(element) => {
               boxes.current[index] = element;

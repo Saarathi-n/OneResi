@@ -69,8 +69,7 @@ export function IconButton({
       onClick={handleClick}
       variants={controlVariants(motionTokens)}
       initial="rest"
-      whileHover={disabled || pending ? undefined : 'hover'}
-      whileTap={disabled || pending ? undefined : 'press'}
+      {...(disabled || pending ? {} : { whileHover: 'hover', whileTap: 'press' })}
       className={cn(
         'focus-ring inline-flex shrink-0 items-center justify-center border',
         'transition-colors duration-150',

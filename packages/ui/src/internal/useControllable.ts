@@ -10,7 +10,7 @@ import { useCallback, useState } from 'react';
 export function useControllable<T>(
   controlled: T | undefined,
   fallback: T,
-  onChange?: ((value: T) => void) | undefined,
+  onChange?: (value: T) => void,
 ): readonly [T, (next: T) => void] {
   const [internal, setInternal] = useState<T>(fallback);
   const isControlled = controlled !== undefined;

@@ -81,8 +81,7 @@ export function Button({
       onClick={handleClick}
       variants={controlVariants(motionTokens)}
       initial="rest"
-      whileHover={disabled || pending ? undefined : 'hover'}
-      whileTap={disabled || pending ? undefined : 'press'}
+      {...(disabled || pending ? {} : { whileHover: 'hover', whileTap: 'press' })}
       className={cn(
         'focus-ring relative inline-flex select-none items-center justify-center border font-medium',
         'transition-colors duration-150',

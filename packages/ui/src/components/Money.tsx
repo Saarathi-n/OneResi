@@ -83,6 +83,8 @@ export function Money({
       <span className="sr-only">{text}</span>
       {text.split('').map((glyph, index) => (
         <motion.span
+          /* eslint-disable-next-line react/no-array-index-key -- an amount's glyphs are fixed
+             positions that never reorder; the position is the identity. */
           key={`${index}:${glyph}`}
           aria-hidden
           initial={{ y: rise, opacity: 0 }}

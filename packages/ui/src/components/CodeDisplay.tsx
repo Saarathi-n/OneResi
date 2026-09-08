@@ -86,6 +86,8 @@ export function CodeDisplay({
           </span>
 
           {code.split('').map((character, index) => (
+            /* eslint-disable react/no-array-index-key -- a code's characters are fixed
+               positions that never reorder; the position is the identity. */
             <motion.span
               key={`${index}:${character}`}
               aria-hidden
