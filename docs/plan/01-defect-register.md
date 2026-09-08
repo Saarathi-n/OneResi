@@ -1083,13 +1083,29 @@ tailing.
 
 **Fix** — set the default to `ap-south-1`, and pass `--region` explicitly in every script anyway.
 
-### D-79 · Terraform 1.9.8 cannot use S3 native state locking
-`terraform version`
+### D-79 · A stale Terraform on PATH shadows the installed one
+`~/bin/terraform`
 
-`architecture.md` specifies `use_lockfile = true`, which requires Terraform 1.10 or later. You have
-1.9.8, so the documented backend configuration would not apply.
+`architecture.md` specifies `use_lockfile = true` on the S3 backend, which requires Terraform 1.10
+or later. `terraform version` reports **1.9.8**, so the documented backend cannot apply.
 
-**Fix** — upgrade to 1.10 or later. It is the smaller change and avoids a DynamoDB lock table.
+Corrected after checking the machine: this is not a missing upgrade. Three binaries exist —
+
+| Path | Version |
+|---|---|
+| `~/bin/terraform` | **1.9.8** — first on PATH, so this is the one that runs |
+| `C:/Developer/Code/terraform_bin/terraform.exe` | 1.15.7 |
+| winget package directory | **1.15.8** |
+
+1.15.8 is already installed. A stale copy in `~/bin` takes precedence over it, which is why every
+`terraform` invocation fails the version constraint with "Unsupported Terraform Core version".
+
+**Fix** — remove or rename `~/bin/terraform` so the winget install is reached, or put its directory
+earlier on PATH. Until then every command needs the full path to the 1.15.8 binary. Nothing needs
+downloading.
+
+Verified with the 1.15.8 binary: `infra/bootstrap` formats, initialises with `-backend=false`, and
+**validates clean**.
 
 ### D-80 · This repository has only `docs/`
 `C:\Developer\Code\OneResi - Copy`

@@ -285,15 +285,41 @@ export const ReportQuery = z.object({
 });
 
 // ---------------------------------------------------------------- inferred types
+//
+//  Every schema gets its inferred type under the same name, so a service signature can say
+//  `input: CreateUnitInput` and mean the parsed shape. A schema without one here is a schema
+//  nothing can be typed against.
 
 export type SignInInput = z.infer<typeof SignInInput>;
 export type RegisterInput = z.infer<typeof RegisterInput>;
+export type RequestPasswordResetInput = z.infer<typeof RequestPasswordResetInput>;
+export type CompletePasswordResetInput = z.infer<typeof CompletePasswordResetInput>;
+export type DecideRegistrationInput = z.infer<typeof DecideRegistrationInput>;
+
 export type CreatePassInput = z.infer<typeof CreatePassInput>;
+export type VerifyPassInput = z.infer<typeof VerifyPassInput>;
+export type RecordEntryInput = z.infer<typeof RecordEntryInput>;
 export type LogWalkInInput = z.infer<typeof LogWalkInInput>;
+export type DecideWalkInInput = z.infer<typeof DecideWalkInInput>;
+
 export type RaiseComplaintInput = z.infer<typeof RaiseComplaintInput>;
 export type UpdateComplaintInput = z.infer<typeof UpdateComplaintInput>;
+export type ReopenComplaintInput = z.infer<typeof ReopenComplaintInput>;
+
 export type RaiseInvoicesInput = z.infer<typeof RaiseInvoicesInput>;
 export type PayInvoiceInput = z.infer<typeof PayInvoiceInput>;
+export type RecordOfflinePaymentInput = z.infer<typeof RecordOfflinePaymentInput>;
+export type CancelInvoiceInput = z.infer<typeof CancelInvoiceInput>;
+
 export type RequestBookingInput = z.infer<typeof RequestBookingInput>;
+export type DecideBookingInput = z.infer<typeof DecideBookingInput>;
+export type CancelBookingInput = z.infer<typeof CancelBookingInput>;
+
 export type PublishAnnouncementInput = z.infer<typeof PublishAnnouncementInput>;
+
+export type CreateBlockInput = z.infer<typeof CreateBlockInput>;
+export type CreateUnitInput = z.infer<typeof CreateUnitInput>;
+export type UpdateUnitInput = z.infer<typeof UpdateUnitInput>;
+
 export type ReportQuery = z.infer<typeof ReportQuery>;
+export type TimeWindow = z.infer<typeof TimeWindow>;
