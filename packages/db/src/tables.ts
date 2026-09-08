@@ -53,6 +53,7 @@ export const NATURAL_KEYS = {
   block: ['name'],
   unit: ['blockId', 'label'],
   residentUser: ['email'],
+  registrationClaim: ['userId'],
   facility: ['name'],
   visitorPass: ['code'],
   visitorLog: ['unitId', 'createdAt'],
