@@ -2,11 +2,14 @@ packages:
   - "packages/*"
   - "apps/*"
 
-# pnpm 11 blocks postinstall scripts unless a package is listed here. These four need theirs:
-# Prisma downloads its query engine, esbuild its platform binary. Both are first-party scripts
-# from the packages themselves, and nothing works without them.
+# pnpm 11 blocks postinstall scripts unless a package is listed here. Prisma downloads its query
+# engine, esbuild its platform binary; sharp (Next image optimisation) and unrs-resolver
+# (eslint-config-next) install prebuilt platform binaries. All first-party scripts from the
+# packages themselves, and nothing works without them.
 allowBuilds:
   "@prisma/client": true
   "@prisma/engines": true
   prisma: true
   esbuild: true
+  sharp: true
+  unrs-resolver: true
