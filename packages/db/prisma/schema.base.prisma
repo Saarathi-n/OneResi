@@ -89,8 +89,9 @@ model ResidentUser {
   /// Set on every password change. A token issued before this is refused, which is how
   /// UC-03's session-invalidation postcondition is met (D-23).
   passwordChangedAt DateTime?
-  /// SHA-256 of the reset token. The token itself is never stored (D-22).
-  resetTokenHash    String?
+  /// SHA-256 of the reset token. The token itself is never stored (D-22). Unique — one token
+  /// resolves to one account, and the pre-flight lookup is a seek, not a scan.
+  resetTokenHash    String? @unique
   resetExpiresAt    DateTime?
 
   createdAt DateTime @default(now())
@@ -136,6 +137,10 @@ model RegistrationClaim {
   /// delete a claim's history (D-47).
   decidedById Int?
   resolvedAt  DateTime?
+  /// The committee's own words for the decision, when they gave any. Stamped on the claim it
+  /// belongs to; a claimless decision's reason travels in the mail row's variables, which is
+  /// written in the same transaction and is just as durable.
+  decisionReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -163,6 +168,9 @@ model VisitorPass {
   validOn     DateTime
   /// PassStatus from @oneresi/contracts.
   status      String @default("ACTIVE")
+  /// Set on the transition into CANCELLED. The status says a pass died; this says when, which is
+  /// what the port asks for and what "why is my old pass still listed" needs.
+  cancelledAt DateTime?
   createdAt   DateTime @default(now())
 
   unit      Unit         @relation(fields: [unitId], references: [id], onDelete: Restrict)
@@ -192,6 +200,10 @@ model VisitorLog {
   decidedAt      DateTime?
   /// Set when a guard admits without waiting for the resident. Names itself and is audited.
   overrideReason String?
+
+  /// The gate scanner's retry key, when it sent one. Unique: a retried scan finds the row its
+  /// first attempt wrote instead of reading a used pass as an error (D-40).
+  idempotencyKey String? @unique
 
   /// Nullable: UC-16 creates the row before entry happens.
   enteredAt DateTime?
