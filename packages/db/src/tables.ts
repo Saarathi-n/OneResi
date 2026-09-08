@@ -12,6 +12,7 @@ export const DOMAIN_TABLES = [
   'block',
   'unit',
   'residentUser',
+  'registrationClaim',
   'facility',
   'visitorPass',
   'visitorLog',

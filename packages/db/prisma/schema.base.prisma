@@ -65,6 +65,7 @@ model Unit {
   complaints   Complaint[]
   invoices     Invoice[]
   bookings     Booking[]
+  claimsResolved RegistrationClaim[]
 
   @@unique([blockId, label])
   @@index([blockId])
@@ -106,10 +107,46 @@ model ResidentUser {
   announcements     Announcement[]    @relation("AnnouncementAuthor")
   refreshTokens     RefreshToken[]
   notifications     Notification[]
+  registrationClaims RegistrationClaim[]
+  claimsDecided     RegistrationClaim[] @relation("ClaimDecider")
 
   @@index([unitId])
   @@index([status, role])
   @@map("resident_user")
+}
+
+/// The free-text home an applicant described because their unit was not on the list (D-04).
+/// Held until the committee decides the application: on approval it is stamped with the unit it
+/// became, on decline with who declined and nothing else. Never deleted — the claim is the
+/// applicant's own words about where they live, and the decision's audit is those words plus
+/// what became of them.
+model RegistrationClaim {
+  id Int @id @default(autoincrement())
+  /// One live claim per account. The port's findClaim returns the live claim, so the uniqueness
+  /// is the invariant: there is at most one, and the query cannot lie about which.
+  userId    Int     @unique
+  blockName String
+  unitLabel String
+  /// UnitType from @oneresi/contracts.
+  unitType  String
+  note      String?
+  /// The unit the claim became on approval. Null until then, and on decline.
+  resolvedUnitId Int?
+  /// Who decided. Null until decided. Restrict, not Cascade — removing an account must not
+  /// delete a claim's history (D-47).
+  decidedById Int?
+  resolvedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         ResidentUser  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  resolvedUnit Unit?         @relation(fields: [resolvedUnitId], references: [id], onDelete: Restrict)
+  decidedBy    ResidentUser? @relation("ClaimDecider", fields: [decidedById], references: [id], onDelete: Restrict)
+
+  @@index([resolvedUnitId])
+  @@index([decidedById])
+  @@map("registration_claim")
 }
 
 model VisitorPass {
