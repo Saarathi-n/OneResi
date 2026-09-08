@@ -56,7 +56,9 @@ function cloudUrl(raw) {
 
 function runPass({ target, url, note }) {
   const reportFile = join(reportDir, `${target}.json`);
+  const junitFile = join(repoRoot, 'test-results', `junit-${target}.xml`);
   rmSync(reportFile, { force: true });
+  rmSync(junitFile, { force: true });
 
   out();
   out(`  ── ${target} ${'─'.repeat(Math.max(0, 60 - target.length))}`);
@@ -73,6 +75,10 @@ function runPass({ target, url, note }) {
       '--reporter=default',
       '--reporter=json',
       `--outputFile.json=${reportFile}`,
+      // Naming the reporters on the command line replaces the ones in vitest.config.ts, so the
+      // junit file CI uploads has to be asked for here or it is never written. One per target,
+      // because two passes writing one path is a report that lies about half the run.
+      ...(process.env.CI === 'true' ? ['--reporter=junit', `--outputFile.junit=${junitFile}`] : []),
     ],
     {
       cwd: repoRoot,
@@ -159,6 +165,10 @@ function main() {
   let skipped = false;
   if (raw === undefined || raw.trim() === '') {
     skipped = true;
+    // A report from an earlier run that *did* have a database would otherwise sit here looking
+    // current, and the workflow uploads this directory as an artifact. A skipped pass leaves no
+    // report behind.
+    rmSync(join(reportDir, 'cloud.json'), { force: true });
   } else {
     const { url, note } = cloudUrl(raw.trim());
     passes.push(runPass({ target: 'cloud', url, note }));

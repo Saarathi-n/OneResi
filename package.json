@@ -14,7 +14,7 @@
     "db:reset": "pnpm --filter @oneresi/db reset",
     "db:checksum": "pnpm --filter @oneresi/db checksum",
     "db:studio": "pnpm --filter @oneresi/db studio",
-    "typecheck": "tsc --build --verbose",
+    "typecheck": "tsc -p test && tsc --build --verbose",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

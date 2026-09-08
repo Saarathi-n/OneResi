@@ -16,6 +16,42 @@ import type { Db } from '@oneresi/db';
 const repoRoot = resolve(import.meta.dirname, '..', '..');
 const TEMPLATE_SQLITE = join(repoRoot, '.data', 'test', 'template.db');
 
+/**
+ * Cleanups run from an `afterAll` registered here, at module scope, and not from inside
+ * `testDatabase()`.
+ *
+ * Vitest collects a file and only then runs its hooks, so a hook registered *during* a hook —
+ * `testDatabase()` is normally called from `beforeAll` — is registered too late and never runs. The
+ * first version of this helper did exactly that: every test file leaked its SQLite copy and its open
+ * connection, and on the cloud target it leaked a PostgreSQL schema per file. Proven by probe, not
+ * assumed: an `afterAll` at module scope fires, one registered inside `beforeAll` does not.
+ */
+const cleanups: (() => Promise<void>)[] = [];
+
+afterAll(async () => {
+  for (const cleanup of cleanups.splice(0)) await cleanup();
+});
+
+const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
+
+/**
+ * Deletes a SQLite file and its sidecars. Windows refuses to unlink a file whose handle has not
+ * closed yet, and the Prisma engine closes asynchronously, so this retries — and gives up quietly
+ * rather than failing a green suite. The global teardown sweeps whatever is left.
+ */
+async function discard(file: string): Promise<void> {
+  for (const path of [file, `${file}-journal`, `${file}-wal`, `${file}-shm`]) {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      try {
+        rmSync(path, { force: true });
+        break;
+      } catch {
+        await wait(50);
+      }
+    }
+  }
+}
+
 export interface TestDb {
   readonly db: Db;
   readonly provider: 'sqlite' | 'postgresql';
@@ -36,10 +72,9 @@ export async function testDatabase(): Promise<TestDb> {
       datasourceUrl: `file:${file.replaceAll('\\', '/')}`,
     }) as unknown as Db;
 
-    afterAll(async () => {
+    cleanups.push(async () => {
       await db.$disconnect();
-      rmSync(file, { force: true });
-      rmSync(`${file}-journal`, { force: true });
+      await discard(file);
     });
 
     return { db, provider: 'sqlite' };
@@ -67,7 +102,7 @@ export async function testDatabase(): Promise<TestDb> {
   const { PrismaClient } = await import('@oneresi/db/generated/postgresql');
   const db = new PrismaClient({ datasourceUrl: url.toString() });
 
-  afterAll(async () => {
+  cleanups.push(async () => {
     await db.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
     await db.$disconnect();
   });

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // The harness is checked, never emitted: vitest transforms these files itself, and a stray
+    // .js beside a helper is what the .gitignore at the repo root is apologising for.
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../vitest.config.ts"]
+}

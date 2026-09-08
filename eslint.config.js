@@ -25,9 +25,12 @@ import tseslint from 'typescript-eslint';
 
 const WORKSPACE_FILES = ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx', '**/*.mjs', '**/*.cjs'];
 
-/** Outside any tsconfig `include`, so `projectService` has no program for them. */
+/**
+ * Outside any tsconfig `include`, so `projectService` has no program for them. `test/**` is not in
+ * this list: it has its own `test/tsconfig.json`, so the harness gets the type-aware rules too —
+ * a floating promise in a fixture is the same defect as a floating promise in a handler.
+ */
 const UNPROJECTED = [
-  'test/**/*.ts',
   'packages/*/test/**/*.ts',
   '*.config.ts',
   '**/*.js',
@@ -156,6 +159,14 @@ export default tseslint.config(
   {
     files: ROUTE_HANDLERS,
     rules: { 'no-restricted-imports': ['error', { patterns: [NOT_IN_A_HANDLER, PRISMA_DIRECT] }] },
+  },
+  {
+    // The inside of the seam. `PRISMA_DIRECT` says nothing *outside* packages/db reaches for a
+    // generated client; packages/db/src is what it reaches through — client.ts imports both clients
+    // on purpose, one for its types and one per engine at boot. Applying the rule here would forbid
+    // the data layer from being the data layer.
+    files: ['packages/db/src/**/*.ts'],
+    rules: { 'no-restricted-imports': 'off' },
   },
 
   // ---------------------------------------------------------------- React

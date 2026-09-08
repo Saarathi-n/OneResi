@@ -22,7 +22,8 @@ function runScript(script: string, args: readonly string[], env: NodeJS.ProcessE
   });
 }
 
-export async function setup(): Promise<void> {
+/** Synchronous on purpose: every step here is `execFileSync`, and vitest accepts either shape. */
+export function setup(): void {
   const target = process.env.DB_TARGET ?? 'local';
 
   runScript('generate-schemas.mjs', [], {});
@@ -41,4 +42,30 @@ export async function setup(): Promise<void> {
     throw new Error('DB_TARGET=cloud needs DATABASE_URL. `pnpm test:parity` skips it when absent.');
   }
   runScript('prisma.mjs', ['migrate', 'deploy'], { DB_TARGET: 'cloud' });
+}
+
+/**
+ * The template and every per-file copy go when the run ends, so a green suite leaves the working
+ * tree exactly as it found it. `test/helpers/database.ts` already deletes each copy as its file
+ * finishes; this is the sweep for a run that was interrupted, and for the template itself.
+ *
+ * Retried, because a worker thread on Windows can still be closing the SQLite handle when the main
+ * process gets here. If something is genuinely stuck it says so rather than failing a passing run —
+ * and `setup()` clears the directory on the next run regardless.
+ */
+export async function teardown(): Promise<void> {
+  if ((process.env.DB_TARGET ?? 'local') !== 'local') return;
+  const dir = dirname(TEMPLATE_SQLITE);
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+      return;
+    } catch {
+      await new Promise((done) => setTimeout(done, 100));
+    }
+  }
+  process.stdout.write(
+    `  warning: could not remove ${dir}; it is rebuilt on the next run anyway\n`,
+  );
 }

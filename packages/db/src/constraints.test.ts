@@ -20,25 +20,25 @@ import type { Db } from './client.js';
  * request for the foundation owner, per docs/plan/WIRING.md.
  */
 interface Harness {
-  testDatabase(): Promise<{ db: Db; provider: 'sqlite' | 'postgresql' }>;
+  readonly testDatabase: () => Promise<{ db: Db; provider: 'sqlite' | 'postgresql' }>;
 }
 interface Fixtures {
-  aBlock(db: Db, name?: string): Promise<{ id: number }>;
-  aUnit(
+  readonly aBlock: (db: Db, name?: string) => Promise<{ id: number }>;
+  readonly aUnit: (
     db: Db,
     blockId: number,
     overrides?: { label?: string; type?: string; monthlyChargePaise?: number },
-  ): Promise<{ id: number }>;
-  aUser(
+  ) => Promise<{ id: number }>;
+  readonly aUser: (
     db: Db,
     overrides?: { role?: string; status?: string; unitId?: number; email?: string },
-  ): Promise<{ id: number }>;
-  aFacility(db: Db, overrides?: { name?: string }): Promise<{ id: number }>;
-  onDay(iso: string): Date;
+  ) => Promise<{ id: number }>;
+  readonly aFacility: (db: Db, overrides?: { name?: string }) => Promise<{ id: number }>;
+  readonly onDay: (iso: string) => Date;
 }
 interface HashAssertions {
-  expectNoHash(value: unknown, label?: string): void;
-  expectNoHashField(value: unknown, label?: string): void;
+  readonly expectNoHash: (value: unknown, label?: string) => void;
+  readonly expectNoHashField: (value: unknown, label?: string) => void;
 }
 
 const HARNESS = '../../../test/helpers/database.js';

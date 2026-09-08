@@ -19,10 +19,10 @@ const basePath = join(packageRoot, 'prisma', 'schema.base.prisma');
 
 interface Generator {
   readonly PROVIDERS: readonly string[];
-  render(provider: string, base?: string): string;
-  portablePart(schema: string): string;
-  digestOf(schema: string): string;
-  assertPortable(base: string): void;
+  readonly render: (provider: string, base?: string) => string;
+  readonly portablePart: (schema: string) => string;
+  readonly digestOf: (schema: string) => string;
+  readonly assertPortable: (base: string) => void;
 }
 
 // The generator is the script the build runs; loading it by path is the point — a reimplementation
