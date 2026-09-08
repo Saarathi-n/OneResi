@@ -12,3 +12,8 @@ export * from './deps.js';
 export * from './accounts.js';
 export * from './visitors.js';
 export * from './property.js';
+export * from './billing.js';
+export * from './complaints.js';
+export * from './facilities.js';
+export * from './notices.js';
+export * from './notifications.js';

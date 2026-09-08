@@ -108,7 +108,13 @@ export interface StoredRefreshToken {
  * One outbox row the service asks for, written in the same transaction as the change that
  * caused it. The payload is flat scalars so it survives being stringified as JSON on either
  * database. It deliberately carries no surrogate ids — mail addresses people by name and email,
- * and ids differ between targets by design.
+ * and ids differ between targets by design. The one exception is an id the event is ABOUT
+ * (`invoiceId`, `complaintId`, …): those arrive through the `eventsFor` callbacks below, which
+ * the adapter calls with the row it just inserted.
+ *
+ * Recipient convention: the `name` and `email` keys identify the ONE person the message is for;
+ * every other key is a template variable. The adapter lifts those two into the mail envelope's
+ * `to` and passes the rest as `vars`.
  */
 export interface OutboxEventInput {
   readonly type: C.OutboxEventType;
@@ -209,6 +215,177 @@ export interface AdminBlockView {
   readonly floors: number;
   readonly active: boolean;
   readonly unitCount: number;
+}
+
+/**
+ * An invoice with its payment joined in. `payment` is the settlement the status claims: the
+ * previous build returned invoices marked PAID with no payment row behind them, and the receipt
+ * button invented the rest (D-26). Exactly one payment exists per invoice — settlement is in
+ * full, and the UNPAID/OVERDUE -> PAID guard refuses a second row.
+ */
+export interface StoredInvoice {
+  readonly id: number;
+  readonly unitId: number;
+  /** Attribution for the billing run. */
+  readonly raisedById: number;
+  /** `YYYY-MM`. */
+  readonly period: string;
+  /** Snapshotted at generation; a charge change never reprices a raised invoice (D-50). */
+  readonly amountPaise: C.Paise;
+  readonly dueOn: Date;
+  readonly status: C.InvoiceStatus;
+  readonly cancelledReason: string | null;
+  readonly payment: StoredPayment | null;
+}
+
+export interface StoredPayment {
+  readonly id: number;
+  readonly invoiceId: number;
+  /** Who entered the payment — a committee member taking cash; null for online settlement. */
+  readonly recordedById: number | null;
+  readonly amountPaise: C.Paise;
+  readonly method: C.PaymentMethod;
+  /** Period plus a per-period sequence, allocated inside the payment transaction (D-37). */
+  readonly receiptNo: string;
+  /** The opaque reference that stands in for a gateway order id (D-54). */
+  readonly reference: string;
+  readonly paidAt: Date;
+}
+
+/**
+ * A receipt is server-rendered from the persisted payment row, addressed by number so the URL
+ * survives a target switch (D-26). The submitted model keeps no payer column, so the household
+ * names itself: `payerName` is the unit's first-listed ACTIVE resident, joined by the store.
+ */
+export interface StoredReceipt {
+  readonly payment: StoredPayment;
+  readonly invoice: StoredInvoice;
+  readonly home: StoredHome;
+  readonly payerName: string;
+}
+
+export interface StoredComplaint {
+  readonly id: number;
+  readonly unitId: number;
+  readonly category: C.ComplaintCategory;
+  readonly priority: C.ComplaintPriority;
+  readonly description: string;
+  /**
+   * Up to three S3 object keys. The service never inspects them — an object key is an opaque
+   * string a presigned upload produced — so they cross as an array and the adapter joins or
+   * splits on the stored newline separator.
+   */
+  readonly photoKeys: readonly string[];
+  readonly status: C.ComplaintStatus;
+  /** Set on entering RESOLVED, never cleared except by an explicit reopen (D-20). */
+  readonly resolvedAt: Date | null;
+  readonly reopenCount: number;
+  readonly raisedAt: Date;
+  /** Every status change with its attribution, oldest first. */
+  readonly updates: readonly StoredComplaintUpdate[];
+}
+
+export interface StoredComplaintUpdate {
+  readonly id: number;
+  readonly complaintId: number;
+  readonly updatedById: number;
+  /** The acting identity, joined — UC-20 step 3 requires a name, not a bare foreign key. */
+  readonly updatedByName: string;
+  readonly statusAfter: C.ComplaintStatus;
+  readonly note: string;
+  readonly createdAt: Date;
+}
+
+export interface NewComplaint {
+  readonly unitId: number;
+  readonly category: C.ComplaintCategory;
+  readonly priority: C.ComplaintPriority;
+  readonly description: string;
+  readonly photoKeys: readonly string[];
+  readonly raisedAt: Date;
+}
+
+export interface StoredFacility {
+  readonly id: number;
+  readonly name: string;
+  readonly description: string;
+  /** `HH:MM`, zero padded, so lexical order is chronological. Enforced on booking (D-72). */
+  readonly opensAt: string;
+  readonly closesAt: string;
+  readonly hourlyRatePaise: C.Paise;
+  readonly active: boolean;
+}
+
+export interface StoredBooking {
+  readonly id: number;
+  readonly facilityId: number;
+  /** Joined, so a household's list never costs one query per booking. */
+  readonly facilityName: string;
+  readonly unitId: number;
+  readonly bookingDate: Date;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly status: C.BookingStatus;
+  /** Charged at request time from the facility's rate and the window length (D-72). */
+  readonly amountPaise: C.Paise;
+  readonly requestedAt: Date;
+  readonly decidedAt: Date | null;
+  readonly decisionReason: string | null;
+}
+
+export interface NewBooking {
+  readonly facilityId: number;
+  readonly unitId: number;
+  readonly bookingDate: Date;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly amountPaise: C.Paise;
+  readonly requestedAt: Date;
+}
+
+export interface StoredAnnouncement {
+  readonly id: number;
+  readonly authorId: number;
+  readonly authorName: string;
+  readonly title: string;
+  readonly body: string;
+  readonly category: C.AnnouncementCategory;
+  readonly pinned: boolean;
+  readonly attachmentKey: string | null;
+  /** The date the notice drops off the feed. UC-24 requires it (D-46). */
+  readonly expiresAt: Date | null;
+  readonly publishedAt: Date;
+}
+
+export interface NewAnnouncement {
+  readonly authorId: number;
+  readonly title: string;
+  readonly body: string;
+  readonly category: C.AnnouncementCategory;
+  readonly pinned: boolean;
+  readonly attachmentKey: string | null;
+  readonly expiresAt: Date | null;
+  readonly publishedAt: Date;
+}
+
+export interface StoredNotification {
+  readonly id: number;
+  readonly userId: number;
+  readonly type: C.OutboxEventType;
+  readonly title: string;
+  readonly body: string;
+  readonly href: string | null;
+  readonly readAt: Date | null;
+  readonly createdAt: Date;
+}
+
+export interface NewNotification {
+  readonly userId: number;
+  readonly type: C.OutboxEventType;
+  readonly title: string;
+  readonly body: string;
+  readonly href: string | null;
+  readonly createdAt: Date;
 }
 
 // ---------------------------------------------------------------- ports
@@ -455,6 +632,268 @@ export interface PropertyStore {
     },
     events: readonly OutboxEventInput[],
   ): Promise<StoredHome | null>;
+}
+
+/**
+ * The billing service's view of the database. Shared lookups (`findHome`,
+ * `findResidentsForUnit`) are redeclared as in the ports above; the adapter implements each
+ * method once.
+ *
+ * Two methods here take an `eventsFor` callback rather than an events array, because the event
+ * payload carries a value that exists only once the insert has run: the invoice's own id, and
+ * the receipt number the payment transaction allocates. The adapter calls the callback with the
+ * row it just wrote, inside the same transaction, and inserts what it returns.
+ */
+export interface BillingStore {
+  findHome(unitId: number): Promise<StoredHome | null>;
+  findResidentsForUnit(
+    unitId: number,
+  ): Promise<readonly { readonly id: number; readonly name: string; readonly email: string }[]>;
+
+  /**
+   * Active units with a charge to bill — the run's census, with the label an email needs. A
+   * unit with no charge has nothing to collect and is not in the list.
+   */
+  billableUnits(): Promise<
+    readonly {
+      readonly unitId: number;
+      readonly blockName: string;
+      readonly label: string;
+      readonly monthlyChargePaise: C.Paise;
+    }[]
+  >;
+
+  /**
+   * The friendly pre-check for a period already generated. The guarantee itself is the
+   * `(unitId, period)` unique constraint inside `raiseInvoices` (D-17).
+   */
+  countInvoicesForPeriod(period: string): Promise<number>;
+
+  findInvoiceById(id: number): Promise<StoredInvoice | null>;
+  findInvoicesForUnit(unitId: number): Promise<readonly StoredInvoice[]>;
+
+  /**
+   * One transaction: every invoice for the period, or none. Null when any unit in `units`
+   * already has an invoice for the period — the architecture refuses the whole run rather than
+   * reporting a partial count (D-17, D-29). Amounts are snapshotted from the census the caller
+   * just read, so the invoice never depends on the unit's current charge again (D-50).
+   */
+  raiseInvoices(
+    input: { readonly period: string; readonly dueOn: Date; readonly raisedById: number; readonly raisedAt: Date },
+    units: readonly { readonly unitId: number; readonly amountPaise: C.Paise }[],
+    eventsFor: (invoice: StoredInvoice) => readonly OutboxEventInput[],
+  ): Promise<readonly StoredInvoice[] | null>;
+
+  /**
+   * One transaction: allocate the period's next receipt number from `ReceiptSequence` (the
+   * increment rolls back with the payment, so the run stays gap-free, D-37), insert the payment
+   * with the reference the caller derived, and apply the guarded UNPAID/OVERDUE -> PAID
+   * transition to the invoice. The receipt number is formatted with the shared token helper so
+   * the rule exists in exactly one place.
+   *
+   * Null when the invoice stopped being payable between the caller's check and this call. When
+   * `reference` already exists, the existing payment is returned unchanged and nothing is
+   * written — a repeated confirmation of the same intent must produce one row, not two.
+   */
+  recordPayment(
+    input: {
+      readonly invoiceId: number;
+      readonly recordedById: number | null;
+      readonly amountPaise: C.Paise;
+      readonly method: C.PaymentMethod;
+      readonly paidAt: Date;
+      readonly reference: string;
+    },
+    eventsFor: (payment: StoredPayment) => readonly OutboxEventInput[],
+  ): Promise<StoredPayment | null>;
+
+  /**
+   * One transaction: the guarded UNPAID/OVERDUE -> CANCELLED transition and its reason — the
+   * only way to void a wrongly raised invoice. No outbox event type exists for a cancellation;
+   * the events parameter keeps the seam's shape. Null when the invoice is no longer in a
+   * cancellable state.
+   */
+  cancelInvoice(
+    input: { readonly invoiceId: number; readonly reason: string; readonly cancelledAt: Date },
+    events: readonly OutboxEventInput[],
+  ): Promise<StoredInvoice | null>;
+
+  /**
+   * One transaction: every UNPAID invoice whose due date falls strictly before `dueBefore` —
+   * the instant the caller's "today" began, computed by the service so the store never decides
+   * what today means — flagged OVERDUE. The one rule the scheduled job reuses (D-36, including
+   * the off-by-one that flagged an invoice due today at 00:01). The callback is async because
+   * the overdue events are addressed per household, which the caller learns only here.
+   */
+  markInvoicesOverdue(
+    input: { readonly dueBefore: Date },
+    eventsFor: (invoice: StoredInvoice) => Promise<readonly OutboxEventInput[]>,
+  ): Promise<readonly StoredInvoice[]>;
+
+  /** A receipt by its number, with the payment, invoice and home joined (D-26). */
+  findReceiptByNo(receiptNo: string): Promise<StoredReceipt | null>;
+}
+
+export interface ComplaintStore {
+  findComplaintById(id: number): Promise<StoredComplaint | null>;
+  findComplaintsForUnit(unitId: number): Promise<readonly StoredComplaint[]>;
+  /** The committee desk's list, optionally narrowed to one status. */
+  findComplaintsForSociety(
+    filter: { readonly status?: C.ComplaintStatus },
+  ): Promise<readonly StoredComplaint[]>;
+
+  findResidentsForUnit(
+    unitId: number,
+  ): Promise<readonly { readonly id: number; readonly name: string; readonly email: string }[]>;
+
+  /**
+   * One transaction: the complaint row and its acknowledgement events. The callback receives
+   * the row with its id, because the in-app event names the complaint.
+   */
+  createComplaint(
+    input: NewComplaint,
+    eventsFor: (complaint: StoredComplaint) => readonly OutboxEventInput[],
+  ): Promise<StoredComplaint>;
+
+  /**
+   * One transaction: the status change, its attributed update row, and the events. The store
+   * applies only a transition the contract's state machine permits from the CURRENT status —
+   * the caller has already validated it, so null means the world changed underneath. Entering
+   * RESOLVED sets `resolvedAt`; a RESOLVED -> OPEN move clears it and advances `reopenCount` —
+   * a reopen, whoever made it; nothing else touches the timestamp (D-20).
+   */
+  applyComplaintUpdate(
+    input: {
+      readonly complaintId: number;
+      readonly statusAfter: C.ComplaintStatus;
+      readonly updatedById: number;
+      readonly note: string;
+      readonly at: Date;
+    },
+    events: readonly OutboxEventInput[],
+  ): Promise<StoredComplaint | null>;
+
+  /**
+   * One transaction: the guarded RESOLVED -> OPEN transition, `resolvedAt` cleared (the one
+   * transition allowed to clear it), `reopenCount` advanced, and the resident's reason recorded
+   * as an attributed update row. Null when the complaint is no longer RESOLVED.
+   */
+  reopenComplaint(
+    input: {
+      readonly complaintId: number;
+      readonly reopenedById: number;
+      readonly reason: string;
+      readonly at: Date;
+    },
+    events: readonly OutboxEventInput[],
+  ): Promise<StoredComplaint | null>;
+}
+
+export interface FacilitiesStore {
+  findHome(unitId: number): Promise<StoredHome | null>;
+  findResidentsForUnit(
+    unitId: number,
+  ): Promise<readonly { readonly id: number; readonly name: string; readonly email: string }[]>;
+
+  findFacilityById(id: number): Promise<StoredFacility | null>;
+  /** The bookable list. The committee sees retired facilities too (UC-22, D-27). */
+  listFacilities(input: { readonly includeInactive: boolean }): Promise<readonly StoredFacility[]>;
+
+  findBookingById(id: number): Promise<StoredBooking | null>;
+  findBookingsForUnit(unitId: number): Promise<readonly StoredBooking[]>;
+
+  /**
+   * PENDING and CONFIRMED bookings for one facility on one date — the slots that are held, read
+   * against the partial unique index's own definition of "live" (D-18).
+   */
+  liveBookingsForFacilityOn(facilityId: number, on: Date): Promise<readonly StoredBooking[]>;
+
+  /** ACTIVE committee members — the people a booking request is addressed to. */
+  findCommitteeMembers(): Promise<
+    readonly { readonly id: number; readonly name: string; readonly email: string }[]
+  >;
+
+  /**
+   * One transaction: the booking row and the committee's request events. Null when the window
+   * collides with a live booking — the friendly refusal; the partial unique index is what makes
+   * it true under concurrency (D-18). The callback receives the row with its id, because the
+   * event payload names the booking.
+   */
+  createBooking(
+    input: NewBooking,
+    eventsFor: (booking: StoredBooking) => readonly OutboxEventInput[],
+  ): Promise<StoredBooking | null>;
+
+  /**
+   * One transaction: the guarded PENDING -> CONFIRMED/REJECTED transition with its attribution,
+   * and the household's decision events. Null when the booking stopped being PENDING.
+   */
+  decideBooking(
+    input: {
+      readonly bookingId: number;
+      readonly statusAfter: 'CONFIRMED' | 'REJECTED';
+      readonly decidedById: number;
+      readonly decidedAt: Date;
+      readonly reason: string | null;
+    },
+    events: readonly OutboxEventInput[],
+  ): Promise<StoredBooking | null>;
+
+  /**
+   * One transaction: the guarded PENDING/CONFIRMED -> CANCELLED transition. No outbox event type
+   * exists for a cancellation; the parameter keeps the seam's shape. Null when the booking is no
+   * longer in a cancellable state.
+   */
+  cancelBooking(
+    input: { readonly bookingId: number; readonly cancelledAt: Date },
+    events: readonly OutboxEventInput[],
+  ): Promise<StoredBooking | null>;
+}
+
+export interface NoticesStore {
+  /** Not expired as of `now`: pinned first, then newest first (D-46). */
+  activeAnnouncements(now: Date): Promise<readonly StoredAnnouncement[]>;
+
+  findAnnouncementById(id: number): Promise<StoredAnnouncement | null>;
+
+  /** Every ACTIVE resident — one outbox row per person, never one message with every address (D-29). */
+  findActiveResidents(): Promise<
+    readonly { readonly id: number; readonly name: string; readonly email: string }[]
+  >;
+
+  /**
+   * One transaction: the announcement row and its fan-out events. The callback receives the row
+   * with its id, because the event payload names the notice.
+   */
+  createAnnouncement(
+    input: NewAnnouncement,
+    eventsFor: (announcement: StoredAnnouncement) => readonly OutboxEventInput[],
+  ): Promise<StoredAnnouncement>;
+
+  /**
+   * One transaction: expiry pulled to `at`, which takes the notice off every feed. Null when the
+   * announcement is unknown. No outbox event type exists for a withdrawal; the parameter keeps
+   * the seam's shape.
+   */
+  withdrawAnnouncement(
+    id: number,
+    at: Date,
+    events: readonly OutboxEventInput[],
+  ): Promise<StoredAnnouncement | null>;
+}
+
+export interface NotificationsStore {
+  /** One person's notifications, newest first. */
+  notificationsForUser(userId: number): Promise<readonly StoredNotification[]>;
+
+  /**
+   * One transaction: marks the given rows read. Scoped to the user — another person's ids mark
+   * nothing, so the call cannot reach across households. Returns how many rows changed.
+   */
+  markNotificationsRead(userId: number, ids: readonly number[], readAt: Date): Promise<number>;
+
+  /** The worker's fan-in: one notification row per person per in-app outbox event (D-29). */
+  createNotifications(rows: readonly NewNotification[]): Promise<void>;
 }
 
 export interface RateLimitVerdict {

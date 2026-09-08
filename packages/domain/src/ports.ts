@@ -250,8 +250,10 @@ export interface BillingService {
   forHousehold(actor: Actor): Promise<Result<readonly InvoiceView[]>>;
   /** Scoped to the caller's own unit. Anyone could settle any invoice before (D-07). */
   pay(actor: Actor, input: C.PayInvoiceInput): Promise<Result<InvoiceView>>;
-  recordOffline(actor: Actor, input: { invoiceId: number; amountPaise: C.Paise; receivedOn: string; note?: string }): Promise<Result<InvoiceView>>;
-  cancel(actor: Actor, input: { invoiceId: number; reason: string }): Promise<Result<InvoiceView>>;
+  /** Committee. Money received outside the system — the path ADR 0002 keeps. */
+  recordOffline(actor: Actor, input: C.RecordOfflinePaymentInput): Promise<Result<InvoiceView>>;
+  /** Committee. The only way to void a wrongly raised invoice. */
+  cancel(actor: Actor, input: C.CancelInvoiceInput): Promise<Result<InvoiceView>>;
   /** Receipt addressed by number, not row id, so it survives a target switch. */
   receipt(actor: Actor, receiptNo: string): Promise<Result<ReceiptView>>;
   flagOverdue(actor: SystemActor, asOf: Date): Promise<Result<{ flagged: number }>>;
@@ -275,8 +277,8 @@ export interface FacilitiesService {
   availability(actor: Actor, input: { facilityId: number; on: string }): Promise<Result<readonly SlotView[]>>;
   request(actor: Actor, input: C.RequestBookingInput): Promise<Result<BookingView>>;
   forHousehold(actor: Actor): Promise<Result<readonly BookingView[]>>;
-  cancel(actor: Actor, input: { bookingId: number }): Promise<Result<BookingView>>;
-  decide(actor: Actor, input: { bookingId: number; decision: 'CONFIRM' | 'REJECT'; reason?: string }): Promise<Result<BookingView>>;
+  cancel(actor: Actor, input: C.CancelBookingInput): Promise<Result<BookingView>>;
+  decide(actor: Actor, input: C.DecideBookingInput): Promise<Result<BookingView>>;
 }
 
 export interface FacilityView {
