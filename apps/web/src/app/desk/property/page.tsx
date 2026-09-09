@@ -352,7 +352,11 @@ export default function PropertyPage() {
             <Button variant="ghost" onClick={() => setBlockOpen(false)}>
               Cancel
             </Button>
-            <Button pending={blockPending} onClick={() => void createBlock()}>
+            <Button
+              pending={blockPending}
+              pendingLabel="Adding the block"
+              onClick={() => void createBlock()}
+            >
               Add block
             </Button>
           </div>
@@ -410,7 +414,7 @@ export default function PropertyPage() {
             <Button variant="ghost" onClick={() => setUnitOpen(false)}>
               Cancel
             </Button>
-            <Button pending={unitPending} onClick={() => void createUnit()}>
+            <Button pending={unitPending} pendingLabel="Adding the unit" onClick={() => void createUnit()}>
               Add unit
             </Button>
           </div>
@@ -468,7 +472,7 @@ export default function PropertyPage() {
             <Button variant="ghost" onClick={() => setEditFor(null)}>
               Cancel
             </Button>
-            <Button pending={editPending} onClick={() => void saveUnit()}>
+            <Button pending={editPending} pendingLabel="Saving" onClick={() => void saveUnit()}>
               Save
             </Button>
           </div>

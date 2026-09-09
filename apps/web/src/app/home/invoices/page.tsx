@@ -176,7 +176,7 @@ export default function InvoicesPage() {
             <Button variant="ghost" onClick={() => setPaying(null)} disabled={pending}>
               Cancel
             </Button>
-            <Button pending={pending} onClick={() => void confirmPay()}>
+            <Button pending={pending} pendingLabel="Recording payment" onClick={() => void confirmPay()}>
               Pay {paying !== null ? <Money value={paise(paying.amountPaise)} label="amount" /> : null}
             </Button>
           </div>

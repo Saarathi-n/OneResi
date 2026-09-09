@@ -665,7 +665,11 @@ export default function RegisterPage() {
           {step < 3 ? (
             <Button onClick={goForward}>Continue</Button>
           ) : (
-            <Button onClick={() => void handleSubmit()} pending={pending}>
+            <Button
+              onClick={() => void handleSubmit()}
+              pending={pending}
+              pendingLabel="Submitting your application"
+            >
               Submit application
             </Button>
           )}

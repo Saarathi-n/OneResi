@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
@@ -8,6 +8,7 @@ import {
   CardHeader,
   EmptyState,
   ErrorState,
+  Input,
   Money,
   Skeleton,
   StatusPill,
@@ -25,6 +26,9 @@ import { useFetch } from '@/lib/useFetch';
 
 const FACILITIES_PATH = '/api/facilities';
 const BOOKINGS_PATH = '/api/facilities/bookings';
+
+/** The facility booked (or browsed) last, so the next visit opens on it. */
+const LAST_FACILITY_KEY = 'oneresi.facility.last';
 
 interface FacilityLine {
   id: number;
@@ -74,7 +78,26 @@ export default function FacilitiesPage() {
   >({ state: 'loading' });
   const [chosen, setChosen] = useState<SlotLine | null>(null);
   const [pending, setPending] = useState(false);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // When the list arrives, open on the facility used last time (or the first one) and load its
+  // day — without this the slot grid would sit on its skeleton until the first hover.
+  useEffect(() => {
+    if (facilities.state.state !== 'ready' || selectedFacility !== null) return;
+    let toOpen = facilities.state.data[0] ?? null;
+    try {
+      const lastId = Number(window.localStorage.getItem(LAST_FACILITY_KEY));
+      const remembered = facilities.state.data.find((facility) => facility.id === lastId);
+      if (remembered !== undefined) {
+        toOpen = remembered;
+        setSelectedFacility(remembered);
+      }
+    } catch {
+      // A blocked localStorage just means starting on the first facility.
+    }
+    if (toOpen !== null) void loadSlots(toOpen.id, today());
+  }, [facilities.state, selectedFacility]);
 
   const activeFacility = useMemo(
     () =>
@@ -141,6 +164,23 @@ export default function FacilitiesPage() {
     void loadSlots(activeFacility.id, date);
   }
 
+  async function cancelBooking(booking: BookingLine): Promise<void> {
+    setCancellingId(booking.id);
+    const result = await call<BookingLine>(`/api/facilities/bookings/${booking.id}/cancel`, {
+      method: 'POST',
+      json: { bookingId: booking.id },
+    });
+    setCancellingId(null);
+    if (result.ok) {
+      bookings.reload();
+      if (activeFacility !== null) void loadSlots(activeFacility.id, date);
+      toast.show({
+        title: 'Booking cancelled',
+        description: `${booking.facilityName} is free for others again.`,
+      });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="type-title text-content">Facilities</h1>
@@ -175,6 +215,11 @@ export default function FacilitiesPage() {
                   onClick={() => {
                     setSelectedFacility(facility);
                     setDate(today());
+                    try {
+                      window.localStorage.setItem(LAST_FACILITY_KEY, String(facility.id));
+                    } catch {
+                      // Remembering is a convenience, never a requirement.
+                    }
                     void loadSlots(facility.id, today());
                   }}
                   onMouseEnter={() => view(facility, date)}
@@ -201,7 +246,7 @@ export default function FacilitiesPage() {
               <CardBody className="space-y-5">
                 <label className="block">
                   <span className="type-label text-content">Day</span>
-                  <input
+                  <Input
                     type="date"
                     value={date}
                     min={today()}
@@ -210,7 +255,7 @@ export default function FacilitiesPage() {
                       setDate(next);
                       void loadSlots(activeFacility.id, next);
                     }}
-                    className="type-body mt-1 block w-full max-w-56 rounded-lg border border-border bg-surface px-3 py-2 text-content"
+                    className="mt-1 max-w-56"
                   />
                 </label>
 
@@ -287,6 +332,7 @@ export default function FacilitiesPage() {
                   </p>
                   <Button
                     pending={pending}
+                    pendingLabel="Requesting the booking"
                     disabled={chosen === null}
                     onClick={() => void submitBooking()}
                   >
@@ -338,22 +384,9 @@ export default function FacilitiesPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        void (async () => {
-                          const result = await call<BookingLine>(
-                            `/api/facilities/bookings/${booking.id}/cancel`,
-                            { method: 'POST', json: { bookingId: booking.id } },
-                          );
-                          if (result.ok) {
-                            bookings.reload();
-                            if (activeFacility !== null) void loadSlots(activeFacility.id, date);
-                            toast.show({
-                              title: 'Booking cancelled',
-                              description: `${booking.facilityName} is free for others again.`,
-                            });
-                          }
-                        })();
-                      }}
+                      pending={cancellingId === booking.id}
+                      pendingLabel="Cancelling"
+                      onClick={() => void cancelBooking(booking)}
                     >
                       Cancel
                     </Button>

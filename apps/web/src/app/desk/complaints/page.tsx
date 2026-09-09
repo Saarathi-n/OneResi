@@ -273,7 +273,7 @@ export default function SocietyComplaintsPage() {
             <Button variant="ghost" onClick={() => setOpenFor(null)}>
               Cancel
             </Button>
-            <Button pending={pending} onClick={() => void submitUpdate()}>
+            <Button pending={pending} pendingLabel="Saving" onClick={() => void submitUpdate()}>
               Save update
             </Button>
           </div>

@@ -333,6 +333,7 @@ function WaitingCard({
               <Button
                 size="sm"
                 pending={busyLogId === visitor.logId}
+                pendingLabel="Recording your answer"
                 onClick={() => void decide(visitor.logId, 'ADMIT')}
               >
                 Admit
@@ -341,6 +342,7 @@ function WaitingCard({
                 size="sm"
                 variant="danger"
                 pending={busyLogId === visitor.logId}
+                pendingLabel="Recording your answer"
                 onClick={() => void decide(visitor.logId, 'REJECT')}
               >
                 Turn away

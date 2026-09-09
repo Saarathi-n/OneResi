@@ -148,7 +148,7 @@ export default function QueuePage() {
                       </div>
                       <p className="type-body text-content-muted">
                         Not on the unit list — the applicant typed these words themselves. Shown
-                        exactly as given (D-04) and resolved only at approval.
+                        exactly as given and resolved only at approval.
                       </p>
                       <p className="type-body text-content-muted">
                         {UNIT_TYPE[application.claim.unitType].label}
@@ -223,6 +223,7 @@ export default function QueuePage() {
             <Button
               variant={decision === 'APPROVE' ? 'primary' : 'danger'}
               pending={pending}
+              pendingLabel={decision === 'APPROVE' ? 'Approving' : 'Declining'}
               onClick={() => void decide()}
             >
               {decision === 'APPROVE' ? 'Approve' : 'Decline'}

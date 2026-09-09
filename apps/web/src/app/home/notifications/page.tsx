@@ -71,7 +71,12 @@ export default function NotificationsPage() {
           </p>
         </div>
         {unread.length > 0 ? (
-          <Button size="sm" pending={pending} onClick={() => void markAllRead()}>
+          <Button
+            size="sm"
+            pending={pending}
+            pendingLabel="Marking them read"
+            onClick={() => void markAllRead()}
+          >
             Mark all read
           </Button>
         ) : null}

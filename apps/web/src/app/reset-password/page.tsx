@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Card, CardBody, Field, Input, Logo } from '@oneresi/ui';
 import { call } from '@/lib/session';
 
@@ -9,10 +9,23 @@ import { call } from '@/lib/session';
  * Requesting a reset link. The endpoint answers the same way whether or not the address has an
  * account (D-22's rule, kept), so the screen says exactly that instead of guessing.
  */
+
+/** The same key sign-in remembers — a reset almost always follows a failed sign-in. */
+const EMAIL_KEY = 'oneresi.sign-in.email';
+
 export default function ResetRequestPage() {
   const [email, setEmail] = useState('');
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    try {
+      const last = window.localStorage.getItem(EMAIL_KEY);
+      if (last !== null && last !== '') setEmail(last);
+    } catch {
+      // A blocked localStorage just means typing the address.
+    }
+  }, []);
 
   async function handleSubmit(): Promise<void> {
     setPending(true);
@@ -78,7 +91,13 @@ export default function ResetRequestPage() {
                       required
                     />
                   </Field>
-                  <Button type="submit" pending={pending} fullWidth size="lg">
+                  <Button
+                    type="submit"
+                    pending={pending}
+                    pendingLabel="Sending the link"
+                    fullWidth
+                    size="lg"
+                  >
                     Send reset link
                   </Button>
                 </form>

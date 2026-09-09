@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Button,
   Card,
@@ -85,6 +85,21 @@ export default function ComplaintsPage() {
   const [reopenReason, setReopenReason] = useState('');
   const [reopenError, setReopenError] = useState<string | null>(null);
   const [reopenPending, setReopenPending] = useState(false);
+
+  // Pre-fill: the household's live complaint is usually the same kind as the next one, so offer
+  // that category once — never overwrite a choice the person already made.
+  const categoryOffered = useRef(false);
+  useEffect(() => {
+    if (categoryOffered.current || category !== '') return;
+    if (complaints.state.state !== 'ready' || complaints.state.data.length === 0) return;
+    const open = complaints.state.data.find(
+      (complaint) => complaint.status === 'OPEN' || complaint.status === 'IN_PROGRESS',
+    );
+    if (open !== undefined) {
+      setCategory(open.category);
+      categoryOffered.current = true;
+    }
+  }, [complaints.state, category]);
 
   async function submit(): Promise<void> {
     setCategoryError(null);
@@ -204,7 +219,11 @@ export default function ComplaintsPage() {
               {formError}
             </p>
           ) : null}
-          <Button pending={pending} onClick={() => void submit()}>
+          <Button
+            pending={pending}
+            pendingLabel="Registering your complaint"
+            onClick={() => void submit()}
+          >
             Register complaint
           </Button>
         </CardBody>
@@ -323,6 +342,7 @@ export default function ComplaintsPage() {
                                 variant="danger"
                                 size="sm"
                                 pending={reopenPending}
+                                pendingLabel="Reopening"
                                 onClick={() => void submitReopen()}
                               >
                                 Reopen complaint

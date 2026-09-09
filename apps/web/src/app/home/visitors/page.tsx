@@ -94,6 +94,7 @@ export default function VisitorsPage() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [purposeError, setPurposeError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [issued, setIssued] = useState<PassLine | null>(null);
 
@@ -140,6 +141,22 @@ export default function VisitorsPage() {
     setFormError(result.error.message);
     if (result.error.field === 'visitorName') setNameError(result.error.message);
     if (result.error.field === 'purpose') setPurposeError(result.error.message);
+  }
+
+  async function cancelPass(pass: PassLine): Promise<void> {
+    setCancellingId(pass.id);
+    const result = await call<PassLine>(`/api/visitors/passes/${pass.id}/cancel`, {
+      method: 'POST',
+      json: { passId: pass.id },
+    });
+    setCancellingId(null);
+    if (result.ok) {
+      passes.reload();
+      toast.show({
+        title: 'Pass cancelled',
+        description: `${pass.visitorName} will be turned away at the gate.`,
+      });
+    }
   }
 
   return (
@@ -242,7 +259,11 @@ export default function VisitorsPage() {
               </p>
             ) : null}
 
-            <Button pending={pending} onClick={() => void submitPass()}>
+            <Button
+              pending={pending}
+              pendingLabel="Issuing the pass"
+              onClick={() => void submitPass()}
+            >
               Issue pass
             </Button>
           </CardBody>
@@ -292,21 +313,9 @@ export default function VisitorsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        void (async () => {
-                          const result = await call<PassLine>(
-                            `/api/visitors/passes/${pass.id}/cancel`,
-                            { method: 'POST', json: { passId: pass.id } },
-                          );
-                          if (result.ok) {
-                            passes.reload();
-                            toast.show({
-                              title: 'Pass cancelled',
-                              description: `${pass.visitorName} will be turned away at the gate.`,
-                            });
-                          }
-                        })();
-                      }}
+                      pending={cancellingId === pass.id}
+                      pendingLabel="Cancelling"
+                      onClick={() => void cancelPass(pass)}
                     >
                       Cancel
                     </Button>
@@ -456,6 +465,7 @@ function WaitingPanel({
               <Button
                 size="sm"
                 pending={busyLogId === visitor.logId}
+                pendingLabel="Recording your answer"
                 onClick={() => void decide(visitor.logId, 'ADMIT')}
               >
                 Admit
@@ -464,6 +474,7 @@ function WaitingPanel({
                 size="sm"
                 variant="danger"
                 pending={busyLogId === visitor.logId}
+                pendingLabel="Recording your answer"
                 onClick={() => void decide(visitor.logId, 'REJECT')}
               >
                 Turn away

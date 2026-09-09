@@ -53,7 +53,11 @@ function ResetCompleteForm() {
           }}
           noValidate
         >
-          <Field label="New password" required hint="At least 10 characters, with a number and a symbol.">
+          <Field
+            label="New password"
+            required
+            hint="At least 10 characters, with upper and lower case, and a number or symbol."
+          >
             <Input
               id="password"
               type="password"
@@ -78,7 +82,13 @@ function ResetCompleteForm() {
               {error}
             </p>
           ) : null}
-          <Button type="submit" pending={pending} fullWidth size="lg">
+          <Button
+            type="submit"
+            pending={pending}
+            pendingLabel="Setting your password"
+            fullWidth
+            size="lg"
+          >
             Set new password
           </Button>
         </form>

@@ -262,6 +262,7 @@ export default function BookingsPage() {
             <Button
               variant={decision === 'CONFIRM' ? 'primary' : 'danger'}
               pending={pending}
+              pendingLabel={decision === 'CONFIRM' ? 'Confirming' : 'Rejecting'}
               onClick={() => void decide()}
             >
               {decision === 'CONFIRM' ? 'Confirm' : 'Reject'}

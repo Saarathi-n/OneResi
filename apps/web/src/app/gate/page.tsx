@@ -45,6 +45,7 @@ type GateDecision =
   | { verdict: 'REFUSE'; reason: GateRefusalReason };
 
 const LAST_UNIT_KEY = 'oneresi.gate.lastUnit';
+const LAST_PURPOSE_KEY = 'oneresi.gate.lastPurpose';
 
 const PURPOSES = ['Delivery', 'Cab', 'Staff', 'Guest', 'Service'];
 
@@ -96,8 +97,10 @@ export default function GatePage() {
       try {
         const last = window.localStorage.getItem(LAST_UNIT_KEY);
         if (last !== null && /^\d+$/.test(last)) setUnitId(last);
+        const lastPurpose = window.localStorage.getItem(LAST_PURPOSE_KEY);
+        if (lastPurpose !== null && PURPOSES.includes(lastPurpose)) setPurpose(lastPurpose);
       } catch {
-        // A blocked localStorage just means typing the unit each time.
+        // A blocked localStorage just means typing the unit and purpose each time.
       }
     })();
   }, [guarded.state]);
@@ -159,6 +162,7 @@ export default function GatePage() {
     if (result.ok) {
       try {
         window.localStorage.setItem(LAST_UNIT_KEY, unitId);
+        window.localStorage.setItem(LAST_PURPOSE_KEY, purpose === '' ? 'Guest' : purpose);
       } catch {
         // Remembering is a convenience, never a requirement.
       }
@@ -238,6 +242,7 @@ export default function GatePage() {
                       <Button
                         size="kiosk"
                         pending={entryPending}
+                        pendingLabel="Recording it"
                         onClick={() => void recordEntry('CHECK_IN')}
                       >
                         Check in
@@ -246,6 +251,7 @@ export default function GatePage() {
                         size="kiosk"
                         variant="secondary"
                         pending={entryPending}
+                        pendingLabel="Recording it"
                         onClick={() => void recordEntry('CHECK_OUT')}
                       >
                         Check out
@@ -353,6 +359,7 @@ export default function GatePage() {
                       <Button
                         size="lg"
                         pending={walkInPending}
+                        pendingLabel="Sending to the household"
                         onClick={() => void logWalkIn()}
                       >
                         Send to the household

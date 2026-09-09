@@ -212,7 +212,16 @@ export default function LedgerPage() {
               : ' · nothing outstanding'}
           </p>
         </div>
-        <Button onClick={() => setRaiseOpen(true)}>Raise a period</Button>
+        <Button
+          onClick={() => {
+            setRaiseOpen(true);
+            setPeriod(new Date().toISOString().slice(0, 7));
+            setDueDate(new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10));
+            setRaiseError(null);
+          }}
+        >
+          Raise a period
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -292,7 +301,7 @@ export default function LedgerPage() {
                       onClick={() => {
                         setOfflineFor(row);
                         setOfflineAmount((row.amountPaise / 100).toFixed(2));
-                        setReceivedOn('');
+                        setReceivedOn(new Date().toISOString().slice(0, 10));
                         setOfflineNote('');
                         setOfflineError(null);
                       }}
@@ -346,7 +355,7 @@ export default function LedgerPage() {
         open={raiseOpen}
         onClose={() => setRaiseOpen(false)}
         title="Raise invoices for a period"
-        description="One run, every home, one amount each: the monthly charge set on the unit. If the period already exists, the run is refused outright (D-17)."
+        description="One run, every home, one amount each: the monthly charge set on the unit. If the period already exists, the run is refused outright."
       >
         <div className="space-y-4">
           <Field label="Period" required hint="e.g. 2026-09 — the label residents will see.">
@@ -372,7 +381,11 @@ export default function LedgerPage() {
             <Button variant="ghost" onClick={() => setRaiseOpen(false)}>
               Cancel
             </Button>
-            <Button pending={raisePending} onClick={() => void raise()}>
+            <Button
+              pending={raisePending}
+              pendingLabel="Raising the invoices"
+              onClick={() => void raise()}
+            >
               Raise
             </Button>
           </div>
@@ -425,7 +438,11 @@ export default function LedgerPage() {
             <Button variant="ghost" onClick={() => setOfflineFor(null)}>
               Cancel
             </Button>
-            <Button pending={offlinePending} onClick={() => void recordOffline()}>
+            <Button
+              pending={offlinePending}
+              pendingLabel="Recording the payment"
+              onClick={() => void recordOffline()}
+            >
               Record
             </Button>
           </div>
@@ -460,7 +477,12 @@ export default function LedgerPage() {
             <Button variant="ghost" onClick={() => setCancelFor(null)}>
               Keep it
             </Button>
-            <Button variant="danger" pending={cancelPending} onClick={() => void cancelInvoice()}>
+            <Button
+              variant="danger"
+              pending={cancelPending}
+              pendingLabel="Voiding the invoice"
+              onClick={() => void cancelInvoice()}
+            >
               Void
             </Button>
           </div>

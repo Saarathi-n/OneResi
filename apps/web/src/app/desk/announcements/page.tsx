@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Badge,
   Button,
@@ -42,6 +42,9 @@ const CATEGORIES = Object.keys(ANNOUNCEMENT_CATEGORY).map((value) => ({
   label: ANNOUNCEMENT_CATEGORY[value as AnnouncementCategory].label,
 }));
 
+/** The category published last time — notices usually travel in the same channel. */
+const CATEGORY_KEY = 'oneresi.notice.category';
+
 export default function AnnouncementsPage() {
   const notices = useFetch<readonly NoticeLine[]>('/api/notices');
   const toast = useToast();
@@ -56,6 +59,19 @@ export default function AnnouncementsPage() {
   const [pending, setPending] = useState(false);
 
   const [withdrawFor, setWithdrawFor] = useState<NoticeLine | null>(null);
+  const [withdrawPending, setWithdrawPending] = useState(false);
+
+  // Open on the category used for the last notice — offered, never forced.
+  useEffect(() => {
+    try {
+      const last = window.localStorage.getItem(CATEGORY_KEY);
+      if (last !== null && CATEGORIES.some((option) => option.value === last)) {
+        setCategory(last);
+      }
+    } catch {
+      // A blocked localStorage just means starting on General.
+    }
+  }, []);
 
   async function publish(): Promise<void> {
     if (title.trim().length < 4) {
@@ -86,6 +102,11 @@ export default function AnnouncementsPage() {
       setBody('');
       setPinned(false);
       setExpiresOn('');
+      try {
+        window.localStorage.setItem(CATEGORY_KEY, category);
+      } catch {
+        // Remembering is a convenience, never a requirement.
+      }
       notices.reload();
       toast.show({
         title: 'Published',
@@ -100,7 +121,9 @@ export default function AnnouncementsPage() {
 
   async function withdraw(): Promise<void> {
     if (withdrawFor === null) return;
+    setWithdrawPending(true);
     const result = await call<null>(`/api/notices/${withdrawFor.id}`, { method: 'DELETE' });
+    setWithdrawPending(false);
     if (result.ok) {
       setWithdrawFor(null);
       notices.reload();
@@ -177,7 +200,11 @@ export default function AnnouncementsPage() {
             </p>
           ) : null}
           <div>
-            <Button pending={pending} onClick={() => void publish()}>
+            <Button
+              pending={pending}
+              pendingLabel="Publishing"
+              onClick={() => void publish()}
+            >
               Publish
             </Button>
           </div>
@@ -261,7 +288,12 @@ export default function AnnouncementsPage() {
             <Button variant="ghost" onClick={() => setWithdrawFor(null)}>
               Keep it
             </Button>
-            <Button variant="danger" onClick={() => void withdraw()}>
+            <Button
+              variant="danger"
+              pending={withdrawPending}
+              pendingLabel="Withdrawing"
+              onClick={() => void withdraw()}
+            >
               Withdraw
             </Button>
           </div>
