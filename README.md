@@ -76,8 +76,8 @@ pnpm --filter @oneresi/web dev    # http://localhost:3000
 pnpm --filter @oneresi/app dev    # http://localhost:3001/a
 ```
 
-Sign in with the accounts the bootstrap output printed (the password is generated at seed time;
-`SEED_PASSWORD` sets a different one):
+Sign in with the accounts the bootstrap output printed (the seed's password is a fixed default
+for local data, and `SEED_PASSWORD` sets a different one):
 
 | Account | Role | What it reaches |
 |---|---|---|
@@ -85,7 +85,8 @@ Sign in with the accounts the bootstrap output printed (the password is generate
 | `gate@oneresi.in` | Gate staff | The kiosk: verify a pass, record an entry, log a walk-in |
 | `saarathi@oneresi.in` | Resident | The app: dues, receipts, complaints, bookings, visitors |
 
-One more resident (`vikram@oneresi.in`) sits in the registration queue with status PENDING, so the
+Two more residents sit in the registration queue with status PENDING — `vikram@oneresi.in`, with
+a live claim to a flat that is not on the register yet, and `kabir.chowdhury@gmail.com` — so the
 committee's approve/decline flow has something to work on. Everyone after the first account who
 registers queues the same way.
 

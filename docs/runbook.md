@@ -202,7 +202,7 @@ are what you set when you step outside that.
 
 | Variable | What it is |
 |---|---|
-| `SEED_PASSWORD` | The password the seed assigns the accounts. Default is a generated value, printed by the seed; set this to choose your own. |
+| `SEED_PASSWORD` | The password the seed assigns every account. Default is the seed's fixed local value, printed when it finishes; set this to choose your own. Because a reseed never rewrites `passwordHash`, a later run prints the default regardless of what the stored accounts actually use — reset to change passwords. |
 | `TERRAFORM_PATH` | Overrides where `scripts/cloud.mjs` finds the terraform binary, for machines where PATH resolves to a stale version. |
 | `NODE_ENV` | Set to `production` in deploy. Triggers the strict boot checks described above. |
 
@@ -235,16 +235,24 @@ abandoned is a database row, which is what the mail test suite asserts against.
 `pnpm db:seed` is convergent: every write is an upsert on a natural key with an empty update branch,
 so running it twice changes nothing — not row counts and not the content digest (`pnpm db:checksum`
 is the gate for that, and it is how the seed proves it does not rewrite `passwordHash` or bump
-`updatedAt` on every run). It creates:
+`updatedAt` on every run). The seed is also deterministic: the clock is frozen once at module load
+and every row is hand-authored, so the same run date produces the same database. It creates
+Nandanam Grove Residency:
 
-- Three blocks (Emerald, Sapphire, Gulmohar Phase 1) and seven units across them, each with a
-  monthly charge.
-- Five accounts sharing one password (set via `SEED_PASSWORD`, otherwise generated and printed):
-  committee, gate, two residents with status ACTIVE, and one resident with status PENDING so the
-  registration queue has an application to decide.
-- Three bookable facilities (clubhouse, badminton, tennis) with hourly rates.
-- One invoice per unit for the previous period (PAID, with a payment and a receipt number) and one
-  for the current period (UNPAID).
+- Three blocks (Gulmohar Court, Jamun Court, Palm Villas) and forty-six units — flats, villas and
+  two shops — each with a monthly charge.
+- Thirty-nine accounts sharing one password (set via `SEED_PASSWORD`, otherwise the seed's fixed
+  local default): a committee member, the gate desk, thirty-four ACTIVE residents, two PENDING
+  (one with a live claim to a flat that is not on the register yet) and one REJECTED, so the
+  registration queue has every kind of decision to make.
+- Five bookable facilities (clubhouse, badminton, tennis, gym, pool) with descriptions and rates.
+- Three billing periods of invoices: two periods ago fully paid, last period mostly paid with two
+  OVERDUE, and the current month mixed PAID, UNPAID, one CANCELLED — every payment in full with a
+  numbered receipt, and the receipt sequence advanced past the seeded numbers so live payments
+  never collide.
+- Nine complaints with their update trails (including one reopened), eight facility bookings in
+  every status, six notices (two pinned), seven visitor passes in every status, a seven-entry gate
+  log — including one walk-in PENDING right now — and six notifications.
 
 The seed prints the three sign-in accounts and the password when it finishes. It runs against
 whichever target `DB_TARGET` names, which is how the cloud deploy seeds RDS.
