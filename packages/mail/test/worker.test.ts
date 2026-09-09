@@ -11,9 +11,11 @@ import {
   setMailTestDatabase,
 } from '../src/testing.js';
 import {
+  ABANDON_AFTER_ATTEMPTS,
   backoffMs,
   drainOutbox,
   MAX_ATTEMPTS,
+  requeueFailed,
   type DrainReport,
 } from '../src/worker.js';
 import { testDatabase } from '../../../test/helpers/database.js';
@@ -344,5 +346,124 @@ describe('rows that are not this worker\'s', () => {
     const report = await drain(aSesProvider(recordingSesClient()));
     expect(report.considered).toBe(0);
     expect(await db.outboxEvent.count({ where: { channel: 'PUSH', status: 'PENDING' } })).toBe(1);
+  });
+});
+
+describe('requeueFailed', () => {
+  /**
+   * A row in exactly the state the resend button finds: FAILED at the attempt limit, with a reason a
+   * person has already read. Seeded directly because drain itself reaching FAILED is covered above —
+   * this suite is about what happens to the row afterwards.
+   */
+  async function aFailedRow(overrides: RowOverrides = {}): Promise<number> {
+    const id = await aPendingRow({
+      status: 'FAILED',
+      attempts: MAX_ATTEMPTS,
+      ...overrides,
+    });
+    await db.outboxEvent.update({
+      where: { id },
+      // The timestamp on the failure: availableAt is meaningless for a FAILED row until a requeue
+      // gives it a new one, but the column is not null, so it carries the moment of the last attempt.
+      data: { lastError: 'Throttling: Maximum sending rate exceeded' },
+    });
+    return id;
+  }
+
+  it('puts a FAILED row back in the queue, immediately due, attempts preserved', async () => {
+    const id = await aFailedRow();
+
+    const count = await requeueFailed({ db, now: clock });
+    expect(count).toBe(1);
+
+    const outbox = await db.outboxEvent.findUniqueOrThrow({ where: { id } });
+    expect(outbox.status).toBe('PENDING');
+    expect(outbox.availableAt).toEqual(clock());
+    // The attempt count travelled with the row — a requeue is one more chance, not a fresh start.
+    expect(outbox.attempts).toBe(MAX_ATTEMPTS);
+
+    // And the very next drain takes it, without any backoff having to pass.
+    const report = await drain(aSesProvider(recordingSesClient()));
+    expect(report).toMatchObject({ considered: 1, claimed: 1, sent: 1 });
+    const sent = await db.outboxEvent.findUniqueOrThrow({ where: { id } });
+    expect(sent.status).toBe('SENT');
+    expect(sent.attempts).toBe(MAX_ATTEMPTS + 1);
+    await expectMail().to(TO).toHaveBeenSentOnce();
+  });
+
+  it('does not touch ABANDONED rows — a wrong message stays wrong', async () => {
+    const id = await aPendingRow({
+      status: 'ABANDONED',
+      attempts: 1,
+    });
+
+    const count = await requeueFailed({ db, now: clock });
+    expect(count).toBe(0);
+
+    const outbox = await db.outboxEvent.findUniqueOrThrow({ where: { id } });
+    expect(outbox.status).toBe('ABANDONED');
+    // And nothing is due for a drain that follows.
+    expect((await drain(aSesProvider(recordingSesClient()))).considered).toBe(0);
+  });
+
+  it('requeues only the named ids', async () => {
+    const kept = await aFailedRow();
+    const alsoFailed = await aFailedRow({ payload: anInvoiceJob('someone-else@oneresi.local') });
+
+    const count = await requeueFailed({ db, ids: [kept], now: clock });
+    expect(count).toBe(1);
+
+    expect((await db.outboxEvent.findUniqueOrThrow({ where: { id: kept } })).status).toBe('PENDING');
+    expect((await db.outboxEvent.findUniqueOrThrow({ where: { id: alsoFailed } })).status).toBe(
+      'FAILED',
+    );
+  });
+
+  it('never requeues another channel, even a FAILED one', async () => {
+    await db.outboxEvent.create({
+      data: {
+        type: 'visitor.arrived',
+        channel: 'PUSH',
+        payload: anInvoiceJob(),
+        status: 'FAILED',
+        attempts: MAX_ATTEMPTS,
+        availableAt: clock(),
+        correlationId: 'corr-test',
+      },
+    });
+
+    expect(await requeueFailed({ db, now: clock })).toBe(0);
+    expect(await db.outboxEvent.count({ where: { channel: 'PUSH', status: 'FAILED' } })).toBe(1);
+  });
+
+  it('buys one attempt at a time, up to ABANDON_AFTER_ATTEMPTS', async () => {
+    const id = await aFailedRow();
+    const provider = failingProvider({ message: 'The provider is still unavailable' });
+
+    // Each requeue is one more drain the row may fail. It stays FAILED — reviewable, requeueable —
+    // until a claim spends the attempt numbered ABANDON_AFTER_ATTEMPTS, and then it is ABANDONED:
+    // nothing will ever send it again, because clearly nobody looked at why it keeps failing.
+    let requeues = 0;
+    for (let expectedAttempts = MAX_ATTEMPTS + 1; expectedAttempts <= ABANDON_AFTER_ATTEMPTS; expectedAttempts += 1) {
+      expect(await requeueFailed({ db, now: clock })).toBe(1);
+      requeues += 1;
+
+      const report = await drain(provider);
+      const outbox = await db.outboxEvent.findUniqueOrThrow({ where: { id } });
+      expect(outbox.attempts).toBe(expectedAttempts);
+      if (expectedAttempts < ABANDON_AFTER_ATTEMPTS) {
+        expect(report.failed).toBe(1);
+        expect(outbox.status).toBe('FAILED');
+      } else {
+        expect(report.abandoned).toBe(1);
+        expect(outbox.status).toBe('ABANDONED');
+      }
+    }
+
+    // MAX_ATTEMPTS requeues would be an unbounded resend button; this is not that.
+    expect(requeues).toBe(ABANDON_AFTER_ATTEMPTS - MAX_ATTEMPTS);
+
+    // And once ABANDONED, the button stops working.
+    expect(await requeueFailed({ db, now: clock })).toBe(0);
   });
 });
