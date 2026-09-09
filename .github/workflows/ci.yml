@@ -1,0 +1,157 @@
+name: ci
+
+# Every gate that can run without AWS credentials, on every push to main and every pull request.
+# Terraform and AWS are deliberately absent: validating or deploying the stack needs credentials
+# this workflow neither has nor should have — that belongs to the infrastructure stream and its
+# IAM role, not to a code review gate.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The setup every job starts with: pnpm from the packageManager field in package.json (one place
+# to bump the version), Node 24, the pnpm store cache, the frozen lockfile, and the bootstrap that
+# generates the two Prisma clients — they are build output, not committed, and packages/db/src
+# imports both of them, so nothing typechecks or runs until they exist.
+# YAML anchors cannot be shared across jobs, so the four steps are repeated verbatim below.
+
+jobs:
+  quality:
+    name: typecheck · lint · gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Bootstrap
+        run: pnpm bootstrap
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      # A gate that scans nothing and exits 0 is D-75 again. These fixtures prove both gates still
+      # bite, whatever state the application source is in.
+      - name: Gate self-tests
+        run: |
+          node scripts/check-copy.mjs --self-test
+          node scripts/check-enums.mjs --self-test
+
+      - name: Copy gate
+        run: pnpm check:copy
+
+      - name: Enumeration gate
+        run: pnpm check:enums
+
+  unit-domain:
+    name: unit tests · domain
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Bootstrap
+        run: pnpm bootstrap
+
+      # The domain suite is pure logic — services against in-memory stores, no database of its
+      # own — so it gets a fast signal here without waiting on a PostgreSQL container.
+      #
+      # It is a separate JOB, not another step of the parity job, on purpose: the global setup
+      # builds one shared SQLite template at .data/test/template.db before any test file runs, and
+      # every file takes a copy of that one file. Two vitest suites running on the same runner
+      # would rebuild the template out from under each other; separate jobs means separate
+      # runners, each with its own filesystem. Never run two suites in one job.
+      - name: Domain suite
+        run: pnpm test packages/domain
+
+  db-parity:
+    name: db store · parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # The parity suite is the point of this job: the same integration tests run against SQLite and
+    # against PostgreSQL, because in the previous build the engine that had been exercised was not
+    # the engine that would be deployed (D-15, D-16, D-25, D-27).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: oneresi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      CI: 'true'
+      # A throwaway database. Each test file takes its own schema and drops it afterwards.
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/oneresi_test?sslmode=disable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Bootstrap
+        run: pnpm bootstrap
+
+      # `pnpm test:parity` runs the integration suite twice with the same bodies — first against
+      # SQLite (that pass is the db-package store suite), then against the PostgreSQL container
+      # behind TEST_DATABASE_URL — and compares the results engine by engine. One command covers
+      # both engines; see scripts/run-parity.mjs, which also writes the reports uploaded below.
+      - name: Parity suite
+        run: pnpm test:parity
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results/
+            .data/parity/
+          if-no-files-found: ignore
+          retention-days: 7

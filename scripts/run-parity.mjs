@@ -16,7 +16,7 @@
  *
  * The PostgreSQL half needs a throwaway PostgreSQL instance. Without `TEST_DATABASE_URL` it is
  * skipped with a notice and the run still succeeds — a developer without Docker must be able to
- * work, and CI always supplies one (.github/workflows/verify.yml).
+ * work, and CI always supplies one (.github/workflows/ci.yml).
  */
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
@@ -192,7 +192,7 @@ function main() {
     );
     out();
     out('  Not a failure: CI runs both halves on every pull request, so the engines are compared');
-    out('  before anything merges. See .github/workflows/verify.yml.');
+    out('  before anything merges. See .github/workflows/ci.yml.');
     out();
   }
 
