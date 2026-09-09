@@ -24,6 +24,12 @@
     "forceConsistentCasingInFileNames": true,
     "jsx": "preserve",
     "allowJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/server/*": ["src/server/*"],
+      "@/components/*": ["src/components/*"],
+      "@/lib/*": ["src/lib/*"]
+    },
     "plugins": [{ "name": "next" }]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

@@ -33,6 +33,9 @@ const WORKSPACE_FILES = ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx', '**/*.mjs
 const UNPROJECTED = [
   'packages/*/test/**/*.ts',
   '*.config.ts',
+  // Next config files lean on `require` inside the webpack hook and on Next's bundled webpack
+  // types; the type-aware rules were written for package sources, not bundler glue.
+  'apps/*/next.config.ts',
   '**/*.js',
   '**/*.jsx',
   '**/*.mjs',
@@ -212,5 +215,11 @@ export default tseslint.config(
   {
     files: UNPROJECTED,
     ...tseslint.configs.disableTypeChecked,
+    rules: {
+      ...tseslint.configs.disableTypeChecked.rules,
+      // Config and script files run under bundlers/Node where `require` is the only way to reach
+      // an unbundled peer (Next's own webpack copy, in next.config.ts).
+      '@typescript-eslint/no-require-imports': 'off',
+    },
   },
 );

@@ -1,2 +1,9 @@
 @import 'tailwindcss';
 @import '@oneresi/ui/tokens.css';
+
+/*
+ * The ui package's components render from packages/ui/src, which sits outside this project
+ * root — Tailwind's automatic detection never scans it, so the utilities those components
+ * use would not be generated without this line (documented in packages/ui/src/tokens.css).
+ */
+@source '../../../../packages/ui/src';
