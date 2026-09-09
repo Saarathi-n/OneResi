@@ -33,7 +33,11 @@ export default function DeskQueuePage(): ReactNode {
     });
   }, [queue]);
 
-  async function decide(application: ApplicationWire, decision: 'APPROVE' | 'DECLINE', reason?: string): Promise<void> {
+  async function decide(
+    application: ApplicationWire,
+    decision: 'APPROVE' | 'DECLINE',
+    reason?: string,
+  ): Promise<boolean> {
     const result = await simple<null>('/api/applications/decision', {
       method: 'POST',
       json: {
@@ -54,9 +58,10 @@ export default function DeskQueuePage(): ReactNode {
             : 'They were told why, in the words you wrote.',
       });
       queue.reload();
-      return;
+      return true;
     }
     toast.show({ title: 'That did not go through', description: result.error.message, tone: 'critical' });
+    return false;
   }
 
   return (
@@ -144,10 +149,10 @@ export default function DeskQueuePage(): ReactNode {
           onClose={() => {
             setDeclining(null);
           }}
-          onDeclined={(reason) => {
-            const application = declining;
-            setDeclining(null);
-            void decide(application, 'DECLINE', reason);
+          onDeclined={async (reason) => {
+            const done = await decide(declining, 'DECLINE', reason);
+            if (done) setDeclining(null);
+            return done;
           }}
         />
       ) : null}
@@ -162,13 +167,13 @@ function DeclineSheet({
 }: {
   readonly application: ApplicationWire;
   readonly onClose: () => void;
-  readonly onDeclined: (reason: string) => void;
+  readonly onDeclined: (reason: string) => Promise<boolean>;
 }): ReactNode {
   const [reason, setReason] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function submit(): void {
+  async function submit(): Promise<void> {
     if (pending) return;
     if (reason.trim().length < 4) {
       setError('Say why in a line — the applicant sees exactly this.');
@@ -176,7 +181,10 @@ function DeclineSheet({
     }
     setError(null);
     setPending(true);
-    onDeclined(reason.trim());
+    // The parent closes the sheet on success; on failure it has already said why, and the
+    // reason stays on screen to be edited and sent again.
+    const done = await onDeclined(reason.trim());
+    if (!done) setPending(false);
   }
 
   return (
@@ -187,7 +195,16 @@ function DeclineSheet({
       description="They have applied and are waiting. The reason you write is shown to them."
       pending={pending}
       footer={
-        <Button size="lg" variant="danger" fullWidth pending={pending} pendingLabel="Declining" onClick={submit}>
+        <Button
+          size="lg"
+          variant="danger"
+          fullWidth
+          pending={pending}
+          pendingLabel="Declining"
+          onClick={() => {
+            void submit();
+          }}
+        >
           Decline the application
         </Button>
       }

@@ -87,8 +87,8 @@ export default function DeskComplaintsPage(): ReactNode {
           onRetry={complaints.reload}
           render={(list) => (
             <div className="mt-3 flex flex-col gap-3">
-              {list.map((complaint) => (
-                <div key={complaint.id} className="row-in" style={rowStyle(0, reduced)}>
+              {list.map((complaint, index) => (
+                <div key={complaint.id} className="row-in" style={rowStyle(index, reduced)}>
                   <Card tone={C.COMPLAINT_STATUS[complaint.status].tone}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">

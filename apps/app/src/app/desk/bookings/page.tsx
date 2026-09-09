@@ -36,7 +36,11 @@ export default function DeskBookingsPage(): ReactNode {
     });
   }, [bookings]);
 
-  async function decide(booking: SocietyBookingWire, decision: 'CONFIRM' | 'REJECT', reason?: string): Promise<void> {
+  async function decide(
+    booking: SocietyBookingWire,
+    decision: 'CONFIRM' | 'REJECT',
+    reason?: string,
+  ): Promise<boolean> {
     const result = await simple<null>(`/api/facilities/bookings/${booking.id}/decision`, {
       method: 'POST',
       json: {
@@ -57,9 +61,10 @@ export default function DeskBookingsPage(): ReactNode {
             : 'They have been told why, in the words you wrote.',
       });
       bookings.reload();
-      return;
+      return true;
     }
     toast.show({ title: 'That did not go through', description: result.error.message, tone: 'critical' });
+    return false;
   }
 
   return (
@@ -161,10 +166,10 @@ export default function DeskBookingsPage(): ReactNode {
           onClose={() => {
             setRejecting(null);
           }}
-          onRejected={(reason) => {
-            const booking = rejecting;
-            setRejecting(null);
-            void decide(booking, 'REJECT', reason);
+          onRejected={async (reason) => {
+            const done = await decide(rejecting, 'REJECT', reason);
+            if (done) setRejecting(null);
+            return done;
           }}
         />
       ) : null}
@@ -179,13 +184,13 @@ function RejectSheet({
 }: {
   readonly booking: SocietyBookingWire;
   readonly onClose: () => void;
-  readonly onRejected: (reason: string) => void;
+  readonly onRejected: (reason: string) => Promise<boolean>;
 }): ReactNode {
   const [reason, setReason] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function submit(): void {
+  async function submit(): Promise<void> {
     if (pending) return;
     if (reason.trim().length < 4) {
       setError('Say why — the resident sees exactly this.');
@@ -193,7 +198,10 @@ function RejectSheet({
     }
     setError(null);
     setPending(true);
-    onRejected(reason.trim());
+    // The parent closes the sheet on success; on failure it has already said why, and the
+    // reason stays on screen so it can be edited and sent again.
+    const done = await onRejected(reason.trim());
+    if (!done) setPending(false);
   }
 
   return (
@@ -204,7 +212,7 @@ function RejectSheet({
       description="A booking is a shared space; a refusal with a reason keeps it civil."
       pending={pending}
       footer={
-        <Button size="lg" variant="danger" fullWidth pending={pending} pendingLabel="Declining" onClick={submit}>
+        <Button size="lg" variant="danger" fullWidth pending={pending} pendingLabel="Declining" onClick={() => { void submit(); }}>
           Decline the booking
         </Button>
       }
