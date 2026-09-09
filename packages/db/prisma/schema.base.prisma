@@ -108,6 +108,7 @@ model ResidentUser {
   announcements     Announcement[]    @relation("AnnouncementAuthor")
   refreshTokens     RefreshToken[]
   notifications     Notification[]
+  pushSubscriptions PushSubscription[]
   registrationClaims RegistrationClaim[]
   claimsDecided     RegistrationClaim[] @relation("ClaimDecider")
 
@@ -491,6 +492,35 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
   @@map("notification")
+}
+
+/// One browser's Web Push subscription. The endpoint URL is the natural key — it is the push
+/// service's own identifier for the device — so a re-subscription (the browser rotating its
+/// keys, or a device changing accounts) updates the row rather than adding a second one for the
+/// same device, and the row follows the account that last claimed it.
+///
+/// A subscription is retired, never deleted: `unsubscribedAt` is stamped when the person asks or
+/// the push service answers 404/410, which keeps delivery history honest and makes resubscribing
+/// an upsert that clears the stamp.
+model PushSubscription {
+  id     Int    @id @default(autoincrement())
+  userId Int
+  /// The push service's URL for this device. Unique: the one row a worker sends to.
+  endpoint String @unique
+  /// The client's public key, base64url, exactly as the browser produced it.
+  p256dh   String
+  /// The subscription's auth secret, base64url.
+  auth     String
+
+  subscribedAt   DateTime
+  unsubscribedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user ResidentUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, unsubscribedAt])
+  @@map("push_subscription")
 }
 
 /// Rotated on use, stored hashed, revocable. Sign-out in the previous build only cleared the

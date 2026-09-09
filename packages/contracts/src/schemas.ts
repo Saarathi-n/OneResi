@@ -87,6 +87,38 @@ export const UnitLabel = z
   .max(20)
   .transform((v) => v.toUpperCase());
 
+/**
+ * The push service's own URL for one browser's subscription. HTTPS only: the POST this address
+ * names carries the message's encryption, and a plain-http endpoint is a downgrade the
+ * subscription protocol does not permit.
+ */
+export const PushEndpoint = z
+  .string()
+  .trim()
+  .max(2048, 'That push endpoint is too long')
+  .url('That is not a valid push endpoint')
+  .refine((v) => v.startsWith('https://'), 'Push endpoints must be HTTPS');
+
+/**
+ * The client's public key, exactly as the browser produced it: 65 bytes on every current browser,
+ * so 87 characters of base64url. The browser generates these strings; a person never types them,
+ * so the rules are structural.
+ */
+export const PushP256dh = z
+  .string()
+  .trim()
+  .min(43, 'That public key is too short')
+  .max(200, 'That public key is too long')
+  .regex(/^[A-Za-z0-9_-]+={0,2}$/, 'The public key is not base64url');
+
+/** The subscription's auth secret: 16 bytes, so 22 characters of base64url. */
+export const PushAuth = z
+  .string()
+  .trim()
+  .min(16, 'That auth key is too short')
+  .max(64, 'That auth key is too long')
+  .regex(/^[A-Za-z0-9_-]+={0,2}$/, 'The auth key is not base64url');
+
 const Id = z.number().int().positive();
 
 /** A window where the end must be after the start. Used by bookings; enforced, not displayed (D-72). */
@@ -255,6 +287,24 @@ export const PublishAnnouncementInput = z.object({
   attachmentKey: z.string().min(1).max(200).optional(),
 });
 
+// ---------------------------------------------------------------- push subscriptions
+
+/**
+ * What a browser's `pushManager.subscribe()` hands over, verbatim in shape. The endpoint is the
+ * natural key: a re-subscription (the browser rotated its keys) refreshes the one row it names
+ * rather than adding a second one for the same device.
+ */
+export const PushSubscribeInput = z.object({
+  endpoint: PushEndpoint,
+  keys: z.object({
+    p256dh: PushP256dh,
+    auth: PushAuth,
+  }),
+});
+
+/** The one subscription being retired, named by the only stable handle there is: its endpoint. */
+export const PushUnsubscribeInput = z.object({ endpoint: PushEndpoint });
+
 // ---------------------------------------------------------------- admin: property
 
 export const CreateBlockInput = z.object({
@@ -316,6 +366,9 @@ export type DecideBookingInput = z.infer<typeof DecideBookingInput>;
 export type CancelBookingInput = z.infer<typeof CancelBookingInput>;
 
 export type PublishAnnouncementInput = z.infer<typeof PublishAnnouncementInput>;
+
+export type PushSubscribeInput = z.infer<typeof PushSubscribeInput>;
+export type PushUnsubscribeInput = z.infer<typeof PushUnsubscribeInput>;
 
 export type CreateBlockInput = z.infer<typeof CreateBlockInput>;
 export type CreateUnitInput = z.infer<typeof CreateUnitInput>;

@@ -6,6 +6,7 @@ import type {
   Invoice,
   Notification,
   Payment,
+  PushSubscription,
   ResidentUser,
   VisitorLog,
 } from '../../prisma/generated/postgresql/index.js';
@@ -23,6 +24,7 @@ import type {
   StoredInvoice,
   StoredNotification,
   StoredPayment,
+  StoredPushSubscription,
   StoredVisitorLog,
   StoredVisitorPass,
 } from '@oneresi/domain';
@@ -326,6 +328,17 @@ export function toNotification(row: Notification): StoredNotification {
     href: row.href,
     readAt: row.readAt,
     createdAt: row.createdAt,
+  };
+}
+
+export function toPushSubscription(row: PushSubscription): StoredPushSubscription {
+  return {
+    endpoint: row.endpoint,
+    userId: row.userId,
+    p256dh: row.p256dh,
+    auth: row.auth,
+    subscribedAt: row.subscribedAt,
+    unsubscribedAt: row.unsubscribedAt,
   };
 }
 

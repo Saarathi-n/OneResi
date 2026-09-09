@@ -406,6 +406,29 @@ export interface NewNotification {
   readonly createdAt: Date;
 }
 
+/**
+ * A browser's Web Push subscription as the notification seam reads it. `endpoint` is the push
+ * service's own URL for the device and the table's natural key; the two keys are exactly the
+ * strings the browser produced, base64url, needed verbatim to encrypt a message to it.
+ */
+export interface StoredPushSubscription {
+  readonly endpoint: string;
+  readonly userId: number;
+  readonly p256dh: string;
+  readonly auth: string;
+  readonly subscribedAt: Date;
+  readonly unsubscribedAt: Date | null;
+}
+
+/** A subscription to store or refresh. Times are passed in by the service, from its clock. */
+export interface NewPushSubscription {
+  readonly userId: number;
+  readonly endpoint: string;
+  readonly p256dh: string;
+  readonly auth: string;
+  readonly subscribedAt: Date;
+}
+
 // ---------------------------------------------------------------- ports
 
 export interface AccountStore {
@@ -950,6 +973,25 @@ export interface NotificationsStore {
 
   /** The worker's fan-in: one notification row per person per in-app outbox event (D-29). */
   createNotifications(rows: readonly NewNotification[]): Promise<void>;
+
+  /**
+   * Upserts by the endpoint URL — the push service's own identifier for one browser. A
+   * re-subscription (the browser rotated its keys, or a device changed accounts) re-claims the
+   * row for the caller: `userId` and the keys are updated too, and an unsubscribed stamp is
+   * cleared, because the subscription must follow the account that last asked for it.
+   */
+  upsertSubscription(input: NewPushSubscription): Promise<StoredPushSubscription>;
+
+  /** The person's active subscriptions — every device they subscribed on, oldest first. */
+  activeSubscriptionsForUser(userId: number): Promise<readonly StoredPushSubscription[]>;
+
+  /**
+   * Marks one subscription unsubscribed, never deletes it — the stamps are the person's delivery
+   * history, and resubscribing is an upsert that clears the stamp. Scoped to the user, so another
+   * person's endpoint retires nothing; returns how many rows changed, so retiring twice is a
+   * no-op rather than an error.
+   */
+  markSubscriptionUnsubscribed(userId: number, endpoint: string, at: Date): Promise<number>;
 }
 
 export interface RateLimitVerdict {

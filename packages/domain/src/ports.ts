@@ -1,4 +1,5 @@
 import type * as C from '@oneresi/contracts';
+import type { OutboxEventInput } from './store.js';
 
 /**
  * The seam. Every use case is a function here; route handlers call one and contain no rules.
@@ -373,6 +374,29 @@ export interface PropertyService {
 export interface NotificationsService {
   unread(actor: Actor): Promise<Result<{ count: number; items: readonly NoticeItem[] }>>;
   markRead(actor: Actor, ids: readonly number[]): Promise<Result<null>>;
+
+  /**
+   * Stores or refreshes the caller's own subscription. The endpoint URL is the natural key, so a
+   * browser re-subscribing — it rotated its keys, or the same device changed accounts — updates
+   * the one row that endpoint names instead of adding a second. The subscription follows the
+   * account that last asked for it, because a browser's subscription outlives its sign-in.
+   */
+  subscribe(actor: Actor, input: C.PushSubscribeInput): Promise<Result<null>>;
+
+  /** Retires the caller's own subscription. An unknown endpoint changes nothing and is not an error. */
+  unsubscribe(actor: Actor, input: C.PushUnsubscribeInput): Promise<Result<null>>;
+
+  /**
+   * Sends one PUSH outbox event to every active subscription the person holds. This is the push
+   * worker's step after it claims a row: it resolves the payload's `email` to a userId and hands
+   * the event over, and this decides what the person reads on their lock screen. An event this
+   * surface does not word comes back addressed to nobody, not as an error — the same rule
+   * `inAppNotification` keeps.
+   */
+  dispatchPush(input: {
+    readonly userId: number;
+    readonly event: OutboxEventInput;
+  }): Promise<Result<PushDispatchReport>>;
 }
 
 export interface NoticeItem {
@@ -382,4 +406,71 @@ export interface NoticeItem {
   readonly href: string | null;
   readonly at: Date;
   readonly read: boolean;
+}
+
+// ---------------------------------------------------------------- push delivery
+//
+//  Mirrors the MailProvider seam in packages/mail: the domain names the port, a transport that
+//  knows about a real push service is wired at boot, and nothing in this package imports a push
+//  library. The real web-push transport is installed at integration.
+
+/** Which transport is wired. `console` is the dev no-op; `webpush` is the real one. */
+export type PushDriver = 'console' | 'webpush';
+
+/** One browser subscription: the three strings the browser produced, nothing more. */
+export interface PushSubscriptionTarget {
+  readonly endpoint: string;
+  readonly p256dh: string;
+  readonly auth: string;
+}
+
+/**
+ * One message to one device. `path` is a path, never a URL — the same rule mail's action block
+ * keeps and for the same reason: the origin is configuration, never the sender's guess (D-22).
+ */
+export interface PushRequest {
+  readonly subscription: PushSubscriptionTarget;
+  readonly title: string;
+  readonly body: string;
+  readonly path: string | null;
+  /** Ties the delivery back to the request that caused it, for log correlation. */
+  readonly correlationId: string;
+}
+
+export interface PushResult {
+  readonly delivered: boolean;
+  /**
+   * True when the push service answered that the subscription no longer exists (404 or 410).
+   * Not a failure: the honest response is to retire the subscription, not to retry it.
+   */
+  readonly gone: boolean;
+  /** Never shown. For the log line the transport owes the operator. */
+  readonly detail?: string;
+}
+
+/**
+ * The port a dispatch sends through. One name, one method — the SES provider and the console
+ * provider in packages/mail are the shape this mirrors, so wiring is a factory call in the
+ * composition root and nothing else.
+ */
+export interface PushTransport {
+  readonly name: PushDriver;
+  send(request: PushRequest): Promise<PushResult>;
+}
+
+/** What one dispatch actually did, so the worker can report and decide retries without catching. */
+export interface PushDispatchReport {
+  /** Active subscriptions the person held when the event was dispatched. */
+  readonly addressed: number;
+  readonly sent: number;
+  /** Transient failures — the push service was unreachable or refused. The worker's call to retry. */
+  readonly failed: number;
+  /** Subscriptions the push service declared dead, marked unsubscribed by this dispatch. */
+  readonly retired: number;
+  /**
+   * What went wrong, per failed delivery, in order — never thrown, never swallowed. Invisible
+   * failures were the previous build's mail story (D-30), and a push worker deserves the same
+   * honesty the mail worker's report has.
+   */
+  readonly problems: readonly string[];
 }
