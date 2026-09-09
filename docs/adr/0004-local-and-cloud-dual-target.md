@@ -40,10 +40,11 @@ start, so the SQLite client is never the one that gets constructed.
 production, because a target you can misidentify is a target you will misidentify.
 
 **Sync is a command, never a behaviour.** `db:diff` reports, `db:push` sends local to the cloud,
-`db:pull` brings the cloud down. Each exports the twelve tables in foreign-key order and upserts by
-natural key inside one transaction, so a row present on both sides converges instead of duplicating.
-Both directions print a row-count table, ask for confirmation, and compare a per-table checksum
-afterwards.
+`db:pull` brings the cloud down. Each moves the property registry — blocks, units and facilities — in
+foreign-key order and upserts by natural key inside one transaction, so a row present on both sides
+converges instead of duplicating; accounts, sessions, tokens, notifications and outbox rows are
+per-database state and never move in either direction. Both directions print their plan, ask for
+confirmation, and re-read both sides afterwards to verify every registry row converged.
 
 Two dialect differences would have made this painful, and both are removed by decisions that are better
 anyway. Money becomes integer paise, so there is no `Decimal`. Enumerations become string unions in

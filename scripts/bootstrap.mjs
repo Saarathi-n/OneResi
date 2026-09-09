@@ -190,9 +190,10 @@ function summary(accounts) {
 
   out(
     webApp
-      ? `  next      pnpm dev   →  ${LOCAL_URL}`
-      : `  next      ${LOCAL_URL} once apps/web is scaffolded; until then: pnpm verify`,
+      ? `  web       pnpm --filter @oneresi/web dev  →  ${LOCAL_URL}`
+      : `  web       ${LOCAL_URL} once apps/web is scaffolded; until then: pnpm verify`,
   );
+  out('  app       pnpm --filter @oneresi/app dev  →  http://localhost:3001/a');
   out();
 }
 
