@@ -17,13 +17,6 @@ const nextConfig: NextConfig = {
       '.js': ['.ts', '.tsx', '.js'],
       '.mjs': ['.mts', '.mjs'],
     };
-    // The lockfile pairs framer-motion@12.6.3 with motion-dom@12.43.0, which dropped three
-    // symbols 12.6.3 imports. The shim re-exports the real package plus those three. See
-    // src/server/motion-dom-shim.mjs; delete both halves if the packages are ever re-pinned.
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'motion-dom': require.resolve('./src/server/motion-dom-shim.mjs'),
-    };
     // `@oneresi/contracts` mixes pure presentation exports (`formatMoney`, descriptor maps) with
     // server-only crypto helpers (`packages/contracts/src/tokens.ts`, which imports `node:crypto`).
     // Any client component that so much as imports the barrel — `Money` does, for `formatMoney` —
