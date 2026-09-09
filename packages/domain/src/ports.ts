@@ -203,8 +203,18 @@ export interface WaitingVisitorView {
 }
 
 /**
+ * The same queue the gate sees, not one household: every pending walk-in in the society, naming
+ * the home each one waits on, so the kiosk can say which flat to call while the visitor stands
+ * at the barrier.
+ */
+export interface SocietyWaitingVisitorView extends WaitingVisitorView {
+  /** `Emerald · B-304` — a home named the way every desk surface names one. */
+  readonly homeLabel: string;
+}
+
+/**
  * One line of the household's visitor log, as the resident's feed reads it: who came, when, and
- * who let them in. A pass entry names the visitor from the pass; a walk-in from the words the
+ * who let them in. A pass entry names its visitor from the pass; a walk-in from the words the
  * guard typed. This is the surface residents in real societies open the app for — and where the
  * recent names the pass form pre-fills from come back out.
  */
@@ -284,6 +294,8 @@ export interface VisitorsService {
   /** Writes decidedById and decidedAt — the columns UC-05 needs and the previous build never set. */
   decideWalkIn(actor: Actor, input: C.DecideWalkInInput): Promise<Result<null>>;
   waitingForHousehold(actor: Actor): Promise<Result<readonly WaitingVisitorView[]>>;
+  /** Every pending walk-in in the society, each naming the home it waits on — the kiosk's feed. */
+  waitingForSociety(actor: Actor): Promise<Result<readonly SocietyWaitingVisitorView[]>>;
   expectedToday(actor: Actor): Promise<Result<readonly PassView[]>>;
   /** The household's visitor log, newest first: the feed on a resident's home. */
   entriesForHousehold(actor: Actor): Promise<Result<readonly EntryLogView[]>>;

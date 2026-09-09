@@ -6,8 +6,10 @@ import {
   isUniqueViolation,
   passInclude,
   sharedLookups,
+  toHome,
   toLog,
   toPass,
+  unitInclude,
   writeEvents,
 } from './shared.js';
 
@@ -196,6 +198,17 @@ export function visitorStore(db: Db): VisitorStore {
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       });
       return rows.map(toLog);
+    },
+
+    async findPendingWalkInsForSociety() {
+      // The kiosk's queue: the same pending rows without the household filter, each joined to
+      // its home so the gate can say which flat a visitor is waiting on.
+      const rows = await db.visitorLog.findMany({
+        where: { approvalStatus: 'PENDING' },
+        include: { unit: { include: unitInclude } },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      });
+      return rows.map((row) => ({ ...toLog(row), home: toHome(row.unit) }));
     },
 
     async findLogsForUnit(unitId, limit) {

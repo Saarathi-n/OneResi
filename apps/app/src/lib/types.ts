@@ -119,6 +119,11 @@ export interface WaitingVisitorWire {
   readonly phone: string | null;
   readonly purpose: string;
   readonly since: string;
+  /**
+   * Only the society-wide read sets it (`Emerald · B-304`): the gate's feed names the flat a
+   * visitor waits on; a resident already knows which home is theirs.
+   */
+  readonly homeLabel?: string | undefined;
 }
 
 export interface EntryLogWire {

@@ -407,9 +407,9 @@ describe('checkInPass and checkOutPass', () => {
 describe('the walk-in queue', () => {
   it('creates a PENDING walk-in with its events, and the queue is oldest-first for one unit', async () => {
     const store = visitorStore(db);
-    const block = await aBlock(db);
-    const unit = await aUnit(db, block.id);
-    const otherUnit = await aUnit(db, block.id);
+    const block = await aBlock(db, 'Brindavan');
+    const unit = await aUnit(db, block.id, { label: 'B-101' });
+    const otherUnit = await aUnit(db, block.id, { label: 'B-102' });
     const event = anEvent('walkin.awaiting_decision');
 
     const early = await store.createWalkInLog(
@@ -446,7 +446,7 @@ describe('the walk-in queue', () => {
       [],
     );
     if (late === null) throw new Error('walk-in creation failed');
-    await store.createWalkInLog(
+    const other = await store.createWalkInLog(
       {
         passId: null,
         unitId: otherUnit.id,
@@ -462,12 +462,18 @@ describe('the walk-in queue', () => {
       },
       [],
     );
+    if (other === null) throw new Error('walk-in creation failed');
 
     expect(early.approvalStatus).toBe('PENDING');
     expect(await db.outboxEvent.count({ where: { correlationId: event.correlationId } })).toBe(1);
 
     const queue = await store.findPendingWalkIns(unit.id);
     expect(queue.map((log) => log.id)).toEqual([early.id, late.id]);
+
+    // The kiosk reads the same queue without the household filter, each row naming its home.
+    const society = await store.findPendingWalkInsForSociety();
+    expect(society.map((log) => log.id)).toEqual([early.id, late.id, other.id]);
+    expect(society[0]?.home).toMatchObject({ unitId: unit.id, blockName: 'Brindavan', label: 'B-101' });
 
     const found = await store.findLogById(early.id);
     expect(found?.walkInName).toBe('Plumber');

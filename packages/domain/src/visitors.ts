@@ -5,6 +5,7 @@ import type {
   GateDecision,
   PassView,
   Result,
+  SocietyWaitingVisitorView,
   VisitorsService,
   WaitingVisitorView,
 } from './ports.js';
@@ -502,6 +503,14 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
       if (actor.unitId === null) return errors.forbidden('see waiting visitors');
       const logs = await store.findPendingWalkIns(actor.unitId);
       return ok(logs.map(waitingView));
+    },
+
+    async waitingForSociety(actor): Promise<Result<readonly SocietyWaitingVisitorView[]>> {
+      // The kiosk's feed: the whole society's queue, not one household. Only the gate reads it —
+      // a committee account has no business watching who is standing at the barrier.
+      if (actor.role !== 'S') return errors.forbidden("see the society's waiting visitors");
+      const logs = await store.findPendingWalkInsForSociety();
+      return ok(logs.map((log) => ({ ...waitingView(log), homeLabel: homeLabel(log.home) })));
     },
 
     async entriesForHousehold(actor): Promise<Result<readonly EntryLogView[]>> {

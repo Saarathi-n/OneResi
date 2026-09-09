@@ -79,7 +79,7 @@ The receipt also renders as its own server route, `/receipts/[receiptNo]` on web
 | POST | `/api/visitors/passes` | `C.CreatePassInput` | `visitors.issuePass(actor, input)` | resident |
 | POST | `/api/visitors/passes/[id]/cancel` | — | `visitors.cancelPass(actor, id)` | resident |
 | GET | `/api/visitors/expected-today` | — | `visitors.expectedToday(actor)` | resident |
-| GET | `/api/visitors/waiting` | — | `visitors.waitingForHousehold(actor)` | resident |
+| GET | `/api/visitors/waiting` | — | resident: `visitors.waitingForHousehold(actor)`; role S: `visitors.waitingForSociety(actor)` | resident, or role S (society-wide) |
 | POST | `/api/visitors/walk-ins/[id]/decision` | `C.DecideWalkInInput` | `visitors.decideWalkIn(actor, input)` | resident |
 | GET | `/api/visitors/entries` | — | `visitors.entriesForHousehold(actor)` | resident |
 | POST | `/api/gate/verify` | `C.VerifyPassInput` | `visitors.verifyCode(actor, input, meta)` | role S |
@@ -89,7 +89,7 @@ The receipt also renders as its own server route, `/receipts/[receiptNo]` on web
 
 The gate routes live under their own prefix so the kiosk's surface is auditable as a unit — the
 kiosk screen renders a decision, never a row (D-40). The SSE stream is thin: an interval re-calling
-`waitingForHousehold` and emitting on change, with a comment heartbeat. It is a wrapper over an
+the waiting read and emitting on change, with a comment heartbeat. It is a wrapper over an
 existing service, not a new use case.
 
 ## Complaints

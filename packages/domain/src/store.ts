@@ -624,6 +624,9 @@ export interface VisitorStore {
   /** The household's undecided walk-ins, oldest first — the queue a resident answers. */
   findPendingWalkIns(unitId: number): Promise<readonly StoredVisitorLog[]>;
 
+  /** Every household's undecided walk-ins, oldest first, each with its home joined — the gate's queue. */
+  findPendingWalkInsForSociety(): Promise<readonly (StoredVisitorLog & { home: StoredHome })[]>;
+
   /**
    * The household's gate log, newest first, joined so every row names its visitor — the feed on
    * a resident's home. `limit` is the caller's rule; the store truncates and orders, it does not

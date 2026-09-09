@@ -21,6 +21,7 @@ import type {
   Result,
   VisitorsService,
   WaitingVisitorView,
+  SocietyWaitingVisitorView,
 } from './ports.js';
 
 /**
@@ -323,6 +324,18 @@ class MemoryVisitorStore implements VisitorStore {
       this.logs
         .filter((l) => l.unitId === unitId && l.approvalStatus === 'PENDING')
         .map((l) => ({ ...l })),
+    );
+  }
+
+  findPendingWalkInsForSociety(): Promise<readonly (StoredVisitorLog & { home: StoredHome })[]> {
+    return Promise.resolve(
+      this.logs
+        .filter((l) => l.approvalStatus === 'PENDING')
+        .map((l) => {
+          const home = this.homeFor(l.unitId);
+          if (home === null) throw new Error(`test seed: unit ${l.unitId} has no home`);
+          return { ...l, home };
+        }),
     );
   }
 
@@ -1326,6 +1339,70 @@ describe('waitingForHousehold', () => {
     const world = harness();
     seededWorld(world.store);
     await expectError(world.service.waitingForHousehold(GUARD), 'FORBIDDEN');
+  });
+});
+
+describe('waitingForSociety', () => {
+  it('is the kiosk’s queue: every household’s pending walk-ins, oldest first, each naming the home it waits on', async () => {
+    const world = harness();
+    const { unitId, otherUnitId } = seededWorld(world.store);
+    const older = world.store.seedLog({
+      passId: null,
+      unitId,
+      walkInName: 'Suresh the courier',
+      walkInPhone: '9886012345',
+      walkInPurpose: 'Package for B-101',
+      approvalStatus: 'PENDING',
+      decidedById: null,
+      decidedAt: null,
+      overrideReason: null,
+      enteredAt: null,
+      exitedAt: null,
+    });
+    const newer = world.store.seedLog({
+      passId: null,
+      unitId: otherUnitId,
+      walkInName: 'Aunt Meera',
+      walkInPhone: null,
+      walkInPurpose: 'Surprise visit',
+      approvalStatus: 'PENDING',
+      decidedById: null,
+      decidedAt: null,
+      overrideReason: null,
+      enteredAt: null,
+      exitedAt: null,
+    });
+    world.store.seedLog({
+      passId: null,
+      unitId,
+      walkInName: 'Already answered',
+      walkInPhone: null,
+      walkInPurpose: 'Visit',
+      approvalStatus: 'APPROVED',
+      decidedById: 1,
+      decidedAt: new Date('2026-09-08T08:30:00Z'),
+      overrideReason: null,
+      enteredAt: null,
+      exitedAt: null,
+    });
+
+    const waiting: readonly SocietyWaitingVisitorView[] = await expectOk(
+      world.service.waitingForSociety(GUARD),
+    );
+
+    expect(waiting.map((w) => w.name)).toEqual(['Suresh the courier', 'Aunt Meera']);
+    expect(waiting[0]).toMatchObject({
+      logId: older.id,
+      homeLabel: 'Brindavan · B-101',
+      purpose: 'Package for B-101',
+    });
+    expect(waiting[1]).toMatchObject({ logId: newer.id, homeLabel: 'Brindavan · B-102' });
+  });
+
+  it('refuses everyone but the gate — a household’s queue is not the society’s', async () => {
+    const world = harness();
+    const { unitId } = seededWorld(world.store);
+    await expectError(world.service.waitingForSociety(residentActor(world.store, unitId)), 'FORBIDDEN');
   });
 });
 
