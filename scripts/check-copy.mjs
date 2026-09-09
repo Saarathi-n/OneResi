@@ -46,6 +46,15 @@ const MARKUP_EXTENSIONS = new Set(['.html', '.htm', '.mjml', '.txt']);
 export const PATTERNS = [
   { name: 'use-case identifier', pattern: /UC-\d{2}/g, defect: 'D-51' },
   { name: 'decision record', pattern: /ADR[- ]?\d{4}/g, defect: 'D-51' },
+  {
+    // Defect-register numbers leaked through once as "(D-04)" beside a button label — same
+    // defect as the use-case identifiers, different token. Exactly two digits: the register
+    // numbers are D-01..D-80, while a flat label in a block named D reads "D-402", which
+    // must not trip this.
+    name: 'defect-register number',
+    pattern: /\bD-\d{2}\b/g,
+    defect: 'D-51',
+  },
   { name: 'course code', pattern: /BCSE\d+/g, defect: 'D-53' },
   { name: 'register number', pattern: /24BCE\d+/g, defect: 'D-53' },
   { name: 'seeded data', pattern: /Seeded/gi, defect: 'D-53' },
@@ -505,6 +514,18 @@ const FIXTURES = [
     ext: '.ts',
     source: "const a = 'ADR-0003'; const b = 'ADR 0002'; const c = 'ADR0004';",
     violations: 3,
+  },
+  {
+    why: 'defect-register number beside a button',
+    ext: '.tsx',
+    source: '<button>Resend code (D-04)</button>',
+    violations: 1,
+  },
+  {
+    why: 'a flat label in block D is not a defect number',
+    ext: '.tsx',
+    source: "<p>{'Your home: D-402, Palm Villas'}</p>",
+    violations: 0,
   },
   {
     why: 'course code and register number',
