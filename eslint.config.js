@@ -198,8 +198,15 @@ export default tseslint.config(
 
   {
     // The build scripts are command-line tools. Their output is the interface.
-    files: ['scripts/**'],
+    files: ['scripts/**', 'apps/*/scripts/**'],
     rules: { 'no-console': 'off' },
+  },
+  {
+    // The app-shell service worker is served verbatim from public/, so it is linted as plain
+    // JavaScript (no tsconfig) — but under ServiceWorker globals, not Node's: `self`, `caches`
+    // and `clients` are the worker's real environment, not undefined names.
+    files: ['apps/*/public/**/*.js'],
+    languageOptions: { globals: { ...globals.serviceworker } },
   },
   {
     // Fixtures and helpers assert; they do not need the whole type-aware ceremony, and a test that

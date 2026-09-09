@@ -28,7 +28,6 @@ await mkdir(outDir, { recursive: true });
  */
 function iconSvg({ size, markScale = 1 }) {
   const translate = (size * (1 - markScale)) / 2;
-  const scaled = size * markScale;
   return Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
       `<rect width="${size}" height="${size}" fill="#1d6853"/>` +
