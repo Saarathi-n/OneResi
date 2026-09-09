@@ -23,6 +23,7 @@ import {
   notificationsService,
   propertyService,
   bcryptHasher,
+  createConsolePushTransport,
   joseAccessToken,
   type Clock,
   type ServiceEnv,
@@ -124,7 +125,13 @@ async function buildRuntime(): Promise<Runtime & { mailWorker: MailWorkerHandle 
     complaints: complaintsService({ store: complaintStore(db), clock }),
     facilities: facilitiesService({ store: facilitiesStore(db), clock }),
     notices: noticesService({ store: noticesStore(db), clock }),
-    notifications: notificationsService({ store: notificationsStore(db), clock }),
+    // The console push transport, until the web-push transport lands with its VAPID keys: it logs
+    // what would have gone to the lock screen, exactly as mail's console provider does.
+    notifications: notificationsService({
+      store: notificationsStore(db),
+      clock,
+      push: createConsolePushTransport(),
+    }),
     property: propertyService({ store: propertyStore(db) }),
     mailWorker,
   };
