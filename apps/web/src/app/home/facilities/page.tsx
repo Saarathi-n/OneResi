@@ -14,7 +14,7 @@ import {
   StatusPill,
   useToast,
 } from '@oneresi/ui';
-import { BOOKING_STATUS, paise } from '@oneresi/contracts';
+import { BOOKING_STATUS, formatCalendarDate, paise } from '@oneresi/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 
@@ -371,11 +371,7 @@ export default function FacilitiesPage() {
                       <StatusPill descriptor={BOOKING_STATUS[booking.status]} size="sm" />
                     </div>
                     <p className="type-micro mt-1 text-content-subtle">
-                      {new Date(booking.bookingDate).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}{' '}
+                      {formatCalendarDate(booking.bookingDate)}{' '}
                       · {booking.startTime}–{booking.endTime} ·{' '}
                       <Money value={paise(booking.amountPaise)} label="booking charge" />
                     </p>

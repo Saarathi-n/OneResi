@@ -15,7 +15,14 @@ import {
   StatusPill,
   useToast,
 } from '@oneresi/ui';
-import { INVOICE_STATUS, PAYMENT_METHODS, PAYMENT_METHOD, paise, type PaymentMethod } from '@oneresi/contracts';
+import {
+  INVOICE_STATUS,
+  PAYMENT_METHODS,
+  PAYMENT_METHOD,
+  paise,
+  type PaymentMethod,
+  formatCalendarDate,
+} from '@oneresi/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 
@@ -27,6 +34,13 @@ import { useFetch } from '@/lib/useFetch';
 
 const INVOICES_PATH = '/api/billing/invoices';
 const METHOD_KEY = 'oneresi.payment.method';
+
+/**
+ * What a household may settle with online. Cash is deliberately absent: money in hand is recorded
+ * by the committee against the invoice, with their name on the row — a household marking its own
+ * invoice settled "by cash" is a claim nobody witnessed, not a payment.
+ */
+const RESIDENT_METHODS = PAYMENT_METHODS.filter((method) => method !== 'CASH');
 
 interface InvoiceLine {
   id: number;
@@ -42,7 +56,7 @@ function loadLastMethod(): PaymentMethod {
   if (typeof window === 'undefined') return 'UPI';
   try {
     const raw = window.localStorage.getItem(METHOD_KEY);
-    if (raw !== null && (PAYMENT_METHODS as readonly string[]).includes(raw)) {
+    if (raw !== null && (RESIDENT_METHODS as readonly string[]).includes(raw)) {
       return raw as PaymentMethod;
     }
   } catch {
@@ -131,7 +145,7 @@ export default function InvoicesPage() {
                   <p className="type-label mt-1 text-content-muted">
                     Period {invoice.period}
                     {invoice.status === 'UNPAID' || invoice.status === 'OVERDUE'
-                      ? ` · due ${new Date(invoice.dueOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      ? ` · due ${formatCalendarDate(invoice.dueOn)}`
                       : ''}
                   </p>
                 </div>
@@ -188,7 +202,7 @@ export default function InvoicesPage() {
           </p>
         ) : null}
         <Select
-          options={PAYMENT_METHODS.map((value) => ({
+          options={RESIDENT_METHODS.map((value) => ({
             value,
             label: PAYMENT_METHOD[value].label,
           }))}

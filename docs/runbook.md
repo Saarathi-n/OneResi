@@ -92,7 +92,7 @@ run by CI.
 ```bash
 pnpm cloud:up      # terraform apply, then print the app URL
 pnpm cloud:down    # terraform destroy
-pnpm cloud:stop    # desired_count 0 — keeps everything, stops the only continuous meter
+pnpm cloud:stop    # desired_count 0 — keeps everything, stops the Fargate meter (not the whole bill)
 pnpm cloud:start   # desired_count 1
 pnpm cloud:env     # print the export line for DATABASE_URL (from stack outputs + Secrets Manager)
 ```
@@ -108,6 +108,36 @@ export DB_TARGET=cloud
 Terraform is invoked by full path on purpose: a stale 1.9.8 in `~/bin` can shadow the installed
 1.15.8 on PATH. Set `TERRAFORM_PATH` to override the binary location if your PATH situation is
 different.
+
+#### The first deploy, in order
+
+Two things have to exist before `cloud:up` can succeed, and the failure when they do not is a
+refusal with instructions rather than a half-built stack — but the order is cheaper to know up
+front:
+
+```bash
+# 1. The state bucket, once, ever. Local state, one apply, no cost.
+cd infra/bootstrap && terraform init && terraform apply && cd ../..
+
+# 2. The container images, pushed into the ECR repository the stack owns. Build and push BOTH
+#    targets — the runtime image and the migrate image — before the first apply, or the migrate
+#    step stops the apply with the exact docker commands to run.
+aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 215671569291.dkr.ecr.ap-south-1.amazonaws.com
+docker build --file infra/docker/Dockerfile --target runtime --tag <repo-url>:latest .
+docker push <repo-url>:latest
+docker build --file infra/docker/Dockerfile --target migrate --tag <repo-url>:migrate .
+docker push <repo-url>:migrate
+
+# 3. Then the stack itself. The ECR repository URL is in the stack's outputs after the first
+#    apply attempt; the repo name is oneresi-app in this account.
+cd infra/stack && terraform init && cp example.tfvars terraform.tfvars
+#    fill in notification_email, github_repository, and the three vapid_* values from pnpm push:keys
+terraform plan && terraform apply
+```
+
+`terraform destroy` refuses while `deletion_protection` is on and while the uploads bucket or ECR
+still hold data — set `environment = "dev"` and `allow_destroy_with_data = true` in tfvars to
+allow a full teardown, and only when you mean it.
 
 ### Static checks and gates
 

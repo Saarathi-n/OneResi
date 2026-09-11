@@ -17,7 +17,7 @@ import {
   StatusPill,
   useToast,
 } from '@oneresi/ui';
-import { APPROVAL_STATUS, PASS_STATUS } from '@oneresi/contracts';
+import { APPROVAL_STATUS, PASS_STATUS, formatCalendarDate } from '@oneresi/contracts';
 import { call } from '@/lib/session';
 import { useFetch, type FetchState } from '@/lib/useFetch';
 
@@ -175,11 +175,7 @@ export default function VisitorsPage() {
             <CodeDisplay code={issued.code} label={`Pass code for ${issued.visitorName}`} copyable />
             <p className="type-body text-content-muted">
               {issued.visitorName} · {issued.purpose} · valid{' '}
-              {new Date(issued.validOn).toLocaleDateString('en-IN', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })}
+              {formatCalendarDate(issued.validOn)}
             </p>
             <Button variant="secondary" size="sm" onClick={() => setIssued(null)}>
               Issue another
@@ -302,10 +298,7 @@ export default function VisitorsPage() {
                     </div>
                     <p className="type-micro mt-1 text-content-subtle">
                       {pass.purpose} · valid{' '}
-                      {new Date(pass.validOn).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                      })}{' '}
+                      {formatCalendarDate(pass.validOn)}{' '}
                       · code {pass.code}
                     </p>
                   </div>

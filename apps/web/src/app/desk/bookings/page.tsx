@@ -19,6 +19,7 @@ import {
   paise,
   type BookingStatus,
   type UnitType,
+  formatCalendarDate,
 } from '@oneresi/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
@@ -154,11 +155,7 @@ export default function BookingsPage() {
             cell: (row) => (
               <div>
                 <p className="type-body text-content">
-                  {new Date(row.bookingDate).toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  {formatCalendarDate(row.bookingDate)}
                 </p>
                 <p className="type-micro text-content-subtle">
                   {row.startTime}–{row.endTime}

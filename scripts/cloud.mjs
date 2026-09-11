@@ -79,12 +79,17 @@ async function main() {
       // joined here into the one URL the db package accepts.
       const endpoint = terraform(['output', '-raw', 'database_endpoint']).trim();
       const secretArn = terraform(['output', '-raw', 'database_secret_arn']).trim();
+      // The region is named here, never inherited from the CLI's default: the stack lives in
+      // ap-south-1 and a CLI configured for any other region answers ResourceNotFoundException
+      // for a secret that exists (D-78's lesson, one layer up).
       const secret = JSON.parse(
         run('aws', [
           'secretsmanager',
           'get-secret-value',
           '--secret-id',
           secretArn,
+          '--region',
+          'ap-south-1',
           '--query',
           'SecretString',
           '--output',

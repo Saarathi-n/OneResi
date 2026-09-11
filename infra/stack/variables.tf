@@ -81,9 +81,12 @@ variable "desired_count" {
   type        = number
   default     = 1
   description = <<-EOT
-    Running tasks. Fargate is the only line item that bills continuously, so 0 between sessions is
-    the difference between ~$9 a month and a few cents. `cloud:stop` and `cloud:start` move it with
-    the CLI; the next apply restores this value.
+    Running tasks. Fargate is the only line item this switch controls: 0 between sessions is the
+    difference between ~$9 a month and nothing FOR THIS LINE. The stack is not free while stopped —
+    the ALB, its public IPv4 addresses and the RDS master-password secret keep billing (~$1-4/month
+    inside the free-tier year, roughly the ALB's rate card after it), so `cloud:stop` bounds the
+    bill rather than zeroing it. The budget alarms watch the real number either way.
+    `cloud:stop` and `cloud:start` move it with the CLI; the next apply restores this value.
   EOT
 
   validation {

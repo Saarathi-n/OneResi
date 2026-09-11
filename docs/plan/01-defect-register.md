@@ -1113,3 +1113,54 @@ Verified with the 1.15.8 binary: `infra/bootstrap` formats, initialises with `-b
 No `app/`, no `infra/`. The code and the Terraform are in `C:\Developer\Code\OneResi`. Open
 question 1 in the README.
 
+
+### D-81 · Two overlapping bookings with different start times can both commit
+`packages/db/prisma/postgresql/migrations/20260905120100_booking_live_slot_index/migration.sql`
+
+The partial unique index that guards a slot keys on `(facilityId, bookingDate, startTime)` — the
+exact start. The domain's overlap check (`held.some(overlaps)`) runs *before* the insert, outside
+the transaction, under READ COMMITTED. Two concurrent requests whose windows overlap but start at
+different times (10:00–12:00 and 11:00–13:00) both read no conflict, both insert, and both commit:
+the facility is double-booked for the middle hour.
+
+The exact-start case is airtight (the index refuses the second row, the adapter maps P2002 to a
+409) and the sequential case is airtight (the in-memory check sees the first booking). Only the
+concurrent-overlap race is open.
+
+**Fix** — a slot-holds table: one row per facility/date/hour a booking spans, unique on
+`(facilityId, date, hour)`, written transactionally beside the booking and released on
+cancellation. Two overlapping windows necessarily claim a common hour, so the unique constraint
+refuses the second the same way it refuses the exact start today — and the rule is identical on
+SQLite and PostgreSQL, which an EXCLUDE/gist constraint would not be.
+
+### D-82 · A registration race answers 500, not 409
+`packages/db/src/stores/accounts.ts` — `createAccount`
+
+`register()` pre-checks `findAccountByEmail` and answers CONFLICT for a taken address, but two
+simultaneous registrations with the same email can both pass the pre-check; the loser then hits the
+unique index and the P2002 escapes as an unhandled 500. Every other natural-key write in the db
+layer catches P2002 outside the transaction and reports null; `createAccount` cannot return null
+(it must return the created account), so the honest mapping is a typed CONFLICT thrown by the
+adapter and translated by the service. No data is written (the transaction rolls back); the caller
+who retries gets the ordinary 409.
+
+### D-83 · The rate limiter keys on a spoofable header
+`apps/web/src/server/http.ts` — `meta()`
+
+`ip` is the **first** hop of `x-forwarded-for`, which is client-supplied: CloudFront appends the
+viewer's address to the end of the chain, so a client that sends its own `X-Forwarded-For` chooses
+its own rate-limit identity. Sign-in and reset are additionally keyed per email (unaffected); the
+weakened windows are registration per IP and gate code checks per IP — the latter still counts
+every miss against the gate's shared window, so the floor holds.
+
+**Fix** — trust the address at the position our own edge appended it, or drop the header at the
+CloudFront origin-request policy and key on `x-real-ip` set there.
+
+### D-84 · Buttons nested inside links
+`apps/web/src/app/desk/layout.tsx`, `home/layout.tsx`, `home/invoices/page.tsx`
+
+`<Link><Button>…</Button></Link>` renders an interactive element inside an interactive element —
+invalid HTML, hydration warnings, and a keyboard focus target that is a button pretending to be a
+link. Navigation works today because a click on the inner button bubbles to the anchor. The honest
+shape is a Button that can render as a link (an `as`/`asChild` prop on the UI library's Button) or
+links carrying the button's classes directly.

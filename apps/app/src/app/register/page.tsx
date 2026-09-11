@@ -168,7 +168,11 @@ export default function RegisterPage() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      // The two password fields never reach storage: a draft exists so a refresh does not cost the
+      // applicant their typed answers, and retyping a password is one field — while a password in
+      // localStorage outlives the tab, the sign-out and the browser's idea of who is logged in.
+      const { password: _password, confirmPassword: _confirmPassword, ...rest } = draft;
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(rest));
     } catch {
       // Storage refused (private mode, full). The form still works; only the crash protection is gone.
     }

@@ -146,9 +146,11 @@ self.addEventListener('push', (event) => {
 });
 
 /*
- * A tap on the notification. If the app is already open, focus it — a second window on a phone
- * is not a thing. Otherwise open the app at the path the message carried (or its root when the
- * message had none), which is why the path rides along in the notification's `data`.
+ * A tap on the notification. If the app is already open, focus it and take it to the path the
+ * message carried — focusing without navigating lands the resident on whatever screen they last
+ * had open, which is rarely the screen the notification is about. Otherwise open the app at that
+ * path (or its root when the message had none), which is why the path rides along in the
+ * notification's `data`.
  */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
@@ -165,6 +167,15 @@ self.addEventListener('notificationclick', (event) => {
         if (new URL(client.url).origin !== self.location.origin) continue;
         if ('focus' in client) {
           await client.focus();
+          // Navigating a client this SW controls reloads it at the target; one that cannot be
+          // navigated (an uncontrolled window) keeps whatever it was showing.
+          if (typeof client.navigate === 'function') {
+            try {
+              await client.navigate(target);
+            } catch {
+              /* not controlled by this worker; the focus above is the best available */
+            }
+          }
           return;
         }
       }

@@ -22,6 +22,7 @@ import {
   paise,
   type InvoiceStatus,
   type UnitType,
+  formatCalendarDateShort,
 } from '@oneresi/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
@@ -265,7 +266,7 @@ export default function LedgerPage() {
             id: 'dueOn',
             header: 'Due',
             sortable: true,
-            cell: (row) => new Date(row.dueOn).toLocaleDateString('en-IN'),
+            cell: (row) => formatCalendarDateShort(row.dueOn),
             secondary: true,
           },
           {

@@ -97,7 +97,11 @@ function loadDraft(): { draft: Draft; restored: boolean } {
 
 function saveDraft(draft: Draft): void {
   try {
-    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    // The two password fields never reach storage. A draft exists so a refresh does not cost the
+    // applicant their typed answers — retyping a password is one field, and a password left in
+    // localStorage outlives the tab, the sign-out and the browser's idea of who is logged in.
+    const { password: _password, passwordConfirm: _passwordConfirm, ...rest } = draft;
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(rest));
   } catch {
     // A full or blocked localStorage must not break the form; the draft is a convenience.
   }
