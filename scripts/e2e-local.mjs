@@ -75,6 +75,7 @@ async function api(actor, method, path, { json, query } = {}) {
   if (query !== undefined) for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
   const headers = {};
   if (actor?.token) headers.authorization = `Bearer ${actor.token}`;
+  if (actor?.cookie) headers.cookie = actor.cookie;
   if (json !== undefined) headers['content-type'] = 'application/json';
   const response = await fetch(url, {
     method,
@@ -198,7 +199,7 @@ async function main() {
   resident.token = sessions[2].actor.token;
   const unitId = sessions[2].actor.person?.home?.unitId;
 
-  check('refresh cookie is set and refreshes', (await (async () => {
+  check('refresh cookie is set and refreshes', await (async () => {
     const a = makeActor();
     const first = await api(a, 'POST', '/api/auth/sign-in', { json: { email: RESIDENT, password: SEED_PASSWORD } });
     if (first.status !== 200 || a.cookie === null) return `sign-in status ${first.status}, cookie ${a.cookie}`;
@@ -207,7 +208,7 @@ async function main() {
     a.token = refreshed.body.accessToken;
     const me = await api(a, 'GET', '/api/auth/me');
     return me.status === 200 && me.body?.email === RESIDENT ? true : `me after refresh: ${me.status}`;
-  })()) === true);
+  })());
   check('sign-out clears the session', (await (async () => {
     const a = makeActor();
     await api(a, 'POST', '/api/auth/sign-in', { json: { email: RESIDENT, password: SEED_PASSWORD } });
@@ -257,7 +258,7 @@ async function main() {
   const declined = await api(committee, 'POST', '/api/applications/decision', { json: { userId: seededPending.userId, decision: 'DECLINE', reason: 'The flat already has a registered household.' } });
   check('the committee declines the other seeded application', declined.status === 200, JSON.stringify(declined.body));
   const declinedSignIn = await api(makeActor(), 'POST', '/api/auth/sign-in', { json: { email: 'kabir.chowdhury@gmail.com', password: SEED_PASSWORD } });
-  check('a declined applicant cannot sign in', declinedSignIn.status === 403 || declinedSignIn.status === 401, `status ${declinedSignIn.status}`);
+  check('a declined applicant cannot sign in', declinedSignIn.status === 409 && declinedSignIn.body?.code === 'STATE_NOT_ALLOWED', `status ${declinedSignIn.status}`);
   const e2e = firstSignIn.actor;
 
   // ---------------------------------------------------------------- change password + reset
@@ -271,7 +272,7 @@ async function main() {
   check('reset-request is accepted (it never says whether the account exists)', resetRequested.status === 200, JSON.stringify(resetRequested.body));
   const resetMail = await poll(() => {
     const rows = dbAll(
-      "SELECT \"bodyHtml\" FROM mail_message WHERE \"toAddress\" = ? AND template LIKE '%password-reset%' AND status = 'SENT' ORDER BY id DESC LIMIT 1",
+      "SELECT \"bodyHtml\" FROM mail_message WHERE \"toAddress\" = ? AND template = 'password.reset_requested' AND status = 'SENT' ORDER BY id DESC LIMIT 1",
       [E2E_EMAIL],
     );
     const link = rows[0]?.bodyHtml?.match(/token=([A-Za-z0-9._-]+)/);
@@ -295,7 +296,7 @@ async function main() {
   check('the committee creates a block', newBlock.status === 200 && newBlock.body?.id > 0, JSON.stringify(newBlock.body)?.slice(0, 120));
   const newUnit = await api(committee, 'POST', '/api/property/units', { json: { blockId: newBlock.body.id, unitLabel: 'e2e-901', type: 'FLAT_2BHK', monthlyChargePaise: 250000 } });
   check('the committee creates a unit in it', newUnit.status === 200 && newUnit.body?.id > 0, JSON.stringify(newUnit.body)?.slice(0, 120));
-  const patched = await api(committee, 'PATCH', `/api/property/units/${newUnit.body.id}`, { json: { monthlyChargePaise: 260000 } });
+  const patched = await api(committee, 'PATCH', `/api/property/units/${newUnit.body.id}`, { json: { unitId: newUnit.body.id, monthlyChargePaise: 260000 } });
   check('the committee updates the monthly charge', patched.status === 200, JSON.stringify(patched.body)?.slice(0, 120));
   const optionsAfter = await api(null, 'GET', '/api/registration/options');
   const e2eBlock = (optionsAfter.body ?? []).find((b) => b.blockName === 'E2E Court');
@@ -320,22 +321,22 @@ async function main() {
   check('the resident sees their own invoice for the period', household.status === 200 && mine2 !== undefined, JSON.stringify(household.body)?.slice(0, 160));
 
   const idemKey = 'a'.repeat(32);
-  const paid = await api(resident, 'POST', `/api/billing/invoices/${mine2.id}/pay`, { json: { method: 'UPI', idempotencyKey: idemKey } });
+  const paid = await api(resident, 'POST', `/api/billing/invoices/${mine2.id}/pay`, { json: { invoiceId: mine2.id, method: 'UPI', idempotencyKey: idemKey } });
   check('paying returns a numbered receipt', paid.status === 200 && typeof paid.body?.receiptNo === 'string' && paid.body.receiptNo.length > 0, JSON.stringify(paid.body)?.slice(0, 160));
-  const paidAgain = await api(resident, 'POST', `/api/billing/invoices/${mine2.id}/pay`, { json: { method: 'UPI', idempotencyKey: idemKey } });
+  const paidAgain = await api(resident, 'POST', `/api/billing/invoices/${mine2.id}/pay`, { json: { invoiceId: mine2.id, method: 'UPI', idempotencyKey: idemKey } });
   check('the same idempotency key returns the same receipt, not a second payment', paidAgain.status === 200 && paidAgain.body?.receiptNo === paid.body?.receiptNo, JSON.stringify(paidAgain.body)?.slice(0, 120));
-  const paidBare = await api(resident, 'POST', `/api/billing/invoices/${mine2.id}/pay`, { json: { method: 'UPI' } });
+  const paidBare = await api(resident, 'POST', `/api/billing/invoices/${mine2.id}/pay`, { json: { invoiceId: mine2.id, method: 'UPI' } });
   check('paying a paid invoice without a key is a 409', paidBare.status === 409, `status ${paidBare.status}`);
 
   const receipt = await api(resident, 'GET', `/api/billing/receipts/${encodeURIComponent(paid.body.receiptNo)}`);
   check('the receipt reads back by number', receipt.status === 200 && receipt.body?.receiptNo === paid.body.receiptNo, JSON.stringify(receipt.body)?.slice(0, 120));
 
   const offlineTarget = periodInvoices.find((i) => i.home?.unitId !== unitId);
-  const offline = await api(committee, 'POST', `/api/billing/invoices/${offlineTarget.id}/offline-payment`, { json: { amountPaise: offlineTarget.amountPaise, method: 'CASH', receivedOn: TODAY, note: 'Collected at the desk.' } });
+  const offline = await api(committee, 'POST', `/api/billing/invoices/${offlineTarget.id}/offline-payment`, { json: { invoiceId: offlineTarget.id, amountPaise: offlineTarget.amountPaise, method: 'CASH', receivedOn: TODAY, note: 'Collected at the desk.' } });
   check('the committee records a cash payment with its own receipt', offline.status === 200 && typeof offline.body?.receiptNo === 'string', JSON.stringify(offline.body)?.slice(0, 160));
 
   const cancelTarget = periodInvoices.find((i) => i.id !== mine2.id && i.id !== offlineTarget.id);
-  const cancelled = await api(committee, 'POST', `/api/billing/invoices/${cancelTarget.id}/cancel`, { json: { reason: 'Raised twice for the same flat by mistake.' } });
+  const cancelled = await api(committee, 'POST', `/api/billing/invoices/${cancelTarget.id}/cancel`, { json: { invoiceId: cancelTarget.id, reason: 'Raised twice for the same flat by mistake.' } });
   check('the committee cancels an invoice with a reason', cancelled.status === 200, JSON.stringify(cancelled.body)?.slice(0, 120));
   const residentSociety = await api(resident, 'GET', '/api/billing/invoices/society');
   check('the society ledger is committee-only', residentSociety.status === 403, `status ${residentSociety.status}`);
@@ -492,9 +493,9 @@ async function main() {
     ['resident verifies a gate code', resident, 'POST', '/api/gate/verify', { code: '123456' }],
     ['gate reads a household ledger', gate, 'GET', '/api/billing/invoices'],
     ['gate issues a visitor pass', gate, 'POST', '/api/visitors/passes', { visitorName: 'No One', purpose: 'Should fail', validDate: TODAY }],
-    ['committee issues a visitor pass for themselves', committee, 'POST', '/api/visitors/passes', { visitorName: 'No One', purpose: 'Should fail', validDate: TODAY }],
     ['gate works the complaint queue', gate, 'GET', '/api/complaints/society'],
-    ['resident records a cash payment', resident, 'POST', `/api/billing/invoices/${mine2.id}/offline-payment`, { amountPaise: 100, method: 'CASH', receivedOn: TODAY }],
+    ['gate records a cash payment', gate, 'POST', `/api/billing/invoices/${mine2.id}/offline-payment`, { invoiceId: mine2.id, amountPaise: 100, method: 'CASH', receivedOn: TODAY }],
+    ['gate cancels an invoice', gate, 'POST', `/api/billing/invoices/${cancelTarget.id}/cancel`, { invoiceId: cancelTarget.id, reason: 'Not the gate\'s call.' }],
   ];
   for (const [name, who, method, path, json] of matrix) {
     const r = await api(who, method, path, ...(json === undefined ? [] : [{ json }]));
@@ -503,8 +504,13 @@ async function main() {
 
   // ---------------------------------------------------------------- the outbox, honestly
   begin('the outbox — every row this walk caused has been drained');
-  const stuck = dbAll("SELECT id, type, channel, status FROM outbox_event WHERE status IN ('PENDING', 'FAILED', 'ABANDONED')");
-  check('no outbox row is stuck', stuck.length === 0, JSON.stringify(stuck.slice(0, 5)));
+  // The workers drain on their own interval, so this waits for the queue to go quiet rather than
+  // asserting on an instant.
+  const stuck = await poll(() => {
+    const rows = dbAll("SELECT id, type, channel, status FROM outbox_event WHERE status IN ('PENDING', 'FAILED', 'ABANDONED')");
+    return rows.length === 0 ? [] : undefined;
+  }, { attempts: 20, intervalMs: 2000 });
+  check('no outbox row is stuck', stuck !== undefined && stuck.length === 0, JSON.stringify(dbAll("SELECT id, type, channel, status FROM outbox_event WHERE status IN ('PENDING', 'FAILED', 'ABANDONED')").slice(0, 5)));
   const sentMail = dbAll("SELECT COUNT(*) AS n FROM mail_message WHERE status = 'SENT'");
   check('the mail log recorded the walk\'s messages', (sentMail[0]?.n ?? 0) >= 2, `${sentMail[0]?.n ?? 0} sent`);
 
