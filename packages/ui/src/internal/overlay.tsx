@@ -92,7 +92,15 @@ export function useFocusTrap(
   container: RefObject<HTMLElement | null>,
   options: FocusTrapOptions = {},
 ): void {
-  const { onEscape, initialFocus } = options;
+  const { initialFocus } = options;
+  // The escape callback is followed through a ref, not a dependency: it is rebuilt by every
+  // consumer render (an inline arrow to their state setter), and a keystroke in a field inside
+  // the dialog re-renders the consumer — if the callback were a dependency, the trap would tear
+  // down and re-run on every keystroke, re-focusing the first focusable child and yanking the
+  // cursor out of the field being typed in.
+  const onEscapeRef = useRef<(() => void) | undefined>(options.onEscape);
+  onEscapeRef.current = options.onEscape;
+
   const returnTo = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -107,9 +115,9 @@ export function useFocusTrap(
     target.focus({ preventScroll: true });
 
     function onKeyDown(event: KeyboardEvent): void {
-      if (event.key === 'Escape' && onEscape !== undefined) {
+      if (event.key === 'Escape' && onEscapeRef.current !== undefined) {
         event.stopPropagation();
-        onEscape();
+        onEscapeRef.current();
         return;
       }
       if (event.key !== 'Tab' || root === null) return;
@@ -144,6 +152,6 @@ export function useFocusTrap(
       returnTo.current = null;
       if (restore !== null && document.contains(restore)) restore.focus({ preventScroll: true });
     };
-  }, [active, container, initialFocus, onEscape]);
+  }, [active, container, initialFocus]);
 }
 
