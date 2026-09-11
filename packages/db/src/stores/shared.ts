@@ -112,6 +112,25 @@ export function isRecordMissing(error: unknown): boolean {
 }
 
 /**
+ * The hours a booking window touches: `10:30–11:15` is hour 10 only, `10:00–12:00` is hours 10
+ * and 11 (the end is exclusive). Any two overlapping ranges share at least one hour of the day,
+ * which is what makes one hold row per touched hour the collision rule (D-81). Shared by the
+ * store's create and the seed, so a seeded booking holds its hours exactly like a made one.
+ */
+export function hoursTouched(input: {
+  readonly startTime: string;
+  readonly endTime: string;
+}): number[] {
+  const minutesOf = (clockTime: string): number =>
+    Number(clockTime.slice(0, 2)) * 60 + Number(clockTime.slice(3, 5));
+  const first = Math.floor(minutesOf(input.startTime) / 60);
+  const last = Math.floor((minutesOf(input.endTime) - 1) / 60);
+  const hours: number[] = [];
+  for (let hour = first; hour <= last; hour += 1) hours.push(hour);
+  return hours;
+}
+
+/**
  * The outbox half of every mutation. Payloads are flat scalars by port contract, so
  * `JSON.stringify` is engine-proof; the row is born PENDING and the worker takes it from there.
  */

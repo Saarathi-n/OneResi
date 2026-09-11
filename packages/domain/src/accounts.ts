@@ -417,6 +417,12 @@ export function accountsService(deps: AccountsDeps): AccountsService {
           ),
       );
 
+      if (account === null) {
+        // Two applications with one email raced past the pre-check; the unique index refused the
+        // second. The answer is the same CONFLICT the pre-check gives — never a 500 (D-82).
+        return errors.conflict('An application already exists for this email.');
+      }
+
       return { ok: true, value: { personId: account.id } };
     },
 

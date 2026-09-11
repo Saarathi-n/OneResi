@@ -53,13 +53,27 @@ function anEvent(type: OutboxEventInput['type']): OutboxEventInput {
 
 const expiry = () => new Date(Date.now() + 15 * 60 * 1000);
 
+/**
+ * createAccount may answer null (the D-82 race), so tests that mean to succeed unwrap here
+ * rather than asserting non-null eleven times.
+ */
+async function mustCreate(
+  store: ReturnType<typeof accountStore>,
+  ...args: Parameters<ReturnType<typeof accountStore>['createAccount']>
+): Promise<NonNullable<Awaited<ReturnType<ReturnType<typeof accountStore>['createAccount']>>>> {
+  const created = await store.createAccount(...args);
+  if (created === null) throw new Error('createAccount unexpectedly refused a unique email');
+  return created;
+}
+
+
 describe('createAccount', () => {
   it('writes the account and its outbox events in one transaction', async () => {
     const store = accountStore(db);
     const stamp = onDay('2026-09-08');
     const event = anEvent('resident.registered');
 
-    const created = await store.createAccount(
+    const created = await mustCreate(store, 
       {
         name: 'Asha',
         email: 'asha@oneresi.test',
@@ -92,29 +106,29 @@ describe('createAccount', () => {
     expect(JSON.parse(row.payload)).toEqual({ name: 'Asha', email: 'asha@oneresi.test' });
   });
 
-  it('rolls the events back with the account when the transaction fails', async () => {
+  it('a duplicate email is null, with the events rolled back with the account (D-82)', async () => {
     const store = accountStore(db);
     const taken = `taken-${eventCounter}@oneresi.test`;
     await aUser(db, { email: taken });
     const event = anEvent('resident.registered');
 
-    // A duplicate email is a unique violation inside the same transaction as the event write.
-    await expect(
-      store.createAccount(
-        {
-          name: 'Duplicate',
-          email: taken,
-          phone: '+919876500002',
-          passwordHash: '$2b$12$x',
-          role: 'R',
-          status: 'PENDING',
-          unitId: null,
-          passwordChangedAt: onDay('2026-09-08'),
-        },
-        null,
-        () => [event],
-      ),
-    ).rejects.toThrow();
+    // Two simultaneous registrations with one email: the pre-check saw no conflict, the unique
+    // index refused the insert anyway. The answer is null — the caller's CONFLICT — never a 500.
+    const raced = await store.createAccount(
+      {
+        name: 'Duplicate',
+        email: taken,
+        phone: '+919876500002',
+        passwordHash: '$2b$12$x',
+        role: 'R',
+        status: 'PENDING',
+        unitId: null,
+        passwordChangedAt: onDay('2026-09-08'),
+      },
+      null,
+      () => [event],
+    );
+    expect(raced).toBeNull();
 
     // A domain write and its mail may never diverge across transactions (D-29): if the account
     // did not land, the event row did not either.
@@ -126,7 +140,7 @@ describe('createAccount', () => {
     const store = accountStore(db);
     const event = anEvent('resident.registered');
 
-    const created = await store.createAccount(
+    const created = await mustCreate(store, 
       {
         name: 'Claimant',
         email: `claimant-${eventCounter}@oneresi.test`,
@@ -166,7 +180,7 @@ describe('createAccount', () => {
   it('a resubmitted registration is a new account, and each account carries one live claim', async () => {
     const store = accountStore(db);
 
-    const first = await store.createAccount(
+    const first = await mustCreate(store, 
       {
         name: 'Reapplicant',
         email: `again-a-${eventCounter}@oneresi.test`,
@@ -180,7 +194,7 @@ describe('createAccount', () => {
       { blockName: 'Palm Grove', unitLabel: 'PG-7', unitType: 'VILLA', note: 'near the gate' },
       () => [],
     );
-    const second = await store.createAccount(
+    const second = await mustCreate(store, 
       {
         name: 'Reapplicant',
         email: `again-b-${eventCounter}@oneresi.test`,
@@ -484,7 +498,7 @@ describe('listPendingApplications', () => {
     await aUser(db, { status: 'REJECTED' });
     const staff = await aUser(db, { role: 'S', status: 'PENDING' });
 
-    const unitless = await store.createAccount(
+    const unitless = await mustCreate(store, 
       {
         name: 'First Applicant',
         email: `queue-a-${eventCounter}@oneresi.test`,
@@ -498,7 +512,7 @@ describe('listPendingApplications', () => {
       null,
       () => [],
     );
-    const claimant = await store.createAccount(
+    const claimant = await mustCreate(store, 
       {
         name: 'Second Applicant',
         email: `queue-b-${eventCounter}@oneresi.test`,
@@ -547,7 +561,7 @@ describe('the registration decision', () => {
   it('approves, resolves the claim to a zero-charge home, and writes the event', async () => {
     const store = accountStore(db);
     const event = anEvent('resident.approved');
-    const applicant = await store.createAccount(
+    const applicant = await mustCreate(store, 
       {
         name: 'Approved Applicant',
         email: `approved-${eventCounter}@oneresi.test`,
@@ -634,7 +648,7 @@ describe('the registration decision', () => {
 
   it('declines to REJECTED, stamps the claim without a unit, and a second decision is a null', async () => {
     const store = accountStore(db);
-    const applicant = await store.createAccount(
+    const applicant = await mustCreate(store, 
       {
         name: 'Declined Applicant',
         email: `declined-${eventCounter}@oneresi.test`,
@@ -678,7 +692,7 @@ describe('the registration decision', () => {
 
   it('a re-decided application updates the same claim row, never a second one', async () => {
     const store = accountStore(db);
-    const applicant = await store.createAccount(
+    const applicant = await mustCreate(store, 
       {
         name: 'Reopened Applicant',
         email: `reopened-${eventCounter}@oneresi.test`,
@@ -729,7 +743,7 @@ describe('the registration decision', () => {
     const store = accountStore(db);
     const ghostBlock = `Ghost Block ${eventCounter}`;
     const event = anEvent('resident.approved');
-    const settled = await store.createAccount(
+    const settled = await mustCreate(store, 
       {
         name: 'Settled Applicant',
         email: `settled-${eventCounter}@oneresi.test`,

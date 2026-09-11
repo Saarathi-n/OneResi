@@ -367,16 +367,48 @@ model Booking {
   facility  Facility      @relation(fields: [facilityId], references: [id], onDelete: Restrict)
   unit      Unit          @relation(fields: [unitId], references: [id], onDelete: Restrict)
   decidedBy ResidentUser? @relation("BookingDecider", fields: [decidedById], references: [id], onDelete: Restrict)
+  slotHolds BookingSlotHold[]
 
   /// NOTE: the constraint that actually prevents a double booking is a PARTIAL unique index
   /// over (facilityId, bookingDate, startTime) restricted to PENDING and CONFIRMED. Prisma
   /// cannot express a filtered index, so it lives in hand-written SQL in the initial migration
   /// for both providers. ADR 0003 requires it; the previous build had neither it nor a
   /// migrations directory to put it in (D-18).
+  ///
+  /// That index guards the exact start only. Windows that overlap but start at different times
+  /// (10:00–12:00 and 11:00–13:00) share no start, so under READ COMMITTED both can commit —
+  /// the race D-81 records. The holds below are the structural fix.
   @@index([facilityId, bookingDate])
   @@index([unitId])
   @@index([status])
   @@map("booking")
+}
+
+/// One hour of one facility-date that a live booking spans — the row that makes overlapping
+/// windows collide. Any two time ranges that overlap share at least one hour of the day, so the
+/// unique constraint on (facilityId, bookingDate, startHour) refuses the second overlapping
+/// insert the same way the partial index refuses a second identical start, with no isolation
+/// level required to see it (D-81). Plain SQL unique constraints exist identically on SQLite
+/// and PostgreSQL, which a gist exclusion constraint would not.
+///
+/// Written beside the booking in one transaction; deleted when the booking stops holding the
+/// slot (cancelled or rejected). A confirmed booking keeps its holds until it happens.
+model BookingSlotHold {
+  id        Int @id @default(autoincrement())
+  bookingId Int
+  /// Denormalized from the booking so the unique key names the facility-date directly.
+  facilityId   Int
+  /// Date only, stored at UTC midnight — the booking's own date.
+  bookingDate  DateTime
+  /// The hour bucket the window touches, 0–23: `10:30–11:15` holds hour 10 only, `10:00–12:00`
+  /// holds hours 10 and 11 (the end is exclusive).
+  startHour    Int
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@unique([facilityId, bookingDate, startHour])
+  @@index([bookingId])
+  @@map("booking_slot_hold")
 }
 
 model Announcement {

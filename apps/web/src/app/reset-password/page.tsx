@@ -2,7 +2,15 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Button, Card, CardBody, Field, Input, Logo } from '@oneresi/ui';
+import {
+  Button,
+  Card,
+  CardBody,
+  Field,
+  Input,
+  Logo,
+  buttonClass,
+} from '@oneresi/ui';
 import { call } from '@/lib/session';
 
 /**
@@ -44,10 +52,8 @@ export default function ResetRequestPage() {
           <Link href="/" aria-label="OneResi home">
             <Logo variant="wordmark" size={28} />
           </Link>
-          <Link href="/sign-in">
-            <Button variant="ghost" size="sm">
-              Back to sign in
-            </Button>
+          <Link href="/sign-in" className={buttonClass('ghost', 'sm')}>
+            Back to sign in
           </Link>
         </div>
       </header>
@@ -62,8 +68,8 @@ export default function ResetRequestPage() {
                   If an account exists for {email}, a reset link is on its way. The link works for
                   15 minutes and can be used once.
                 </p>
-                <Link href="/sign-in" className="mt-6 inline-block">
-                  <Button variant="secondary">Back to sign in</Button>
+                <Link href="/sign-in" className={buttonClass('secondary', 'md', 'mt-6')}>
+                  Back to sign in
                 </Link>
               </>
             ) : (

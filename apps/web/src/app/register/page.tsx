@@ -13,6 +13,7 @@ import {
   Stepper,
   Textarea,
   ProgressRing,
+  buttonClass,
 } from '@oneresi/ui';
 import {
   Email,
@@ -345,8 +346,8 @@ export default function RegisterPage() {
             usually within a day or two. Once approved, sign in with the email and password you
             just chose.
           </p>
-          <Link href="/sign-in" className="mt-8">
-            <Button size="lg">Go to sign in</Button>
+          <Link href="/sign-in" className={buttonClass('primary', 'lg', 'mt-8')}>
+            Go to sign in
           </Link>
         </main>
       </div>
@@ -360,10 +361,8 @@ export default function RegisterPage() {
           <Link href="/" aria-label="OneResi home">
             <Logo variant="wordmark" size={28} />
           </Link>
-          <Link href="/sign-in">
-            <Button variant="ghost" size="sm">
-              I already have an account
-            </Button>
+          <Link href="/sign-in" className={buttonClass('ghost', 'sm')}>
+            I already have an account
           </Link>
         </div>
       </header>

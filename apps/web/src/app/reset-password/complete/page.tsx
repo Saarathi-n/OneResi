@@ -3,7 +3,15 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { Button, Card, CardBody, Field, Input, Logo } from '@oneresi/ui';
+import {
+  Button,
+  Card,
+  CardBody,
+  Field,
+  Input,
+  Logo,
+  buttonClass,
+} from '@oneresi/ui';
 import { call } from '@/lib/session';
 
 /**
@@ -105,10 +113,8 @@ export default function ResetCompletePage() {
           <Link href="/" aria-label="OneResi home">
             <Logo variant="wordmark" size={28} />
           </Link>
-          <Link href="/sign-in">
-            <Button variant="ghost" size="sm">
-              Back to sign in
-            </Button>
+          <Link href="/sign-in" className={buttonClass('ghost', 'sm')}>
+            Back to sign in
           </Link>
         </div>
       </header>

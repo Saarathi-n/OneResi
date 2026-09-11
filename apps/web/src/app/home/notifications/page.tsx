@@ -11,6 +11,7 @@ import {
   RelativeTime,
   Skeleton,
   useToast,
+  buttonClass,
 } from '@oneresi/ui';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
@@ -118,10 +119,8 @@ export default function NotificationsPage() {
                 </span>
               </div>
               {item.href !== null ? (
-                <Link href={item.href} className="mt-2 inline-block">
-                  <Button variant="ghost" size="sm">
-                    Open
-                  </Button>
+                <Link href={item.href} className={buttonClass('ghost', 'sm', 'mt-2 inline-block')}>
+                  Open
                 </Link>
               ) : null}
             </li>

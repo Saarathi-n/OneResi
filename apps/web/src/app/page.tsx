@@ -1,5 +1,8 @@
 import Link from 'next/link';
-import { Logo, Button } from '@oneresi/ui';
+import {
+  Logo,
+  buttonClass,
+} from '@oneresi/ui';
 
 /**
  * The public landing page. A real explanation of what the system does and for whom, structured
@@ -57,13 +60,11 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Logo variant="wordmark" size={32} />
           <nav className="flex items-center gap-3">
-            <Link href="/sign-in" className="hidden sm:block">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
+            <Link href="/sign-in" className={buttonClass('ghost', 'sm', 'hidden sm:inline-flex')}>
+              Sign in
             </Link>
-            <Link href="/register">
-              <Button size="sm">Join your society</Button>
+            <Link href="/register" className={buttonClass('primary', 'sm')}>
+              Join your society
             </Link>
           </nav>
         </div>
@@ -82,13 +83,11 @@ export default function LandingPage() {
               households can read, and a committee desk that does not drown in spreadsheets.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/register">
-                <Button size="lg">Create your account</Button>
+              <Link href="/register" className={buttonClass('primary', 'lg')}>
+                Create your account
               </Link>
-              <Link href="/sign-in">
-                <Button variant="secondary" size="lg">
-                  Sign in
-                </Button>
+              <Link href="/sign-in" className={buttonClass('secondary', 'lg')}>
+                Sign in
               </Link>
             </div>
             <p className="type-micro mt-4 text-content-subtle">
@@ -198,8 +197,8 @@ export default function LandingPage() {
             Register with your flat number. If your unit is not listed yet, describe it and the
             committee resolves it when they approve you.
           </p>
-          <Link href="/register">
-            <Button size="lg">Join your society</Button>
+          <Link href="/register" className={buttonClass('primary', 'lg')}>
+            Join your society
           </Link>
         </div>
       </section>

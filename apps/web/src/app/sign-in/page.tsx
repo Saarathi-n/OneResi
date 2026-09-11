@@ -3,7 +3,15 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Button, Field, Input, Logo, Card, CardBody } from '@oneresi/ui';
+import {
+  Button,
+  Field,
+  Input,
+  Logo,
+  Card,
+  CardBody,
+  buttonClass,
+} from '@oneresi/ui';
 import { signIn } from '@/lib/session';
 
 /** The sign-in screen. One form, the reset link, and the path to registration. */
@@ -59,10 +67,8 @@ export default function SignInPage() {
           <Link href="/" aria-label="OneResi home">
             <Logo variant="wordmark" size={28} />
           </Link>
-          <Link href="/register">
-            <Button variant="ghost" size="sm">
-              Create an account
-            </Button>
+          <Link href="/register" className={buttonClass('ghost', 'sm')}>
+            Create an account
           </Link>
         </div>
       </header>

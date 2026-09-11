@@ -14,6 +14,7 @@ import {
   Skeleton,
   StatusPill,
   useToast,
+  buttonClass,
 } from '@oneresi/ui';
 import {
   INVOICE_STATUS,
@@ -162,10 +163,8 @@ export default function InvoicesPage() {
                     </Button>
                   ) : null}
                   {invoice.receiptNo !== null ? (
-                    <Link href={`/receipts/${invoice.receiptNo}`}>
-                      <Button variant="ghost" size="sm">
-                        Receipt
-                      </Button>
+                    <Link href={`/receipts/${invoice.receiptNo}`} className={buttonClass('ghost', 'sm')}>
+                      Receipt
                     </Link>
                   ) : null}
                 </div>

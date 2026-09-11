@@ -34,11 +34,21 @@ export async function actor(request: NextRequest): Promise<Result<Actor>> {
  */
 export function meta(request: NextRequest): RequestMeta {
   const forwarded = request.headers.get('x-forwarded-for');
-  const firstHop = forwarded === null ? null : forwarded.split(',')[0]?.trim();
-  const ip =
-    firstHop !== undefined && firstHop !== null && firstHop.length > 0
-      ? firstHop
-      : (request.headers.get('x-real-ip') ?? 'unknown');
+  // The viewer's address, not the first hop the client typed. In production every request walks
+  // CloudFront then the ALB, and both APPEND: the last hop was written by our own ALB (a CloudFront
+  // edge), the hop before it by CloudFront (the viewer), and anything before that is the viewer's
+  // own forgery — a client that sends X-Forwarded-For chooses its first hop, so keying a rate
+  // window on it lets the client rotate identities (D-83). One hop is the client itself, direct,
+  // with nothing appended after it.
+  const hops =
+    forwarded === null
+      ? []
+      : forwarded
+          .split(',')
+          .map((hop) => hop.trim())
+          .filter((hop) => hop.length > 0);
+  const viewer = hops.length >= 2 ? hops[hops.length - 2] : hops[0];
+  const ip = viewer ?? (request.headers.get('x-real-ip') ?? 'unknown');
   const userAgent = request.headers.get('user-agent');
   const requested = request.headers.get('x-request-id');
   return {

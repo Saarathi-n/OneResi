@@ -3,7 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { Badge, Button, Logo, Skeleton, useToast } from '@oneresi/ui';
+import {
+  Badge,
+  Button,
+  Logo,
+  Skeleton,
+  useToast,
+  buttonClass,
+} from '@oneresi/ui';
 import { onSessionChange, signOut, useGuardedSession, call } from '@/lib/session';
 import { useEffect, useState } from 'react';
 
@@ -69,40 +76,34 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
           </Link>
           <nav aria-label="Resident" className="hidden items-center gap-1 md:flex">
             {NAV.map((item) => (
-              <Link key={item.href} href={item.href} className="contents">
-                <Button
-                  variant={pathname === item.href ? 'secondary' : 'ghost'}
-                  size="sm"
-                  tabIndex={-1}
-                  aria-current={pathname === item.href ? 'page' : undefined}
-                >
-                  {item.label}
-                </Button>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={buttonClass(pathname === item.href ? 'secondary' : 'ghost', 'sm')}
+                aria-current={pathname === item.href ? 'page' : undefined}
+              >
+                {item.label}
               </Link>
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-3">
-            <Link href="/home/notifications" className="rounded-full">
-              <Button
-                variant="ghost"
-                size="sm"
-                leadingIcon={
-                  unread !== null && unread > 0 ? (
-                    <Badge tone="critical" emphasis="solid" size="sm">
-                      {unread}
-                    </Badge>
-                  ) : undefined
-                }
-                aria-label={
-                  unread === null
-                    ? 'Notifications'
-                    : unread > 0
-                      ? `Notifications, ${unread} unread`
-                      : 'Notifications'
-                }
-              >
-                <span className="hidden sm:inline">Notifications</span>
-              </Button>
+            <Link
+              href="/home/notifications"
+              className={buttonClass('ghost', 'sm', 'rounded-full')}
+              aria-label={
+                unread === null
+                  ? 'Notifications'
+                  : unread > 0
+                    ? `Notifications, ${unread} unread`
+                    : 'Notifications'
+              }
+            >
+              {unread !== null && unread > 0 ? (
+                <Badge tone="critical" emphasis="solid" size="sm">
+                  {unread}
+                </Badge>
+              ) : null}
+              <span className="hidden sm:inline">Notifications</span>
             </Link>
             <span className="hidden text-right sm:block">
               <span className="type-label block text-content">{person.name}</span>
@@ -113,10 +114,8 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
               ) : null}
             </span>
             {person.role === 'A' ? (
-              <Link href="/desk">
-                <Button variant="secondary" size="sm">
-                  Committee desk
-                </Button>
+              <Link href="/desk" className={buttonClass('secondary', 'sm')}>
+                Committee desk
               </Link>
             ) : null}
             <Button
@@ -138,10 +137,12 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
           className="flex gap-1 overflow-x-auto border-t border-border px-4 py-2 md:hidden"
         >
             {MOBILE_NAV.map((item) => (
-              <Link key={item.href} href={item.href} className="shrink-0">
-                <Button variant={pathname === item.href ? 'secondary' : 'ghost'} size="sm">
-                  {item.label}
-                </Button>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={buttonClass(pathname === item.href ? 'secondary' : 'ghost', 'sm', 'shrink-0')}
+              >
+                {item.label}
               </Link>
             ))}
         </nav>

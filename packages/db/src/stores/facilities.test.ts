@@ -201,6 +201,148 @@ describe('createBooking', () => {
     );
     expect(relapse).not.toBeNull();
   });
+
+  it('writes one hold per hour the window touches, with the end exclusive', async () => {
+    const store = facilitiesStore(db);
+    const home = await aSociety();
+
+    const whole = await store.createBooking(
+      {
+        facilityId: home.facility.id,
+        unitId: home.unit.id,
+        bookingDate: onDay('2026-11-02'),
+        startTime: '10:00',
+        endTime: '12:00',
+        amountPaise: C.rupees(300),
+        requestedAt: onDay('2026-10-20'),
+      },
+      () => [],
+    );
+    // 10:00–12:00 holds hours 10 and 11 — the 12:00 end does not hold hour 12.
+    expect(
+      await db.bookingSlotHold.findMany({
+        where: { bookingId: whole!.id },
+        orderBy: { startHour: 'asc' },
+      }),
+    ).toEqual([
+      expect.objectContaining({ facilityId: home.facility.id, startHour: 10 }),
+      expect.objectContaining({ facilityId: home.facility.id, startHour: 11 }),
+    ]);
+
+    const partial = await store.createBooking(
+      {
+        facilityId: home.facility.id,
+        unitId: home.unit.id,
+        bookingDate: onDay('2026-11-03'),
+        startTime: '10:30',
+        endTime: '10:45',
+        amountPaise: C.rupees(150),
+        requestedAt: onDay('2026-10-20'),
+      },
+      () => [],
+    );
+    // 10:30–10:45 never leaves hour 10.
+    expect(await db.bookingSlotHold.count({ where: { bookingId: partial!.id } })).toBe(1);
+  });
+
+  it('the hold constraint refuses an hour a concurrent window took, whatever the isolation level (D-81)', async () => {
+    const store = facilitiesStore(db);
+    const home = await aSociety();
+
+    const first = await store.createBooking(
+      {
+        facilityId: home.facility.id,
+        unitId: home.unit.id,
+        bookingDate: onDay('2026-11-04'),
+        startTime: '10:00',
+        endTime: '12:00',
+        amountPaise: C.rupees(300),
+        requestedAt: onDay('2026-10-20'),
+      },
+      () => [],
+    );
+    expect(first).not.toBeNull();
+
+    // The race the in-memory check cannot see: a second transaction that read no live booking
+    // writes its own booking row, and its holds collide with the first window's. The unique key
+    // on (facilityId, bookingDate, startHour) refuses it — 10:00–12:00 and 11:00–13:00 share
+    // hour 11 — and the transaction rolls back to nothing.
+    const raced = await store.createBooking(
+      {
+        facilityId: home.facility.id,
+        unitId: home.unit.id,
+        bookingDate: onDay('2026-11-04'),
+        startTime: '11:00',
+        endTime: '13:00',
+        amountPaise: C.rupees(300),
+        requestedAt: onDay('2026-10-21'),
+      },
+      () => [],
+    );
+    expect(raced).toBeNull();
+    expect(
+      await db.booking.count({ where: { facilityId: home.facility.id, bookingDate: onDay('2026-11-04') } }),
+    ).toBe(1);
+  });
+
+  it('a rejected or cancelled booking releases its hours; a confirmed one keeps them', async () => {
+    const store = facilitiesStore(db);
+    const home = await aSociety();
+
+    const rejected = await store.createBooking(
+      {
+        facilityId: home.facility.id,
+        unitId: home.unit.id,
+        bookingDate: onDay('2026-11-05'),
+        startTime: '10:00',
+        endTime: '11:00',
+        amountPaise: C.rupees(150),
+        requestedAt: onDay('2026-10-20'),
+      },
+      () => [],
+    );
+    await store.decideBooking(
+      {
+        bookingId: rejected!.id,
+        statusAfter: 'REJECTED',
+        decidedById: home.committee.id,
+        decidedAt: onDay('2026-10-21'),
+        reason: 'Maintenance that morning.',
+      },
+      [],
+    );
+    expect(await db.bookingSlotHold.count({ where: { bookingId: rejected!.id } })).toBe(0);
+
+    // The rejected window's hour is bookable again.
+    const retry = await store.createBooking(
+      {
+        facilityId: home.facility.id,
+        unitId: home.unit.id,
+        bookingDate: onDay('2026-11-05'),
+        startTime: '10:00',
+        endTime: '11:00',
+        amountPaise: C.rupees(150),
+        requestedAt: onDay('2026-10-22'),
+      },
+      () => [],
+    );
+    expect(retry).not.toBeNull();
+
+    await store.decideBooking(
+      {
+        bookingId: retry!.id,
+        statusAfter: 'CONFIRMED',
+        decidedById: home.committee.id,
+        decidedAt: onDay('2026-10-23'),
+        reason: null,
+      },
+      [],
+    );
+    expect(await db.bookingSlotHold.count({ where: { bookingId: retry!.id } })).toBe(1);
+
+    await store.cancelBooking({ bookingId: retry!.id, cancelledAt: onDay('2026-10-24') }, []);
+    expect(await db.bookingSlotHold.count({ where: { bookingId: retry!.id } })).toBe(0);
+  });
 });
 
 describe('decideBooking', () => {

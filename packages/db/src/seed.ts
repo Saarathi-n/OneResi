@@ -43,6 +43,7 @@ import { hash } from 'bcryptjs';
 import * as C from '@oneresi/contracts';
 import { getDb, liveTarget } from './client.js';
 import type { Db } from './client.js';
+import { hoursTouched } from './stores/shared.js';
 
 const DEMO_PASSWORD = process.env.SEED_PASSWORD ?? 'starling-marble-97-QUAY';
 
@@ -1350,8 +1351,8 @@ async function seedBookings(
         db.booking.findFirst({
           where: { facilityId, bookingDate, startTime: spec.start, unitId },
         }),
-      () =>
-        db.booking.create({
+      async () => {
+        const booking = await db.booking.create({
           data: {
             facilityId,
             unitId,
@@ -1368,7 +1369,21 @@ async function seedBookings(
             createdAt: spec.requestedAt,
             updatedAt: spec.updatedAt,
           },
-        }),
+        });
+        // Live seeds hold their hours like any live booking would (D-81): without the hold rows
+        // a seeded booking would be overlappable by a new one that starts at a different time.
+        if (spec.status === 'PENDING' || spec.status === 'CONFIRMED') {
+          await db.bookingSlotHold.createMany({
+            data: hoursTouched({ startTime: spec.start, endTime: spec.end }).map((hour) => ({
+              bookingId: booking.id,
+              facilityId,
+              bookingDate,
+              startHour: hour,
+            })),
+          });
+        }
+        return booking;
+      },
     );
     count += 1;
   }

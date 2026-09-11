@@ -465,13 +465,14 @@ export interface AccountStore {
   /**
    * One transaction: the account row, its optional home claim, and the paired outbox events. The
    * callback receives the row with its id, because the registration notification names the
-   * applicant.
+   * applicant. Null when the email was taken between the caller's pre-check and this insert —
+   * two simultaneous registrations, one unique index; the loser is a CONFLICT, not a 500 (D-82).
    */
   createAccount(
     input: NewAccount,
     claim: StoredClaim | null,
     eventsFor: (account: StoredAccount) => readonly OutboxEventInput[],
-  ): Promise<StoredAccount>;
+  ): Promise<StoredAccount | null>;
 
   /** The free-text claim on a pending application, for the committee to resolve (D-04). */
   findClaim(userId: number): Promise<StoredClaim | null>;

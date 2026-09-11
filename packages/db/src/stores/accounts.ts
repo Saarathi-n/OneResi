@@ -10,7 +10,7 @@ import type {
   StoredRefreshToken,
 } from '@oneresi/domain';
 import type { Db } from '../client.js';
-import { sharedLookups, toAccount, writeEvents } from './shared.js';
+import { isUniqueViolation, sharedLookups, toAccount, writeEvents } from './shared.js';
 import type { Tx } from './shared.js';
 
 /**
@@ -55,36 +55,44 @@ export function accountStore(db: Db): AccountStore {
     },
 
     async createAccount(input, claim, eventsFor) {
-      return db.$transaction(async (tx) => {
-        const row = await tx.residentUser.create({
-          data: {
-            name: input.name,
-            email: input.email,
-            phone: input.phone,
-            passwordHash: input.passwordHash,
-            role: input.role,
-            status: input.status,
-            unitId: input.unitId,
-            passwordChangedAt: input.passwordChangedAt,
-          },
-        });
-
-        if (claim !== null) {
-          // One live claim per account, upserted on userId: a registration creates a fresh
-          // account so the create branch is the one that runs, but a claim arriving for an
-          // account that already has one replaces the old row rather than colliding with the
-          // unique index — the resubmission story the migration documents. The words are the
-          // applicant's, stored exactly as given (D-04).
-          await tx.registrationClaim.upsert({
-            where: { userId: row.id },
-            create: claimData(row.id, claim),
-            update: { ...claimData(row.id, claim), resolvedUnitId: null, decidedById: null, resolvedAt: null },
+      // The catch sits OUTSIDE the transaction, so the engine rolls back the whole attempt: a
+      // concurrent registration with the same email hits the unique index and comes back as
+      // null — the caller's CONFLICT — rather than escaping as a 500 (D-82).
+      try {
+        return await db.$transaction(async (tx) => {
+          const row = await tx.residentUser.create({
+            data: {
+              name: input.name,
+              email: input.email,
+              phone: input.phone,
+              passwordHash: input.passwordHash,
+              role: input.role,
+              status: input.status,
+              unitId: input.unitId,
+              passwordChangedAt: input.passwordChangedAt,
+            },
           });
-        }
 
-        await writeEvents(tx, eventsFor(toAccount(row)));
-        return toAccount(row);
-      });
+          if (claim !== null) {
+            // One live claim per account, upserted on userId: a registration creates a fresh
+            // account so the create branch is the one that runs, but a claim arriving for an
+            // account that already has one replaces the old row rather than colliding with the
+            // unique index — the resubmission story the migration documents. The words are the
+            // applicant's, stored exactly as given (D-04).
+            await tx.registrationClaim.upsert({
+              where: { userId: row.id },
+              create: claimData(row.id, claim),
+              update: { ...claimData(row.id, claim), resolvedUnitId: null, decidedById: null, resolvedAt: null },
+            });
+          }
+
+          await writeEvents(tx, eventsFor(toAccount(row)));
+          return toAccount(row);
+        });
+      } catch (error) {
+        if (isUniqueViolation(error)) return null;
+        throw error;
+      }
     },
 
     /**

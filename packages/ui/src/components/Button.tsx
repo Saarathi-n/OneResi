@@ -6,6 +6,7 @@ import { cn } from '../internal/cn.js';
 import { Spinner } from '../internal/Spinner.js';
 import { controlVariants } from '../motion/transitions.js';
 import { useMotion } from '../motion/useMotion.js';
+import { BUTTON_SIZE_CLASS, BUTTON_VARIANT_CLASS } from './buttonStyles.js';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -34,19 +35,8 @@ export interface ButtonProps extends MotionButtonProps {
   readonly children?: ReactNode | undefined;
 }
 
-const VARIANT: Readonly<Record<ButtonVariant, string>> = {
-  primary: 'bg-accent text-accent-on border-accent hover:bg-accent-hover',
-  secondary: 'bg-surface-raised text-content border-border-strong hover:bg-surface-sunken',
-  ghost: 'bg-transparent text-content border-transparent hover:bg-surface-sunken',
-  danger: 'bg-critical text-critical-on border-critical hover:bg-critical-hover',
-};
-
-const SIZE: Readonly<Record<ButtonSize, string>> = {
-  sm: 'h-8 px-3 gap-1.5 type-label rounded-md',
-  md: 'h-11 px-4 gap-2 type-body rounded-lg',
-  lg: 'h-12 px-5 gap-2 type-body rounded-lg',
-  kiosk: 'h-16 px-8 gap-3 type-title rounded-xl',
-};
+const VARIANT = BUTTON_VARIANT_CLASS;
+const SIZE = BUTTON_SIZE_CLASS;
 export function Button({
   variant = 'primary',
   size = 'md',

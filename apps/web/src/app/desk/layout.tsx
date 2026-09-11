@@ -3,7 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Badge, Button, Logo, Skeleton, useToast } from '@oneresi/ui';
+import {
+  Badge,
+  Button,
+  Logo,
+  Skeleton,
+  useToast,
+  buttonClass,
+} from '@oneresi/ui';
 import { signOut, useGuardedSession } from '@/lib/session';
 
 /**
@@ -84,10 +91,8 @@ export default function DeskLayout({ children }: { children: ReactNode }) {
             >
               Jump to
             </Button>
-            <Link href="/home">
-              <Button variant="ghost" size="sm">
-                Resident view
-              </Button>
+            <Link href="/home" className={buttonClass('ghost', 'sm')}>
+              Resident view
             </Link>
             <Button
               variant="ghost"

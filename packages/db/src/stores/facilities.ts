@@ -3,6 +3,7 @@ import type { Db, Prisma } from '../client.js';
 import type { FacilitiesStore } from '@oneresi/domain';
 import {
   bookingInclude,
+  hoursTouched,
   isUniqueViolation,
   sharedLookups,
   toBooking,
@@ -106,8 +107,9 @@ export function facilitiesStore(db: Db): FacilitiesStore {
       try {
         return await db.$transaction(async (tx) => {
           // The friendly refusal, inside the write: a live booking that overlaps this window
-          // nulls the request before anything is written. The partial unique index makes the
-          // same-start case true under concurrency even between two transactions.
+          // nulls the request before anything is written. The partial unique index and the
+          // slot holds below are what make it true under concurrency, even between two
+          // transactions that both read no conflict (D-18, D-81).
           const held = await tx.booking.findMany({
             where: {
               facilityId: input.facilityId,
@@ -129,6 +131,17 @@ export function facilitiesStore(db: Db): FacilitiesStore {
               createdAt: input.requestedAt,
             },
           });
+          // One hold per hour the window touches. A concurrent overlapping window necessarily
+          // claims a common hour, so the unique constraint refuses the loser here — the same
+          // guarantee the partial index gives the exact-start case, extended to every overlap.
+          await tx.bookingSlotHold.createMany({
+            data: hoursTouched(input).map((hour) => ({
+              bookingId: created.id,
+              facilityId: input.facilityId,
+              bookingDate: input.bookingDate,
+              startHour: hour,
+            })),
+          });
           const row = await tx.booking.findUniqueOrThrow({
             where: { id: created.id },
             include: bookingInclude,
@@ -138,7 +151,8 @@ export function facilitiesStore(db: Db): FacilitiesStore {
           return booking;
         });
       } catch (error) {
-        // The index refused a same-start window a concurrent request had just taken.
+        // The index refused a same-start window, or a hold refused an overlapping one, that a
+        // concurrent request had just taken.
         if (isUniqueViolation(error)) return null;
         throw error;
       }
@@ -158,6 +172,13 @@ export function facilitiesStore(db: Db): FacilitiesStore {
         });
         if (applied.count === 0) return null;
 
+        // A rejected booking stops holding its slot; a confirmed one keeps every hold until the
+        // slot happens. The partial index reads status for the exact-start case; the holds are
+        // the overlap case, and they must follow the same rule (D-81).
+        if (input.statusAfter === 'REJECTED') {
+          await tx.bookingSlotHold.deleteMany({ where: { bookingId: input.bookingId } });
+        }
+
         await writeEvents(tx, events);
         const row = await tx.booking.findUniqueOrThrow({
           where: { id: input.bookingId },
@@ -176,6 +197,9 @@ export function facilitiesStore(db: Db): FacilitiesStore {
           data: { status: 'CANCELLED' },
         });
         if (applied.count === 0) return null;
+
+        // The slot is free the moment the booking stops holding it (D-81, same as UC-12's rule).
+        await tx.bookingSlotHold.deleteMany({ where: { bookingId: input.bookingId } });
 
         await writeEvents(tx, events);
         const row = await tx.booking.findUniqueOrThrow({

@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Button, Card } from '@oneresi/ui';
+import {
+  Button,
+  Card,
+  buttonClass,
+} from '@oneresi/ui';
 import { CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -111,10 +115,8 @@ export default function EntryPage(): ReactNode {
               Visitors you check in with a pass code will appear here until they leave.
             </p>
             <div className="mt-6">
-              <Link href="/gate/verify" className="block">
-                <Button size="kiosk" fullWidth>
-                  Check a pass code
-                </Button>
+              <Link href="/gate/verify" className={buttonClass('primary', 'kiosk', 'w-full')}>
+                Check a pass code
               </Link>
             </div>
           </Card>

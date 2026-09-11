@@ -246,7 +246,7 @@ class MemoryStore implements AccountStore {
     input: NewAccount,
     claim: StoredClaim | null,
     eventsFor: (account: StoredAccount) => readonly OutboxEventInput[],
-  ): Promise<StoredAccount> {
+  ): Promise<StoredAccount | null> {
     const account: AccountRow = {
       id: this.nextAccountId++,
       name: input.name,

@@ -30,6 +30,7 @@ export { Logo, type LogoProps } from './brand/Logo.js';
 
 // Controls
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './components/Button.js';
+export { buttonClass } from './components/buttonStyles.js';
 export { IconButton, type IconButtonProps } from './components/IconButton.js';
 export { Field, type FieldProps, useFieldControl, type FieldControl } from './components/Field.js';
 export { Input, type InputProps } from './components/Input.js';

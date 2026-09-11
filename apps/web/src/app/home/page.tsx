@@ -13,6 +13,7 @@ import {
   StatusPill,
   Money,
   EmptyState,
+  buttonClass,
 } from '@oneresi/ui';
 import {
   APPROVAL_STATUS,
@@ -159,10 +160,8 @@ export default function ResidentHomePage() {
           <CardHeader
             title="Maintenance due"
             actions={
-              <Link href="/home/invoices">
-                <Button variant="ghost" size="sm">
-                  All payments
-                </Button>
+              <Link href="/home/invoices" className={buttonClass('ghost', 'sm')}>
+                All payments
               </Link>
             }
           />
@@ -173,8 +172,8 @@ export default function ResidentHomePage() {
                 Period {firstOpen.period}
               </p>
             </div>
-            <Link href="/home/invoices">
-              <Button>Pay now</Button>
+            <Link href="/home/invoices" className={buttonClass()}>
+              Pay now
             </Link>
           </CardBody>
         </Card>
@@ -183,8 +182,8 @@ export default function ResidentHomePage() {
           title="No maintenance due"
           description="Every invoice for your home is settled. Receipts stay in Payments."
           action={
-            <Link href="/home/invoices">
-              <Button variant="secondary">See payment history</Button>
+            <Link href="/home/invoices" className={buttonClass('secondary')}>
+              See payment history
             </Link>
           }
         />
@@ -200,10 +199,8 @@ export default function ResidentHomePage() {
                 {nextDueComplaint.description}
               </p>
             </div>
-            <Link href="/home/complaints" className="shrink-0">
-              <Button variant="ghost" size="sm">
-                Track
-              </Button>
+            <Link href="/home/complaints" className={buttonClass('ghost', 'sm', 'shrink-0')}>
+              Track
             </Link>
           </CardBody>
         </Card>
