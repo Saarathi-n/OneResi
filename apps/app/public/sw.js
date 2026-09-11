@@ -112,3 +112,63 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(cacheFirst(request, SHELL_CACHE));
   }
 });
+
+/*
+ * Push. The payload is the three fields the server's push transport writes —
+ * { title, body, path } — where `path` is a path, never a URL: the origin is this worker's
+ * business, never the sender's guess, so a message cannot carry a link that points anywhere
+ * but this app (D-22).
+ */
+self.addEventListener('push', (event) => {
+  const payload = { title: 'OneResi', body: 'You have a new notification.', path: null };
+  if (event.data !== null) {
+    try {
+      const parsed = event.data.json();
+      if (typeof parsed === 'object' && parsed !== null) {
+        if (typeof parsed.title === 'string' && parsed.title.length > 0) payload.title = parsed.title;
+        if (typeof parsed.body === 'string' && parsed.body.length > 0) payload.body = parsed.body;
+        if (typeof parsed.path === 'string') payload.path = parsed.path;
+      }
+    } catch {
+      // Not JSON, or no data at all: the defaults above stand, because a push that shows
+      // nothing is indistinguishable from one that never arrived.
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/a/icons/icon-192.png',
+      badge: '/a/icons/icon-192.png',
+      data: { path: payload.path },
+    }),
+  );
+});
+
+/*
+ * A tap on the notification. If the app is already open, focus it — a second window on a phone
+ * is not a thing. Otherwise open the app at the path the message carried (or its root when the
+ * message had none), which is why the path rides along in the notification's `data`.
+ */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const path = event.notification.data && typeof event.notification.data.path === 'string'
+    ? event.notification.data.path
+    : '';
+  const target = new URL('/a' + path, self.location.origin).href;
+
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of clientList) {
+        if (new URL(client.url).origin !== self.location.origin) continue;
+        if ('focus' in client) {
+          await client.focus();
+          return;
+        }
+      }
+      await self.clients.openWindow(target);
+    })(),
+  );
+});

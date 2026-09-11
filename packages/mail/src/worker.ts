@@ -84,7 +84,13 @@ export interface DrainReport {
   readonly problems: readonly string[];
 }
 
-type Settlement = 'retried' | 'failed' | 'abandoned' | 'unsettled';
+/**
+ * Where a failed row lands, and the settling itself. Exported because the PUSH drain
+ * (`push-worker.ts`) marks its rows through the exact same lifecycle — the constants, the backoff
+ * and this function are the outbox's retry contract, and forking them here is how the two workers
+ * would drift into disagreeing about what five attempts mean.
+ */
+export type Settlement = 'retried' | 'failed' | 'abandoned' | 'unsettled';
 
 interface SettleInput {
   readonly db: Db;
@@ -105,7 +111,7 @@ interface SettleInput {
  * poison row that keeps coming back hides everything queued behind it, so it is abandoned with the
  * reason on the row.
  */
-async function settle(input: SettleInput): Promise<Settlement> {
+export async function settle(input: SettleInput): Promise<Settlement> {
   const status =
     input.permanent || input.attempt >= ABANDON_AFTER_ATTEMPTS
       ? 'ABANDONED'

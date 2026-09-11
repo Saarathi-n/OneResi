@@ -293,6 +293,11 @@ export const PublishAnnouncementInput = z.object({
  * What a browser's `pushManager.subscribe()` hands over, verbatim in shape. The endpoint is the
  * natural key: a re-subscription (the browser rotated its keys) refreshes the one row it names
  * rather than adding a second one for the same device.
+ *
+ * `expirationTime` is accepted because the browser sends it, and not stored: the push service
+ * announces the real expiry by answering 410 when the subscription dies, which is the only
+ * source worth trusting — a promised expiry time that comes and goes would have subscriptions
+ * retired early or zombie rows kept alive.
  */
 export const PushSubscribeInput = z.object({
   endpoint: PushEndpoint,
@@ -300,6 +305,7 @@ export const PushSubscribeInput = z.object({
     p256dh: PushP256dh,
     auth: PushAuth,
   }),
+  expirationTime: z.number().optional(),
 });
 
 /** The one subscription being retired, named by the only stable handle there is: its endpoint. */

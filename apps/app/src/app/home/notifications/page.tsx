@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Button, Card, RelativeTime } from '@oneresi/ui';
 import { Icon } from '@/components/icons';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
+import { PushSetting } from '@/components/PushSetting';
 import { Shell } from '@/components/Shell';
 import { simple } from '@/lib/api';
 import { RESIDENT_TABS } from '@/lib/tabs';
@@ -68,6 +69,9 @@ export default function NotificationsPage(): ReactNode {
         ) : undefined
       }
     >
+      {/* The lock-screen switch, above the feed it governs. It renders nothing when this
+          browser or this checkout cannot do push — the layout below is unchanged in that case. */}
+      <PushSetting />
       <AsyncView
         state={notifications.state}
         skeleton={<CardListSkeleton rows={4} />}
@@ -83,7 +87,7 @@ export default function NotificationsPage(): ReactNode {
         render={(list) => (
           <div className="flex flex-col gap-3">
             {list.items.map((item, index) => (
-              <div key={item.id} className="row-in" style={rowStyle(index, reduced)}>
+              <div key={item.id} className="row-in" style={rowStyle(index + 1, reduced)}>
                 <NotificationCard
                   item={item}
                   onRead={() => {

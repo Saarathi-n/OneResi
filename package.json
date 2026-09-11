@@ -17,6 +17,7 @@
     "db:pull": "node scripts/db-pull.mjs",
     "db:push": "node scripts/db-push.mjs",
     "db:diff": "node scripts/db-diff.mjs",
+    "push:keys": "node scripts/generate-vapid-keys.mjs",
     "cloud:up": "node scripts/cloud.mjs up",
     "cloud:down": "node scripts/cloud.mjs down",
     "cloud:stop": "node scripts/cloud.mjs stop",
@@ -31,6 +32,7 @@
     "check:gates": "node scripts/check-copy.mjs --self-test && node scripts/check-enums.mjs --self-test",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "node scripts/e2e-local.mjs",
     "test:mail:live": "tsx scripts/mail-live.mjs",
     "test:parity": "node scripts/run-parity.mjs",
     "verify": "pnpm typecheck && pnpm lint && pnpm check:copy && pnpm check:enums && pnpm test:parity"

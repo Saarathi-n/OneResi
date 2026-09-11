@@ -31,3 +31,4 @@ export * from './render.js';
 export * from './templates/index.js';
 export * from './providers/index.js';
 export * from './worker.js';
+export * from './push-worker.js';

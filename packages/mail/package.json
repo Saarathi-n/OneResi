@@ -7,7 +7,10 @@
     ".": "./src/index.ts",
     "./testing": "./src/testing.ts",
     "./worker": "./src/worker.ts",
+    "./push-worker": "./src/push-worker.ts",
+    "./in-app-worker": "./src/in-app-worker.ts",
     "./providers/ses": "./src/providers/ses.ts",
+    "./providers/webpush": "./src/providers/webpush.ts",
     "./providers/ses-events": "./src/providers/ses-events.ts"
   },
   "scripts": {
@@ -17,9 +20,11 @@
     "@aws-sdk/client-sesv2": "^3.700.0",
     "@aws-sdk/client-sqs": "^3.700.0",
     "@oneresi/contracts": "workspace:*",
-    "@oneresi/db": "workspace:*"
+    "@oneresi/db": "workspace:*",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@types/web-push": "^3.6.4",
     "vitest": "3.1.1"
   }
 }

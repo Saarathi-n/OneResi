@@ -24,11 +24,17 @@ import {
   propertyService,
   bcryptHasher,
   createConsolePushTransport,
+  inAppNotification,
   joseAccessToken,
   type Clock,
+  type PushTransport,
   type ServiceEnv,
 } from '@oneresi/domain';
 import { startMailWorker, type MailWorkerHandle } from '@oneresi/mail/worker';
+import { startPushWorker, type PushWorkerHandle } from '@oneresi/mail/push-worker';
+import { startInAppWorker, type InAppWorkerHandle } from '@oneresi/mail/in-app-worker';
+import { createWebPushTransport } from '@oneresi/mail/providers/webpush';
+import { pushDriver } from '@oneresi/mail';
 import { BCRYPT_COST } from '@oneresi/contracts';
 
 /**
@@ -77,17 +83,43 @@ interface Runtime {
 
 let shutdownRegistered = false;
 
-/** Stops the local mail worker (if running) and closes the single Prisma client. */
+/** Stops the local workers (if running) and closes the single Prisma client. */
 async function shutdown(): Promise<void> {
-  const pending = (globalThis as { __oneresiWebRuntime?: Promise<{ mailWorker: MailWorkerHandle | null }> })
+  const pending = (globalThis as { __oneresiWebRuntime?: Promise<BuiltRuntime> })
     .__oneresiWebRuntime;
   if (pending === undefined) return;
   const rt = await pending.catch(() => null);
   await rt?.mailWorker?.stop();
+  await rt?.pushWorker?.stop();
+  await rt?.inAppWorker?.stop();
   await closeDb();
 }
 
-async function buildRuntime(): Promise<Runtime & { mailWorker: MailWorkerHandle | null }> {
+/** What the composition root hands the composition seams: a full runtime plus its local workers. */
+interface BuiltRuntime extends Runtime {
+  readonly mailWorker: MailWorkerHandle | null;
+  readonly pushWorker: PushWorkerHandle | null;
+  readonly inAppWorker: InAppWorkerHandle | null;
+  /**
+   * The push transport selected by PUSH_DRIVER, exported for the Lambda, which drains the PUSH
+   * channel in the same invocation as email and needs the same object rather than a second one
+   * constructed from the same variables.
+   */
+  readonly pushTransport: PushTransport;
+}
+
+/**
+ * The transport the notifications service sends through, by PUSH_DRIVER. `pushDriver()` refuses
+ * anything but webpush in production and `createWebPushTransport()` resolves the VAPID settings
+ * eagerly — so a production misconfiguration dies HERE, at boot, loudly, exactly the way a
+ * defaulted one silently delivering nothing must not (D-30, and D-05's argument for it).
+ */
+function selectPushTransport(): PushTransport {
+  const driver = pushDriver();
+  return driver === 'webpush' ? createWebPushTransport() : createConsolePushTransport();
+}
+
+async function buildRuntime(): Promise<BuiltRuntime> {
   // Production misconfiguration fails HERE, at boot, loudly — never as a silent fallback.
   assertRuntimeConfig();
 
@@ -108,6 +140,41 @@ async function buildRuntime(): Promise<Runtime & { mailWorker: MailWorkerHandle 
       ? null // Production drains the outbox from SQS → Lambda, never an in-process timer.
       : startMailWorker();
 
+  const pushTransport = selectPushTransport();
+  const notifications = notificationsService({
+    store: notificationsStore(db),
+    clock,
+    push: pushTransport,
+  });
+
+  // The local push drain runs beside the mail drain on the same interval, in the same process:
+  // locally the three channels are one process's three timers. On AWS none of these timers
+  // exists — the Lambda's handler drains every channel once per invocation.
+  const pushWorker =
+    process.env.NODE_ENV === 'production'
+      ? null
+      : startPushWorker({
+          // The dispatcher is a callback, not an import: packages/mail must not depend on
+          // packages/domain (WIRING's layering), so the composition root supplies the function
+          // the drain calls per row. Structural typing carries it across the seam.
+          dispatch: (userId, event) => notifications.dispatchPush({ userId, event }),
+        });
+
+  // The in-app drain, wired the same way: the domain's wording function and the notifications
+  // store's insert, both supplied here because packages/mail cannot import either.
+  const inAppWorker =
+    process.env.NODE_ENV === 'production'
+      ? null
+      : startInAppWorker({
+          wording: inAppNotification,
+          sink: (userId, wording) =>
+            notificationsStore(db)
+              .createNotifications([
+                { userId, type: wording.type, title: wording.title, body: wording.body, href: wording.href, createdAt: clock.now() },
+              ])
+              .then(() => undefined),
+        });
+
   if (!shutdownRegistered) {
     shutdownRegistered = true;
     process.once('SIGTERM', () => {
@@ -125,24 +192,19 @@ async function buildRuntime(): Promise<Runtime & { mailWorker: MailWorkerHandle 
     complaints: complaintsService({ store: complaintStore(db), clock }),
     facilities: facilitiesService({ store: facilitiesStore(db), clock }),
     notices: noticesService({ store: noticesStore(db), clock }),
-    // The console push transport, until the web-push transport lands with its VAPID keys: it logs
-    // what would have gone to the lock screen, exactly as mail's console provider does.
-    notifications: notificationsService({
-      store: notificationsStore(db),
-      clock,
-      push: createConsolePushTransport(),
-    }),
+    notifications,
     property: propertyService({ store: propertyStore(db) }),
     mailWorker,
+    pushWorker,
+    inAppWorker,
+    pushTransport,
   };
 }
 
-const holder = globalThis as {
-  __oneresiWebRuntime?: Promise<Runtime & { mailWorker: MailWorkerHandle | null }>;
-};
+const holder = globalThis as { __oneresiWebRuntime?: Promise<BuiltRuntime> };
 
 /** Every service, wired. Memoized on globalThis so a dev-server hot reload reuses the same client. */
-export function services(): Promise<Runtime & { mailWorker: MailWorkerHandle | null }> {
+export function services(): Promise<BuiltRuntime> {
   holder.__oneresiWebRuntime ??= buildRuntime();
   return holder.__oneresiWebRuntime;
 }
