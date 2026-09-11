@@ -1127,11 +1127,11 @@ The exact-start case is airtight (the index refuses the second row, the adapter 
 409) and the sequential case is airtight (the in-memory check sees the first booking). Only the
 concurrent-overlap race is open.
 
-**Fix** — a slot-holds table: one row per facility/date/hour a booking spans, unique on
-`(facilityId, date, hour)`, written transactionally beside the booking and released on
-cancellation. Two overlapping windows necessarily claim a common hour, so the unique constraint
-refuses the second the same way it refuses the exact start today — and the rule is identical on
-SQLite and PostgreSQL, which an EXCLUDE/gist constraint would not be.
+**Fixed** — the slot-holds table as proposed, applied: `booking_slot_hold`, one row per
+facility-date-hour a live window touches, unique on `(facilityId, bookingDate, startHour)`,
+written beside the booking in the same transaction and released on cancel or rejection. The
+seed writes holds for its live bookings; the store tests cover the hour math, the collision, and
+the release lifecycle.
 
 ### D-82 · A registration race answers 500, not 409
 `packages/db/src/stores/accounts.ts` — `createAccount`
@@ -1144,6 +1144,10 @@ layer catches P2002 outside the transaction and reports null; `createAccount` ca
 adapter and translated by the service. No data is written (the transaction rolls back); the caller
 who retries gets the ordinary 409.
 
+**Fixed** — `createAccount` returns null on the P2002 (the adapter's established convention,
+caught outside the transaction), and the service maps it to the same CONFLICT the pre-check
+gives.
+
 ### D-83 · The rate limiter keys on a spoofable header
 `apps/web/src/server/http.ts` — `meta()`
 
@@ -1153,8 +1157,10 @@ its own rate-limit identity. Sign-in and reset are additionally keyed per email 
 weakened windows are registration per IP and gate code checks per IP — the latter still counts
 every miss against the gate's shared window, so the floor holds.
 
-**Fix** — trust the address at the position our own edge appended it, or drop the header at the
-CloudFront origin-request policy and key on `x-real-ip` set there.
+**Fixed** — the first half of the proposal: `meta()` now reads the second-to-last hop, the
+position CloudFront appended the viewer at, with the last hop being our own ALB's unforgeable
+append and one hop being the client itself, direct. Everything before the viewer is the
+viewer's own forgery and is ignored.
 
 ### D-84 · Buttons nested inside links
 `apps/web/src/app/desk/layout.tsx`, `home/layout.tsx`, `home/invoices/page.tsx`
@@ -1164,3 +1170,7 @@ invalid HTML, hydration warnings, and a keyboard focus target that is a button p
 link. Navigation works today because a click on the inner button bubbles to the anchor. The honest
 shape is a Button that can render as a link (an `as`/`asChild` prop on the UI library's Button) or
 links carrying the button's classes directly.
+
+**Fixed** — the second shape: `buttonClass()` in @oneresi/ui exports the Button's look as pure
+classes, in a module without `use client` so server components (the marketing landing) can call
+it; all nineteen nesting sites are real anchors carrying those classes now.
