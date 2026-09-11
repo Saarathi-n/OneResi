@@ -455,12 +455,22 @@ export interface AccountStore {
   countAccounts(): Promise<number>;
 
   /**
-   * One transaction: the account row, its optional home claim, and the paired outbox events.
+   * ACTIVE committee members — the people an application or booking request is addressed to. One
+   * outbox row per member (D-29); redeclared from FacilitiesStore so this port reads standalone.
+   */
+  findCommitteeMembers(): Promise<
+    readonly { readonly id: number; readonly name: string; readonly email: string }[]
+  >;
+
+  /**
+   * One transaction: the account row, its optional home claim, and the paired outbox events. The
+   * callback receives the row with its id, because the registration notification names the
+   * applicant.
    */
   createAccount(
     input: NewAccount,
     claim: StoredClaim | null,
-    events: readonly OutboxEventInput[],
+    eventsFor: (account: StoredAccount) => readonly OutboxEventInput[],
   ): Promise<StoredAccount>;
 
   /** The free-text claim on a pending application, for the committee to resolve (D-04). */

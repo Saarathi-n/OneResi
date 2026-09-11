@@ -345,9 +345,11 @@ describe('raise', () => {
     expect(complaint.raisedAt).toEqual(new Date('2026-09-08T09:00:00Z'));
     expect(world.store.complaints[0]?.photoKeys).toEqual(['uploads/b101-tap-1.jpg', 'uploads/b101-tap-2.jpg']);
 
-    // One in-app note per ACTIVE resident of the home (D-29); no email template exists.
-    expect(world.store.outbox).toHaveLength(2);
-    expect(world.store.outbox.every((e) => e.type === 'complaint.raised' && e.channel === 'IN_APP')).toBe(true);
+    // One in-app note and one push per ACTIVE resident of the home (D-29); no email template.
+    expect(world.store.outbox).toHaveLength(4);
+    expect(world.store.outbox.every((e) => e.type === 'complaint.raised')).toBe(true);
+    expect(world.store.outbox.filter((e) => e.channel === 'IN_APP')).toHaveLength(2);
+    expect(world.store.outbox.filter((e) => e.channel === 'PUSH')).toHaveLength(2);
     expect(world.store.outbox[0]?.payload).toEqual(
       expect.objectContaining({
         name: 'Asha Rao',
@@ -556,8 +558,10 @@ describe('reopen', () => {
       note: 'The drip came back after two days, worse than before.',
     });
 
-    expect(world.store.outbox).toHaveLength(2);
-    expect(world.store.outbox.every((e) => e.type === 'complaint.reopened' && e.channel === 'IN_APP')).toBe(true);
+    expect(world.store.outbox).toHaveLength(4);
+    expect(world.store.outbox.every((e) => e.type === 'complaint.reopened')).toBe(true);
+    expect(world.store.outbox.filter((e) => e.channel === 'IN_APP')).toHaveLength(2);
+    expect(world.store.outbox.filter((e) => e.channel === 'PUSH')).toHaveLength(2);
     expect(world.store.outbox[0]?.payload).toEqual(
       expect.objectContaining({
         complaintId: complaint.id,

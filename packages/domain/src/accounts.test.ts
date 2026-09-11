@@ -230,12 +230,22 @@ class MemoryStore implements AccountStore {
     return Promise.resolve(this.accounts.length);
   }
 
+  findCommitteeMembers(): Promise<
+    readonly { id: number; name: string; email: string }[]
+  > {
+    return Promise.resolve(
+      this.accounts
+        .filter((a) => a.role === 'A' && a.status === 'ACTIVE')
+        .map((a) => ({ id: a.id, name: a.name, email: a.email })),
+    );
+  }
+
   // ---- writes (each one is "a transaction" in the real store)
 
   createAccount(
     input: NewAccount,
     claim: StoredClaim | null,
-    events: readonly OutboxEventInput[],
+    eventsFor: (account: StoredAccount) => readonly OutboxEventInput[],
   ): Promise<StoredAccount> {
     const account: AccountRow = {
       id: this.nextAccountId++,
@@ -253,7 +263,7 @@ class MemoryStore implements AccountStore {
     };
     this.accounts.push(account);
     if (claim !== null) this.claims.set(account.id, claim);
-    this.outbox.push(...events);
+    this.outbox.push(...eventsFor(this.snapshot(account)));
     return Promise.resolve(this.snapshot(account));
   }
 
@@ -793,12 +803,58 @@ describe('register', () => {
     const world = harness();
     const blockId = world.store.seedBlock('Brindavan');
     world.store.seedUnit(blockId, 'B-101');
+    // The registration mail is committee-facing: one row per ACTIVE committee member.
+    world.store.seedAccount({
+      name: 'Meera Committee',
+      email: 'meera@example.com',
+      phone: '9886012000',
+      passwordHash: `fake:${PASSWORD}`,
+      role: 'A',
+      status: 'ACTIVE',
+      unitId: null,
+      passwordChangedAt: new Date('2026-08-01T00:00:00Z'),
+    });
     await world.service.register(registerInput(), { ...META, correlationId: 'corr-42' });
 
     const event = world.store.outbox.find((e) => e.type === 'resident.registered');
     expect(event?.channel).toBe('EMAIL');
     expect(event?.correlationId).toBe('corr-42');
-    expect(event?.payload.name).toBe('Asha Rao');
+    expect(event?.payload.email).toBe('meera@example.com');
+    expect(event?.payload.applicantName).toBe('Asha Rao');
+    expect(event?.payload.applicantId).toBeGreaterThan(0);
+    expect(event?.payload.home).toBe('Brindavan · B-101');
+    expect(typeof event?.payload.submittedAt).toBe('string');
+  });
+
+  it('tells the committee the claim in their own words when the unit is not on the list', async () => {
+    const world = harness();
+    world.store.seedAccount({
+      name: 'Meera Committee',
+      email: 'meera@example.com',
+      phone: '9886012000',
+      passwordHash: `fake:${PASSWORD}`,
+      role: 'A',
+      status: 'ACTIVE',
+      unitId: null,
+      passwordChangedAt: new Date('2026-08-01T00:00:00Z'),
+    });
+    await world.service.register(
+      registerInput({
+        email: 'claimant@example.com',
+        home: {
+          kind: 'claim',
+          blockName: 'Palm Grove',
+          unitLabel: 'pg-7',
+          unitType: 'FLAT_2BHK',
+          note: 'It is the corner house',
+        },
+      }),
+      META,
+    );
+
+    const event = world.store.outbox.find((e) => e.type === 'resident.registered');
+    expect(event?.payload.home).toBe('Palm Grove · PG-7');
+    expect(event?.payload.claimNote).toBe('It is the corner house');
   });
 
   it('refuses a duplicate email', async () => {

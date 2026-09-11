@@ -83,6 +83,13 @@ function personPayload(name: string, email: string): MailPayload {
   return { name, email };
 }
 
+/** The claim as the committee reads it: their block and label, not a unit that exists yet. */
+function claimDescription(home: C.RegisterInput['home']): string {
+  return home.kind === 'claim'
+    ? `${home.blockName} · ${home.unitLabel}`
+    : 'an existing home';
+}
+
 /** passwordChangedAt as whole seconds — the resolution an access token's `pwd` claim carries. */
 function pwdStampSeconds(account: StoredAccount): number | null {
   return account.passwordChangedAt === null
@@ -364,6 +371,18 @@ export function accountsService(deps: AccountsDeps): AccountsService {
       // a literal password (D-01).
       const isFirstResident = (await deps.store.countAccounts()) === 0;
 
+      // The home the committee reads on the application: the existing unit they registered
+      // against, or their own words for one that is not on the list yet.
+      const existingHome = unitId === null ? null : await deps.store.findHome(unitId);
+      const home = existingHome === null ? claimDescription(input.home) : `${existingHome.blockName} · ${existingHome.label}`;
+
+      // The application notification is committee-facing mail (it links into the review queue),
+      // so it is one row per ACTIVE committee member — the same rule facilities keeps for a
+      // booking request. An empty society has no committee to notify: the first resident
+      // activates immediately and the queue they would sit in does not exist yet.
+      const committee =
+        isFirstResident ? [] : await deps.store.findCommitteeMembers();
+
       const account = await deps.store.createAccount(
         {
           name: input.name,
@@ -376,7 +395,26 @@ export function accountsService(deps: AccountsDeps): AccountsService {
           passwordChangedAt: now,
         },
         claim,
-        [mailEvent('resident.registered', personPayload(input.name, input.email), meta.correlationId)],
+        (created) =>
+          committee.map((member) =>
+            mailEvent(
+              'resident.registered',
+              {
+                name: member.name,
+                email: member.email,
+                applicantId: created.id,
+                applicantName: input.name,
+                applicantEmail: input.email,
+                applicantPhone: input.phone,
+                home,
+                submittedAt: now.toISOString(),
+                ...(input.home.kind === 'claim' && input.home.note !== undefined
+                  ? { claimNote: input.home.note }
+                  : {}),
+              },
+              meta.correlationId,
+            ),
+          ),
       );
 
       return { ok: true, value: { personId: account.id } };
@@ -414,7 +452,12 @@ export function accountsService(deps: AccountsDeps): AccountsService {
           // localhost address (D-22).
           mailEvent(
             'password.reset_requested',
-            { ...personPayload(account.name, account.email), token },
+            {
+              ...personPayload(account.name, account.email),
+              recipientName: account.name,
+              token,
+              expiresAt: expiresAt.toISOString(),
+            },
             meta.correlationId,
           ),
         ],
@@ -569,6 +612,20 @@ export function accountsService(deps: AccountsDeps): AccountsService {
         }
       }
 
+      // The home as the applicant reads it after the decision: the claimed address once the
+      // claim resolves, the existing home they registered against, or the words of the claim
+      // itself when the unit has to be created. A declined applicant reads their claim.
+      let home = '';
+      if (resolution !== null) {
+        home = `${resolution.blockName} · ${resolution.unitLabel}`;
+      } else if (target.unitId !== null) {
+        const found = await deps.store.findHome(target.unitId);
+        home = found === null ? '' : `${found.blockName} · ${found.label}`;
+      } else {
+        const claim = await deps.store.findClaim(target.id);
+        home = claim === null ? '' : `${claim.blockName} · ${claim.unitLabel}`;
+      }
+
       const account = await deps.store.applyRegistrationDecision(
         {
           userId: target.id,
@@ -581,6 +638,8 @@ export function accountsService(deps: AccountsDeps): AccountsService {
             input.decision === 'APPROVE' ? 'resident.approved' : 'resident.declined',
             {
               ...personPayload(target.name, target.email),
+              recipientName: target.name,
+              home,
               ...(input.reason === undefined ? {} : { reason: input.reason }),
             },
             meta.correlationId,

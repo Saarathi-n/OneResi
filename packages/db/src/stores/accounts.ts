@@ -45,7 +45,16 @@ export function accountStore(db: Db): AccountStore {
       return db.residentUser.count();
     },
 
-    async createAccount(input, claim, events) {
+    /** ACTIVE committee members — the people an application is addressed to. */
+    async findCommitteeMembers() {
+      return db.residentUser.findMany({
+        where: { role: 'A', status: 'ACTIVE' },
+        select: { id: true, name: true, email: true },
+        orderBy: { id: 'asc' },
+      });
+    },
+
+    async createAccount(input, claim, eventsFor) {
       return db.$transaction(async (tx) => {
         const row = await tx.residentUser.create({
           data: {
@@ -73,7 +82,7 @@ export function accountStore(db: Db): AccountStore {
           });
         }
 
-        await writeEvents(tx, events);
+        await writeEvents(tx, eventsFor(toAccount(row)));
         return toAccount(row);
       });
     },

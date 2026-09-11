@@ -56,15 +56,21 @@ function mailEvent(
 }
 
 /**
- * `pass.created` and `visitor.arrived` have no email template by design — they live on the
- * in-app and push surfaces (D-68).
+ * The push twin of an in-app event: `pass.created` and `visitor.arrived` have no email template
+ * by design (D-68) — they live on the in-app and push surfaces. The same flat payload goes to
+ * both channels; emitting both is the resident's actual expectation — the same fact on the lock
+ * screen and in the feed — and one notification never suppresses the other because the two
+ * channels have their own rows and their own workers (D-29's shape, one level out).
  */
-function inAppEvent(
-  type: C.OutboxEventType,
+function inAppAndPushEvents(
   payload: MailPayload,
+  type: C.OutboxEventType,
   correlationId: string,
-): OutboxEventInput {
-  return { type, channel: 'IN_APP', payload, correlationId };
+): OutboxEventInput[] {
+  return [
+    { type, channel: 'IN_APP', payload, correlationId },
+    { type, channel: 'PUSH', payload, correlationId },
+  ];
 }
 
 /** The UTC calendar day of `at` — the day a pass is good for, and the day it is stored as (D-72). */
@@ -194,8 +200,12 @@ function arrivedEvents(
   purpose: string,
   correlationId: string,
 ): OutboxEventInput[] {
-  return residents.map((resident) =>
-    inAppEvent('visitor.arrived', { name: resident.name, email: resident.email, visitorName, purpose }, correlationId),
+  return residents.flatMap((resident) =>
+    inAppAndPushEvents(
+      { name: resident.name, email: resident.email, visitorName, purpose },
+      'visitor.arrived',
+      correlationId,
+    ),
   );
 }
 
@@ -243,19 +253,17 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const pass = await store.createPass(
           { ...birth, code: C.gatePassCode() },
-          [
-            inAppEvent(
-              'pass.created',
-              {
-                name: actor.name,
-                email: actor.email,
-                visitorName: input.visitorName,
-                purpose: input.purpose,
-                validOn: birth.validOn.toISOString(),
-              },
-              correlationId,
-            ),
-          ],
+          inAppAndPushEvents(
+            {
+              name: actor.name,
+              email: actor.email,
+              visitorName: input.visitorName,
+              purpose: input.purpose,
+              validOn: birth.validOn.toISOString(),
+            },
+            'pass.created',
+            correlationId,
+          ),
         );
         if (pass !== null) return ok(passView(pass));
       }

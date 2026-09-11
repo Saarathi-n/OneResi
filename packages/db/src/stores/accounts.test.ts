@@ -71,7 +71,7 @@ describe('createAccount', () => {
         passwordChangedAt: stamp,
       },
       null,
-      [event],
+      () => [event],
     );
 
     expect(created.role).toBe('R');
@@ -112,7 +112,7 @@ describe('createAccount', () => {
           passwordChangedAt: onDay('2026-09-08'),
         },
         null,
-        [event],
+        () => [event],
       ),
     ).rejects.toThrow();
 
@@ -138,7 +138,7 @@ describe('createAccount', () => {
         passwordChangedAt: onDay('2026-09-08'),
       },
       { blockName: 'Palm Grove', unitLabel: 'PG-7', unitType: 'VILLA', note: 'corner house' },
-      [event],
+      () => [event],
     );
 
     const claim = await db.registrationClaim.findUniqueOrThrow({ where: { userId: created.id } });
@@ -178,7 +178,7 @@ describe('createAccount', () => {
         passwordChangedAt: onDay('2026-09-08'),
       },
       { blockName: 'Palm Grove', unitLabel: 'PG-7', unitType: 'VILLA', note: 'near the gate' },
-      [],
+      () => [],
     );
     const second = await store.createAccount(
       {
@@ -192,7 +192,7 @@ describe('createAccount', () => {
         passwordChangedAt: onDay('2026-09-08'),
       },
       { blockName: 'Palm Grove', unitLabel: 'PG-8', unitType: 'FLAT_2BHK', note: null },
-      [],
+      () => [],
     );
 
     // One claim per account — the unique index is the invariant — and the first applicant's words
@@ -496,7 +496,7 @@ describe('listPendingApplications', () => {
         passwordChangedAt: stamp,
       },
       null,
-      [],
+      () => [],
     );
     const claimant = await store.createAccount(
       {
@@ -510,7 +510,7 @@ describe('listPendingApplications', () => {
         passwordChangedAt: stamp,
       },
       { blockName: 'Palm Grove', unitLabel: 'PG-9', unitType: 'VILLA', note: 'by the park' },
-      [],
+      () => [],
     );
 
     const queue = await store.listPendingApplications();
@@ -559,7 +559,7 @@ describe('the registration decision', () => {
         passwordChangedAt: onDay('2026-09-08'),
       },
       { blockName: 'Palm Grove', unitLabel: 'PG-7', unitType: 'VILLA', note: 'the corner one' },
-      [],
+      () => [],
     );
 
     const decided = await store.applyRegistrationDecision(
@@ -646,7 +646,7 @@ describe('the registration decision', () => {
         passwordChangedAt: onDay('2026-09-08'),
       },
       { blockName: 'Ghost Block', unitLabel: 'G-1', unitType: 'FLAT_1BHK', note: 'please' },
-      [],
+      () => [],
     );
 
     const declined = await store.applyRegistrationDecision(
@@ -690,7 +690,7 @@ describe('the registration decision', () => {
         passwordChangedAt: onDay('2026-09-08'),
       },
       { blockName: 'Palm Grove East', unitLabel: 'PG-9', unitType: 'VILLA', note: null },
-      [],
+      () => [],
     );
 
     await store.applyRegistrationDecision(
@@ -741,7 +741,7 @@ describe('the registration decision', () => {
         passwordChangedAt: onDay('2026-09-08'),
       },
       { blockName: ghostBlock, unitLabel: 'G-1', unitType: 'FLAT_1BHK', note: null },
-      [],
+      () => [],
     );
 
     // REJECTED cannot go straight to ACTIVE; the decision must not land, and a block for a home

@@ -24,12 +24,20 @@ function mailEvent(
   return { type, channel: 'EMAIL', payload, correlationId };
 }
 
-function inAppEvent(
-  type: C.OutboxEventType,
+/**
+ * The push twin of an in-app event: the same flat payload on the channel the push worker drains.
+ * The two channels have their own rows and their own workers, so the lock-screen alert and the
+ * in-feed acknowledgement are written together and never suppress each other (D-29's shape).
+ */
+function inAppAndPushEvents(
   payload: MailPayload,
+  type: C.OutboxEventType,
   correlationId: string,
-): OutboxEventInput {
-  return { type, channel: 'IN_APP', payload, correlationId };
+): OutboxEventInput[] {
+  return [
+    { type, channel: 'IN_APP', payload, correlationId },
+    { type, channel: 'PUSH', payload, correlationId },
+  ];
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -86,16 +94,17 @@ export function complaintsService(deps: ComplaintsDeps): ComplaintsService {
           raisedAt: clock.now(),
         },
         (created) =>
-          // No email template exists for a raised complaint; the acknowledgement is in-app.
-          residents.map((resident) =>
-            inAppEvent(
-              'complaint.raised',
+          // No email template exists for a raised complaint; the acknowledgement is in-app and
+          // push — the surfaces a resident actually watches.
+          residents.flatMap((resident) =>
+            inAppAndPushEvents(
               {
                 name: resident.name,
                 email: resident.email,
                 complaintId: created.id,
                 category: input.category,
               },
+              'complaint.raised',
               correlationId,
             ),
           ),
@@ -204,9 +213,8 @@ export function complaintsService(deps: ComplaintsDeps): ComplaintsService {
           reason: input.reason,
           at: now,
         },
-        residents.map((resident) =>
-          inAppEvent(
-            'complaint.reopened',
+        residents.flatMap((resident) =>
+          inAppAndPushEvents(
             {
               name: resident.name,
               email: resident.email,
@@ -214,6 +222,7 @@ export function complaintsService(deps: ComplaintsDeps): ComplaintsService {
               category: complaint.category,
               reason: input.reason,
             },
+            'complaint.reopened',
             correlationId,
           ),
         ),

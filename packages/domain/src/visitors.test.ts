@@ -511,6 +511,11 @@ describe('issuePass', () => {
         channel: 'IN_APP',
         payload: expect.objectContaining({ visitorName: 'Ravi Kumar', purpose: 'Family visit' }),
       }),
+      expect.objectContaining({
+        type: 'pass.created',
+        channel: 'PUSH',
+        payload: expect.objectContaining({ visitorName: 'Ravi Kumar', purpose: 'Family visit' }),
+      }),
     ]);
   });
 
@@ -852,9 +857,11 @@ describe('recordEntry', () => {
       exitedAt: null,
     });
     expect(world.store.lastIdempotencyKey).toBe(key);
-    // One note per ACTIVE resident of the home (D-29).
-    expect(world.store.outbox).toHaveLength(2);
-    expect(world.store.outbox.every((e) => e.type === 'visitor.arrived' && e.channel === 'IN_APP')).toBe(true);
+    // One in-app note and one push per ACTIVE resident of the home (D-29).
+    expect(world.store.outbox).toHaveLength(4);
+    expect(world.store.outbox.every((e) => e.type === 'visitor.arrived')).toBe(true);
+    expect(world.store.outbox.filter((e) => e.channel === 'IN_APP')).toHaveLength(2);
+    expect(world.store.outbox.filter((e) => e.channel === 'PUSH')).toHaveLength(2);
   });
 
   it('treats a retried check-in as a success with still one log row (D-40)', async () => {
