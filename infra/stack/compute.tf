@@ -213,6 +213,18 @@ locals {
     # Where SES delivery events land. `sesEventQueueUrl()` requires it, and the third tier of the mail
     # suite drains this queue to prove a message left AWS rather than merely being accepted.
     { name = "SES_EVENT_QUEUE_URL", value = aws_sqs_queue.mail_events.id },
+    # Web push. Pinned rather than variable, the way EMAIL_DRIVER is: this container is
+    # NODE_ENV=production, where `pushDriver()` refuses anything but "webpush" with the complete VAPID
+    # set, because a production default of the console transport would report every notification
+    # delivered while sending nothing (D-30). The public key is what the key route hands to browsers;
+    # the private key arrives as a plain value rather than through `secrets` because no AWS-managed
+    # source can generate a VAPID pair — `pnpm push:keys` does, once, and the operator puts it in
+    # terraform.tfvars. Like the JWT secret's value it does live in state; the tfvars file is
+    # gitignored, and the variable is marked sensitive so plans and output redact it.
+    { name = "PUSH_DRIVER", value = "webpush" },
+    { name = "VAPID_PUBLIC_KEY", value = var.vapid_public_key },
+    { name = "VAPID_SUBJECT", value = var.vapid_subject },
+    { name = "VAPID_PRIVATE_KEY", value = var.vapid_private_key },
     { name = "SSM_PREFIX", value = local.ssm_prefix },
   ]
 

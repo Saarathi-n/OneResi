@@ -22,6 +22,18 @@
  *                                                         the way packages/mail reads it
  *   SES_EVENT_QUEUE_URL                                   where those delivery events land
  *   NOTIFICATIONS_QUEUE_URL                               the queue this function drains
+ *   PUSH_DRIVER=webpush, VAPID_PUBLIC_KEY, VAPID_SUBJECT,
+ *   VAPID_PRIVATE_KEY                                     the push half of the same invocation. The
+ *                                                         handler drains channel='PUSH' outbox rows
+ *                                                         through the same claim/lease/retry lifecycle
+ *                                                         as the mail rows (packages/mail reuses one
+ *                                                         set of constants, not two), resolving each
+ *                                                         row's email to an account and dispatching
+ *                                                         through the notifications service, which
+ *                                                         signs each send with the VAPID pair. No
+ *                                                         extra IAM: a browser's push service is just
+ *                                                         another HTTPS endpoint, reached over the
+ *                                                         same IPv6 egress path as SES
  *   AWS_USE_DUALSTACK_ENDPOINT=true                       the function is in private subnets with no
  *                                                         IPv4 route out; AWS APIs are reached over
  *                                                         IPv6 through the egress-only gateway

@@ -198,6 +198,7 @@ its IAM role, not to a code review gate.
 | `pnpm bootstrap` | Fresh clone to working local setup: generate clients, migrate, seed, print accounts |
 | `pnpm db:generate` / `db:migrate` / `db:seed` / `db:reset` / `db:checksum` / `db:studio` | The database package's scripts, targeted by `DB_TARGET` (local by default) |
 | `pnpm db:diff` / `db:pull` / `db:push` | Local and cloud sync, with the rails described above |
+| `pnpm push:keys` | Generate the web push keypair once, for the life of the deployment |
 | `pnpm cloud:up` / `cloud:down` / `cloud:stop` / `cloud:start` / `cloud:env` | Terraform and AWS wrappers for the deployed stack |
 | `pnpm typecheck` / `lint` / `format` / `format:check` | Static checks |
 | `pnpm check:copy` / `check:enums` / `check:gates` | The copy gate (no requirement identifiers or placeholder framing in user-visible strings) and the enumeration gate (no raw enumeration values in the DOM), plus their self-tests |
@@ -213,9 +214,10 @@ The Terraform for the cloud deployment is written: `infra/bootstrap` provisions 
 (apply once, with local state), and `infra/stack` provisions everything else — network, RDS, ECS,
 SES, Lambda, budgets with alarms. Applying any of it requires AWS credentials and is gated on
 authorisation; nothing in this repository or in CI applies it, and no apply has been run. Copy
-`infra/stack/example.tfvars` to `terraform.tfvars` and fill in the two required values when an
-apply is authorised; the comments in that file describe every knob, including the cost ceiling and
-the two ways to verify an SES sending identity.
+`infra/stack/example.tfvars` to `terraform.tfvars` and fill in the required values when an
+apply is authorised — the mailbox, the GitHub repository, and the web push keypair
+(`pnpm push:keys` prints it); the comments in that file describe every knob, including the cost
+ceiling and the two ways to verify an SES sending identity.
 
 ## Further reading
 

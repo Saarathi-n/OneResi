@@ -198,6 +198,19 @@ are what you set when you step outside that.
 | `SES_CONFIGURATION_SET` | Created by Terraform; its event destination publishes delivery events to SNS and SQS. |
 | `SES_EVENT_QUEUE_URL` | The queue those events land in; read by the live mail suite. |
 
+### Web push
+
+| Variable | What it is |
+|---|---|
+| `PUSH_DRIVER` | `console` (default outside production) or `webpush`. Production must say `webpush` explicitly — the console transport writes a log line and delivers nothing, the same rule `EMAIL_DRIVER` keeps. |
+| `VAPID_PUBLIC_KEY` | The public half of the push keypair, base64url. What `/api/push/key` hands to browsers and what their subscriptions encrypt to. Generate with `pnpm push:keys`. |
+| `VAPID_PRIVATE_KEY` | The private half; it signs every push send. Never in the repository — in deploy it is a sensitive Terraform variable (`vapid_private_key` in terraform.tfvars). |
+| `VAPID_SUBJECT` | A `mailto:` contact the push service reaches the sender on about deliverability. |
+
+All three are required whenever the driver is `webpush`, and in deploy they come from Terraform
+(see `vapid_*` in `infra/stack/variables.tf`). A rotated keypair retires every phone's
+subscription, so it is a generate-once secret, not a per-deploy one.
+
 ### Seed and tooling
 
 | Variable | What it is |
@@ -227,8 +240,21 @@ coming back hides everything queued behind it; after eight attempts a row is ABA
 tried again by anything. The worker never throws into a caller: every failure, including the
 database being down, comes back as a value in a report.
 
-The worker only drains `channel = 'EMAIL'` rows. Every message that was ever sent, attempted or
-abandoned is a database row, which is what the mail test suite asserts against.
+The worker drains both channels. `channel = 'EMAIL'` rows render and go to the mail provider;
+`channel = 'PUSH'` rows ride the same claim, lease and retry lifecycle — the same constants, the
+same backoff, not a second copy of either — with one step the mail path does not have: the row's
+recipient email is resolved to an account first, and a row whose account no longer exists is done,
+not failed. Each push row is dispatched through the notifications service, which looks up the
+account's subscriptions, sends to each one, and retires the subscriptions the push service has
+forgotten (it answers 404 or 410) so they are never addressed again. Locally the same in-process
+interval drains both channels; in deploy the Lambda runs both drains in the same invocation. Every
+message that was ever sent, attempted or abandoned is a database row, which is what the mail test
+suite asserts against.
+
+Push sends are signed with a VAPID keypair, generated once with `pnpm push:keys` (the script prints
+all three values and where each goes). Locally none of this is needed: the default `console` push
+transport writes a log line and delivers nothing, and the enable-push control on the notifications
+screen stays hidden until a real key exists — no button that can only fail.
 
 ## The seed, and resetting local data
 

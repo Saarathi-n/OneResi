@@ -146,6 +146,18 @@ resource "aws_lambda_function" "notifier" {
   environment {
     variables = merge(local.lambda_environment, {
       NOTIFICATIONS_QUEUE_URL = aws_sqs_queue.notifications.id
+
+      # Push, on this function only rather than in `lambda_environment` — which the nightly overdue
+      # job also inherits — so the VAPID private key lands only where code that signs with it runs.
+      # PUSH_DRIVER is pinned the way EMAIL_DRIVER is: the function is NODE_ENV=production, and
+      # `pushDriver()` in packages/mail/src/env.ts refuses to boot on anything but "webpush" with the
+      # complete VAPID set (D-30's argument; the same line in the shared block above covers mail).
+      # The push sends themselves need no extra IAM or egress rule: a browser's push service is just
+      # another HTTPS endpoint, reached over the same IPv6 egress-only path as SES.
+      PUSH_DRIVER       = "webpush"
+      VAPID_PUBLIC_KEY  = var.vapid_public_key
+      VAPID_SUBJECT     = var.vapid_subject
+      VAPID_PRIVATE_KEY = var.vapid_private_key
     })
   }
 

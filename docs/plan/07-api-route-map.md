@@ -123,6 +123,17 @@ existing service, not a new use case.
 | DELETE | `/api/notices/[id]` | — | `notices.withdraw(actor, id)` | role A |
 | GET | `/api/notifications` | — | `notifications.unread(actor)` | signed in |
 | POST | `/api/notifications/read` | body `{ ids: number[] }` | `notifications.markRead(actor, ids)` | signed in |
+| GET | `/api/push/key` | — | `pushPublicKey()` from `@oneresi/mail` | public |
+| POST | `/api/push/subscribe` | `C.PushSubscribeInput` | `notifications.subscribe(actor, input)` | signed in |
+| POST | `/api/push/unsubscribe` | `C.PushUnsubscribeInput` | `notifications.unsubscribe(actor, input)` | signed in |
+
+The key route is the one public push endpoint and answers `{ configured: false }` or
+`{ configured: true, publicKey }` with `Access-Control-Allow-Origin: *`, so the PWA's bare fetch
+needs no preflight even cross-origin in dev — the key is what browsers encrypt to, not a secret,
+and an unconfigured server gets an honest "not configured" the client hides its control on rather
+than a broken button (D-30's argument). Subscribe and unsubscribe take any authenticated actor;
+the service scopes the subscription to the caller, and `expirationTime` is accepted because the
+browser sends it but not stored — the push service announces the real expiry by answering 410.
 
 ## Property (committee)
 
@@ -139,5 +150,4 @@ existing service, not a new use case.
   not a form field (D-42's lesson).
 - No admin-facing user list beyond the PENDING queue. Everyone else's status is not the desk's
   screen.
-- No webhook, no SSE besides the waiting-visitor stream, no push subscription (deferred —
-  see the task list).
+- No webhook, no SSE besides the waiting-visitor stream.

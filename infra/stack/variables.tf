@@ -311,6 +311,61 @@ variable "app_domain" {
 }
 
 ########################################################################################################
+# Web push. One VAPID keypair for the life of the deployment — `pnpm push:keys` generates it once.
+########################################################################################################
+
+variable "vapid_public_key" {
+  type    = string
+  default = ""
+  description = <<-EOT
+    The public half of the web push keypair, base64url — the thing the key route hands to browsers
+    and their subscriptions encrypt to, so it is not a secret. No working default: the app
+    container and the notifier both run NODE_ENV=production, where `pushDriver()` in
+    packages/mail refuses to boot on anything but "webpush" with the complete VAPID set, so an
+    apply without this would deploy a task that crash-loops on first boot (D-30's argument, moved
+    to the earliest failure there is). `pnpm push:keys` prints the pair.
+  EOT
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_-]{40,}$", var.vapid_public_key))
+    error_message = "vapid_public_key must be the base64url string `pnpm push:keys` prints (87 characters), not a placeholder."
+  }
+}
+
+variable "vapid_private_key" {
+  type      = string
+  default   = ""
+  sensitive = true
+  description = <<-EOT
+    The private half of the web push keypair, base64url — it signs every push send. Marked
+    sensitive so plans and output redact it; like the JWT secret's value it does live in state,
+    because no AWS-managed source can generate a VAPID pair. `terraform.tfvars` is gitignored —
+    keep it that way. Generate once with `pnpm push:keys` and keep forever: a rotated pair retires
+    every phone's subscription.
+  EOT
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_-]{40,}$", var.vapid_private_key))
+    error_message = "vapid_private_key must be the base64url string `pnpm push:keys` prints (43 characters), not a placeholder."
+  }
+}
+
+variable "vapid_subject" {
+  type    = string
+  default = ""
+  description = <<-EOT
+    A `mailto:` contact the push service reaches the sender on about deliverability — the VAPID
+    spec's "who is responsible for this traffic" field; a bare keypair cannot stand in for it.
+    Same requirement as the other two: production code refuses to boot without it.
+  EOT
+
+  validation {
+    condition     = can(regex("^mailto:[^@[:space:]]+@[^@[:space:]]+\\.[a-zA-Z]{2,}$", var.vapid_subject))
+    error_message = "vapid_subject must be a mailto: address, e.g. mailto:admin@oneresi.in."
+  }
+}
+
+########################################################################################################
 # Lambda bundles and browser uploads
 ########################################################################################################
 

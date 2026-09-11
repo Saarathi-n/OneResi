@@ -3,8 +3,9 @@
 #
 #   cp example.tfvars terraform.tfvars
 #
-# Two values have no default and Terraform will not plan without them. Everything else here is
-# optional and shown with the default it already has.
+# Two values have no default and Terraform will not plan without them; three more below refuse
+# validation until you fill them in. Everything else here is optional and shown with the default it
+# already has.
 ########################################################################################################
 
 # REQUIRED — a mailbox you can actually open, because you have to click a link in it.
@@ -20,6 +21,19 @@ notification_email = "replace-me@example.com"
 # The workflows are not part of this stack; the role they assume has to be, because only Terraform
 # can create it. Set it even if CI does not exist yet — an unused role costs nothing.
 github_repository = "Ashvin-KS/OneResi"
+
+# REQUIRED — the web push keypair, generated once and kept for the life of the deployment. Run
+# `pnpm push:keys` at the repository root; it prints all three values and says where each goes. A
+# rotated pair retires every phone's subscription, so this is a generate-once secret, not a
+# per-deploy one. The placeholders below deliberately fail validation — not base64url, and the
+# subject is not a mailto: — so a copy of this file cannot be applied unedited: both the app
+# container and the notifier run in production mode, where the mail package refuses to boot without
+# the complete set, and an apply that shipped half a keypair would deploy a crash-looping task.
+# vapid_private_key is sensitive; Terraform redacts it in plans and output. terraform.tfvars is
+# gitignored, and the private key belongs nowhere in the repository.
+vapid_public_key  = "replace-me"
+vapid_private_key = "replace-me"
+vapid_subject     = "replace-me"    # e.g. mailto:admin@oneresi.in
 
 ########################################################################################################
 # Naming. Both halves appear in every resource name, so two environments can coexist.
