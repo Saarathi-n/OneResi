@@ -119,18 +119,22 @@ front:
 # 1. The state bucket, once, ever. Local state, one apply, no cost.
 cd infra/bootstrap && terraform init && terraform apply && cd ../..
 
-# 2. The container images, pushed into the ECR repository the stack owns. Build and push BOTH
-#    targets — the runtime image and the migrate image — before the first apply, or the migrate
-#    step stops the apply with the exact docker commands to run.
+# 2. The ECR repository, and ONLY it — the images cannot be pushed into a repository that does
+#    not exist yet, and the full apply stops at the migrate step until they are. -target creates
+#    the repository without starting anything else.
+cd infra/stack && terraform init
+terraform apply -target=aws_ecr_repository.app -auto-approve
+
+# 3. The container images: BOTH targets — the runtime image and the migrate image. The
+#    repository URL is in the apply output; the account is 215671569291 in ap-south-1.
 aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 215671569291.dkr.ecr.ap-south-1.amazonaws.com
 docker build --file infra/docker/Dockerfile --target runtime --tag <repo-url>:latest .
 docker push <repo-url>:latest
 docker build --file infra/docker/Dockerfile --target migrate --tag <repo-url>:migrate .
 docker push <repo-url>:migrate
 
-# 3. Then the stack itself. The ECR repository URL is in the stack's outputs after the first
-#    apply attempt; the repo name is oneresi-app in this account.
-cd infra/stack && terraform init && cp example.tfvars terraform.tfvars
+# 4. Then the stack itself.
+cp example.tfvars terraform.tfvars
 #    fill in notification_email, github_repository, and the three vapid_* values from pnpm push:keys
 terraform plan && terraform apply
 ```
