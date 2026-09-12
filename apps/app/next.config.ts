@@ -7,6 +7,13 @@ import type { NextConfig } from 'next';
  */
 const nextConfig: NextConfig = {
   basePath: '/a',
+  // The app lives under /a (its production mount path beside the website), so a bare visit to the
+  // origin is a 404 by default — a footgun that costs everyone their first minute. The redirect
+  // sends the root (and only the root) to the app itself; in production the task's router serves
+  // /a/* here and everything else to the web app, so this rule simply never fires there.
+  async redirects() {
+    return [{ source: '/', destination: '/a', permanent: false, basePath: false }];
+  },
   webpack: (config) => {
     // The workspace packages export TypeScript source (their package.json "exports" point at
     // ./src/index.ts) and import each other with compiled-style `.js` specifiers — what tsc emits
