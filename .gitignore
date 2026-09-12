@@ -55,3 +55,6 @@ yarn-error.log*
 test/**/*.js
 test/**/*.d.ts
 test/**/*.map
+
+# The built Lambda bundles (pnpm lambdas:build)
+infra/lambda/*-bundle/

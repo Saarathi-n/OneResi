@@ -171,6 +171,17 @@ resource "aws_lambda_function" "notifier" {
   depends_on = [aws_cloudwatch_log_group.notifier]
 }
 
+# SES publishes delivery events (bounces, complaints, deliveries) straight to this queue from the
+# configuration set; the same notifier applies them, so a bounced address marks its mail row FAILED
+# instead of retrying a dead mailbox forever.
+resource "aws_lambda_event_source_mapping" "mail_events" {
+  event_source_arn  = aws_sqs_queue.mail_events.arn
+  function_name     = aws_lambda_function.notifier.arn
+  batch_size        = 10
+  enabled           = true
+  depends_on        = [aws_iam_role_policy.notifier]
+}
+
 resource "aws_lambda_event_source_mapping" "notifications" {
   event_source_arn = aws_sqs_queue.notifications.arn
   function_name    = aws_lambda_function.notifier.arn
@@ -223,6 +234,35 @@ resource "aws_lambda_function" "overdue" {
 
 # EventBridge Scheduler rather than a rule, because it takes a timezone directly and does not need a
 # UTC offset that breaks twice a year in places that observe daylight saving.
+# The safety net for the outbox: every five minutes, wake the notifier regardless of whether an
+# SNS publish arrived. The drains claim rows by compare-and-swap, so a wake-up with nothing due is
+# a no-op — and a wake-up after a lost publish is the difference between mail delayed five minutes
+# and mail stalled until the next domain event.
+resource "aws_scheduler_schedule" "notifier_wakeup" {
+  name        = "${local.name_prefix}-notifier-wake"
+  description = "Drains the outbox even when no SNS publish woke the notifier."
+
+  group_name = "default"
+
+  schedule_expression = "rate(5 minutes)"
+
+  flexible_time_window {
+    mode = "FLEXIBLE"
+    maximum_window_in_minutes = 2
+  }
+
+  target {
+    arn      = aws_lambda_function.notifier.arn
+    role_arn = aws_iam_role.scheduler.arn
+    input    = jsonencode({ source = "schedule", job = "notifier-wake" })
+
+    retry_policy {
+      maximum_retry_attempts       = 2
+      maximum_event_age_in_seconds = 300
+    }
+  }
+}
+
 resource "aws_scheduler_schedule" "overdue" {
   name        = "${local.name_prefix}-overdue-flag"
   description = "Marks unpaid invoices overdue once their due date is strictly past, in IST."
@@ -286,6 +326,17 @@ data "aws_iam_policy_document" "notifier" {
       "sqs:ChangeMessageVisibility",
     ]
     resources = [aws_sqs_queue.notifications.arn]
+  }
+
+  statement {
+    sid = "DrainTheMailEventQueue"
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:ChangeMessageVisibility",
+    ]
+    resources = [aws_sqs_queue.mail_events.arn]
   }
 
   statement {

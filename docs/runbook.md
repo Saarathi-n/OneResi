@@ -133,9 +133,14 @@ docker push <repo-url>:latest
 docker build --file infra/docker/Dockerfile --target migrate --tag <repo-url>:migrate .
 docker push <repo-url>:migrate
 
-# 4. Then the stack itself.
+# 4. The Lambda bundles — the real notifier and overdue handlers, built from the monorepo.
+#    Without them the deployed placeholders refuse to acknowledge anything (by design).
+pnpm lambdas:build     # writes infra/lambda/notifier-bundle and overdue-bundle (gitignored)
+
+# 5. Then the stack itself.
 cp example.tfvars terraform.tfvars
 #    fill in notification_email, github_repository, and the three vapid_* values from pnpm push:keys
+#    and the two bundle_dir values pointing at the built bundles
 terraform plan && terraform apply
 ```
 
