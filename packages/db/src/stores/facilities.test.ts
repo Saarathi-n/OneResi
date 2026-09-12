@@ -564,6 +564,72 @@ describe('findBookingsForSociety', () => {
   });
 });
 
+
+describe('createFacility and updateFacility (UC-22)', () => {
+  it('creates a facility, and a taken name is null', async () => {
+    const store = facilitiesStore(db);
+    const name = `Rooftop Garden ${eventCounter}`;
+
+    const created = await store.createFacility({
+      name,
+      description: 'The terrace above the second floor, with a pergola and seating.',
+      opensAt: '06:00',
+      closesAt: '21:00',
+      hourlyRatePaise: C.rupees(200),
+    });
+    expect(created).not.toBeNull();
+    expect(created!.active).toBe(true);
+    expect(created!.opensAt).toBe('06:00');
+    expect(created!.hourlyRatePaise).toBe(C.rupees(200));
+
+    const raced = await store.createFacility({
+      name,
+      description: 'Another rooftop with the same name.',
+      opensAt: '07:00',
+      closesAt: '20:00',
+      hourlyRatePaise: C.rupees(100),
+    });
+    expect(raced).toBeNull();
+    expect(await db.facility.count({ where: { name } })).toBe(1);
+  });
+
+  it('updates fields, retires and restores, and refuses a name another facility owns', async () => {
+    const store = facilitiesStore(db);
+    const facility = await aFacility(db);
+    const other = await aFacility(db);
+
+    const renamed = await store.updateFacility({
+      facilityId: facility.id,
+      name: `Party Hall ${eventCounter}`,
+      hourlyRatePaise: C.rupees(500),
+    });
+    expect(renamed?.name).toBe(`Party Hall ${eventCounter}`);
+    expect(renamed?.hourlyRatePaise).toBe(C.rupees(500));
+
+    // The name is another facility's now — the refusal is null, never a 500.
+    const clash = await store.updateFacility({ facilityId: other.id, name: `Party Hall ${eventCounter}` });
+    expect(clash).toBeNull();
+
+    const retired = await store.updateFacility({ facilityId: facility.id, active: false });
+    expect(retired?.active).toBe(false);
+    // The resident list drops it; the committee's list keeps it (D-27).
+    expect(
+      (await store.listFacilities({ includeInactive: false })).some((f) => f.id === facility.id),
+    ).toBe(false);
+    expect(
+      (await store.listFacilities({ includeInactive: true })).some((f) => f.id === facility.id),
+    ).toBe(true);
+
+    const restored = await store.updateFacility({ facilityId: facility.id, active: true });
+    expect(restored?.active).toBe(true);
+  });
+
+  it('an unknown facility id is null', async () => {
+    const store = facilitiesStore(db);
+    expect(await store.updateFacility({ facilityId: 9_999_999, active: false })).toBeNull();
+  });
+});
+
 describe('findCommitteeMembers', () => {
   it('returns ACTIVE committee members only', async () => {
     const store = facilitiesStore(db);

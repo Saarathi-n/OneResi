@@ -4,6 +4,7 @@ import type { FacilitiesStore } from '@oneresi/domain';
 import {
   bookingInclude,
   hoursTouched,
+  isRecordMissing,
   isUniqueViolation,
   sharedLookups,
   toBooking,
@@ -59,6 +60,47 @@ export function facilitiesStore(db: Db): FacilitiesStore {
         orderBy: { id: 'asc' },
       });
       return rows.map(toFacility);
+    },
+
+    async createFacility(input) {
+      try {
+        const row = await db.facility.create({
+          data: {
+            name: input.name,
+            description: input.description,
+            opensAt: input.opensAt,
+            closesAt: input.closesAt,
+            hourlyRatePaise: C.paise(input.hourlyRatePaise),
+          },
+        });
+        return toFacility(row);
+      } catch (error) {
+        // The name is the natural key; a taken name is the caller's CONFLICT, not a 500.
+        if (isUniqueViolation(error)) return null;
+        throw error;
+      }
+    },
+
+    async updateFacility(input) {
+      try {
+        const row = await db.facility.update({
+          where: { id: input.facilityId },
+          data: {
+            ...(input.name === undefined ? {} : { name: input.name }),
+            ...(input.description === undefined ? {} : { description: input.description }),
+            ...(input.opensAt === undefined ? {} : { opensAt: input.opensAt }),
+            ...(input.closesAt === undefined ? {} : { closesAt: input.closesAt }),
+            ...(input.hourlyRatePaise === undefined ? {} : { hourlyRatePaise: C.paise(input.hourlyRatePaise) }),
+            ...(input.active === undefined ? {} : { active: input.active }),
+          },
+        });
+        return toFacility(row);
+      } catch (error) {
+        // P2025 is "record not found" — an id the desk cannot see; P2002 is the name taken by
+        // another facility. Both are the caller's to phrase, neither is a crash.
+        if (isUniqueViolation(error) || isRecordMissing(error)) return null;
+        throw error;
+      }
     },
 
     async findBookingById(id) {

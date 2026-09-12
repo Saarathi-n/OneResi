@@ -6,6 +6,7 @@ import {
   type Result,
   type BookingView,
   type FacilitiesService,
+  type FacilityView,
   type SlotView,
   type SocietyBookingView,
 } from './ports.js';
@@ -237,6 +238,59 @@ export function facilitiesService(deps: FacilitiesDeps): FacilitiesService {
       );
     },
 
+    async listAll(actor): Promise<Result<readonly (FacilityView & { active: boolean })[]>> {
+      if (actor.role !== 'A') return errors.forbidden('manage facilities');
+      const facilities = await store.listFacilities({ includeInactive: true });
+      return ok(facilities.map(managedView));
+    },
+
+    async create(actor, input): Promise<Result<FacilityView & { active: boolean }>> {
+      if (actor.role !== 'A') return errors.forbidden('manage facilities');
+      // The schema already refuses a close before its open; this is the same rule stated for
+      // the desk's benefit in case a caller bypassed it (defense in depth costs one line).
+      if (input.closesAt <= input.opensAt) {
+        return errors.invalid('The facility has to close after it opens.', 'closesAt');
+      }
+      const created = await store.createFacility({
+        name: input.name,
+        description: input.description,
+        opensAt: input.opensAt,
+        closesAt: input.closesAt,
+        hourlyRatePaise: C.paise(input.hourlyRatePaise),
+      });
+      if (created === null) {
+        return errors.conflict('A facility with that name already exists.');
+      }
+      return ok(managedView(created));
+    },
+
+    async update(actor, input): Promise<Result<FacilityView & { active: boolean }>> {
+      if (actor.role !== 'A') return errors.forbidden('manage facilities');
+      const existing = await store.findFacilityById(input.facilityId);
+      if (existing === null) return errors.notFound('facility');
+
+      // The hours arrive as a pair or not at all (the schema's rule); when they arrive they are
+      // re-checked against each other, because the pair is coherent but may still be inverted.
+      if (input.opensAt !== undefined && input.closesAt !== undefined && input.closesAt <= input.opensAt) {
+        return errors.invalid('The facility has to close after it opens.', 'closesAt');
+      }
+
+      const updated = await store.updateFacility({
+        facilityId: input.facilityId,
+        ...(input.name === undefined ? {} : { name: input.name }),
+        ...(input.description === undefined ? {} : { description: input.description }),
+        ...(input.opensAt === undefined ? {} : { opensAt: input.opensAt }),
+        ...(input.closesAt === undefined ? {} : { closesAt: input.closesAt }),
+        ...(input.hourlyRatePaise === undefined ? {} : { hourlyRatePaise: C.paise(input.hourlyRatePaise) }),
+        ...(input.active === undefined ? {} : { active: input.active }),
+      });
+      if (updated === null) {
+        // The facility existed a moment ago, so the name must have been the refusal.
+        return errors.conflict('A facility with that name already exists.');
+      }
+      return ok(managedView(updated));
+    },
+
     async cancel(actor, input): Promise<Result<BookingView>> {
       const booking = await store.findBookingById(input.bookingId);
       if (booking === null) return errors.notFound('booking');
@@ -327,4 +381,9 @@ function facilityView(facility: StoredFacility) {
     closesAt: facility.closesAt,
     hourlyRatePaise: facility.hourlyRatePaise,
   };
+}
+
+/** The management view: everything residents see, plus the retired flag the desk works with. */
+function managedView(facility: StoredFacility) {
+  return { ...facilityView(facility), active: facility.active };
 }

@@ -350,6 +350,17 @@ export interface FacilitiesService {
   bookingsForSociety(actor: Actor): Promise<Result<readonly SocietyBookingView[]>>;
   cancel(actor: Actor, input: C.CancelBookingInput): Promise<Result<BookingView>>;
   decide(actor: Actor, input: C.DecideBookingInput): Promise<Result<BookingView>>;
+
+  /** Committee. The list including retired facilities, for the management screen (UC-22). */
+  listAll(actor: Actor): Promise<Result<readonly (FacilityView & { active: boolean })[]>>;
+  /** Committee. Creates an amenity; CONFLICT when the name is taken (UC-22). */
+  create(actor: Actor, input: C.CreateFacilityInput): Promise<Result<FacilityView & { active: boolean }>>;
+  /**
+   * Committee. Edits or retires an amenity (UC-22). Retiring is `active: false` — bookings in
+   * flight keep their records, the facility stops appearing to residents. NOT_FOUND when the id
+   * is unknown, CONFLICT when the new name is taken.
+   */
+  update(actor: Actor, input: C.UpdateFacilityInput): Promise<Result<FacilityView & { active: boolean }>>;
 }
 
 export interface FacilityView {

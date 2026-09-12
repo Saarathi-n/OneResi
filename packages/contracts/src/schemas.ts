@@ -267,6 +267,48 @@ export const RequestBookingInput = z
   })
   .and(TimeWindow);
 
+// ---------------------------------------------------------------- facility management (UC-22)
+
+/** A new amenity: name, what it is, when it is open, and the hourly charge. The hours are a
+ * window whose end must be after its start — the same rule every booking window keeps. */
+export const CreateFacilityInput = z
+  .object({
+    name: z.string().trim().min(3).max(80),
+    description: z.string().trim().min(4).max(500),
+    opensAt: ClockTime,
+    closesAt: ClockTime,
+    hourlyRatePaise: Money,
+  })
+  .refine((f) => f.closesAt > f.opensAt, {
+    message: 'The facility has to close after it opens',
+    path: ['closesAt'],
+  });
+
+/** An edit: every field optional, the id names the facility, `active` retires or restores it. */
+export const UpdateFacilityInput = z.object({
+  facilityId: Id,
+  name: z.string().trim().min(3).max(80).optional(),
+  description: z.string().trim().min(4).max(500).optional(),
+  opensAt: ClockTime.optional(),
+  closesAt: ClockTime.optional(),
+  hourlyRatePaise: Money.optional(),
+  active: z.boolean().optional(),
+}).refine(
+  (input) =>
+    input.name !== undefined ||
+    input.description !== undefined ||
+    input.opensAt !== undefined ||
+    input.closesAt !== undefined ||
+    input.hourlyRatePaise !== undefined ||
+    input.active !== undefined,
+  { message: 'Nothing to change' },
+).refine(
+  // A hours edit must arrive as a coherent pair, or leave both alone — half a window is how a
+  // facility ends up closing before it opens.
+  (input) => (input.opensAt === undefined) === (input.closesAt === undefined),
+  { message: 'Change both opening and closing time together', path: ['closesAt'] },
+);
+
 export const DecideBookingInput = z.object({
   bookingId: Id,
   decision: z.enum(['CONFIRM', 'REJECT']),
@@ -382,3 +424,5 @@ export type UpdateUnitInput = z.infer<typeof UpdateUnitInput>;
 
 export type ReportQuery = z.infer<typeof ReportQuery>;
 export type TimeWindow = z.infer<typeof TimeWindow>;
+export type CreateFacilityInput = z.infer<typeof CreateFacilityInput>;
+export type UpdateFacilityInput = z.infer<typeof UpdateFacilityInput>;

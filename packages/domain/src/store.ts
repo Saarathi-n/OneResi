@@ -895,6 +895,33 @@ export interface FacilitiesStore {
   /** The bookable list. The committee sees retired facilities too (UC-22, D-27). */
   listFacilities(input: { readonly includeInactive: boolean }): Promise<readonly StoredFacility[]>;
 
+  /**
+   * One transaction: the facility row. Null when the name is taken — Facility.name is unique, and
+   * the caller's CONFLICT is the same convention every natural-key write keeps (UC-22).
+   */
+  createFacility(input: {
+    readonly name: string;
+    readonly description: string;
+    readonly opensAt: string;
+    readonly closesAt: string;
+    readonly hourlyRatePaise: C.Paise;
+  }): Promise<StoredFacility | null>;
+
+  /**
+   * Applies the patch and returns the facility as it now stands. Null when the facility is
+   * unknown, or the name is taken by a different facility. The caller has already checked the
+   * hours arrive as a coherent pair.
+   */
+  updateFacility(input: {
+    readonly facilityId: number;
+    readonly name?: string;
+    readonly description?: string;
+    readonly opensAt?: string;
+    readonly closesAt?: string;
+    readonly hourlyRatePaise?: C.Paise;
+    readonly active?: boolean;
+  }): Promise<StoredFacility | null>;
+
   findBookingById(id: number): Promise<StoredBooking | null>;
   findBookingsForUnit(unitId: number): Promise<readonly StoredBooking[]>;
 
