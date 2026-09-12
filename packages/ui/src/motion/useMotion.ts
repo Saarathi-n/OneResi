@@ -18,7 +18,7 @@ import type { DurationName, ElevationLevel, SpringWeight, TravelName } from '../
 const QUERY = '(prefers-reduced-motion: reduce)';
 
 /** Decelerating, no overshoot. For anything that is not moving in space. */
-const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
+export const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 /** Symmetric, for a cross-fade. */
 const EASE_IN_OUT: [number, number, number, number] = [0.4, 0, 0.2, 1];

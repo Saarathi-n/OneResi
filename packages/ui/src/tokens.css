@@ -64,6 +64,21 @@
   --info-border: #a9c8ea;
   --info-on: #ffffff;
 
+  /* the money metal. Not a status tone and not decoration for its own sake: gold is reserved
+     for the figures a screen is about — a collected total, a receipt. Deep enough in light mode
+     to hold contrast on a raised surface, and it warms rather than alarms. */
+  --gold: #8a6800;
+  --gold-soft: #faf3dc;
+  --gold-border: #dcc98c;
+
+  /* the halo a hero figure carries. A colour at low alpha, so it rides whatever surface it is
+     on; `.money-glow` spends it. */
+  --glow: rgb(138 104 0 / 0.16);
+
+  /* a raised surface that lets the background through. The floating nav and any overlay panel
+     that should feel suspended rather than painted sit on this, and the blur does the rest. */
+  --surface-glass: rgb(255 255 255 / 0.72);
+
   /* edges */
   --border: #dde1e8;
   --border-strong: #c2c9d4;
@@ -125,6 +140,14 @@
   --info-border: #2c4c6e;
   --info-on: #06131f;
 
+  --gold: #e3b763;
+  --gold-soft: #2a2110;
+  --gold-border: #6b5522;
+
+  --glow: rgb(227 183 99 / 0.3);
+
+  --surface-glass: rgb(20 26 36 / 0.64);
+
   --border: #212936;
   --border-strong: #35404f;
 
@@ -167,12 +190,15 @@
    product without a single `dark:` variant in component code. */
 
 @theme {
+  /* The curve language is generous: cards carry 20px, dialogues and heroes 24, and a sheet
+     rises with a 28px top edge. Actions and single-line controls go full pill. */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 22px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 28px;
   --radius-pill: 999px;
 
   --spacing: 4px;
@@ -185,6 +211,7 @@
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-surface-sunken: var(--surface-sunken);
+  --color-surface-glass: var(--surface-glass);
 
   --color-content: var(--content);
   --color-content-muted: var(--content-muted);
@@ -218,6 +245,10 @@
   --color-info-soft: var(--info-soft);
   --color-info-border: var(--info-border);
   --color-info-on: var(--info-on);
+
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-border: var(--gold-border);
 
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
@@ -410,6 +441,13 @@
   .spinner {
     animation: oneresi-pulse 900ms ease-in-out infinite;
   }
+}
+
+/* The halo behind a hero figure. A number carrying `money-glow` reads as lit rather than
+   painted; in dark mode it is the difference between text and a jewel. It is static by
+   definition, so reduced motion has nothing to undo here. */
+.money-glow {
+  text-shadow: 0 0 24px var(--glow);
 }
 
 /* Scroll containers inside a sheet or a dialog keep momentum without dragging the page. */

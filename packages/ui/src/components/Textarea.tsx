@@ -55,7 +55,8 @@ export function Textarea({
         className={cn(
           CONTROL_BASE,
           controlBorder(isInvalid),
-          'type-input min-h-24 resize-y px-3.5 py-2.5',
+          // A multi-line control cannot be a pill; the merge lets this rounded-xl win.
+          'rounded-xl type-input min-h-24 resize-y px-3.5 py-2.5',
           className,
         )}
         {...rest}

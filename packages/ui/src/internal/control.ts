@@ -6,7 +6,7 @@
 export const CONTROL_BASE = [
   'w-full bg-surface-raised text-content',
   'placeholder:text-content-subtle',
-  'border rounded-lg transition-colors duration-150',
+  'border rounded-pill transition-colors duration-150',
   'focus-ring',
   'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-content-subtle',
 ].join(' ');

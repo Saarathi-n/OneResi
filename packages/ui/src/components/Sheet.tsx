@@ -107,7 +107,7 @@ export function Sheet({
               onDragEnd={onDragEnd}
               style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
               className={cn(
-                'relative flex w-full max-w-xl flex-col gap-3 rounded-t-2xl',
+                'relative flex w-full max-w-xl flex-col gap-3 rounded-t-3xl',
                 'border border-b-0 border-border bg-surface-raised px-4 pt-3 shadow-e4',
                 HEIGHT[height],
                 className,
