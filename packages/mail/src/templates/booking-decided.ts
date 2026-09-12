@@ -53,7 +53,7 @@ function compose(vars: BookingDecidedVars): Block[] {
     blocks.push(quote(vars.reason, vars.decidedByName));
   }
 
-  blocks.push(action('See the booking', PATHS.booking(vars.bookingId)));
+  blocks.push(action('See the booking', PATHS.booking));
 
   if (confirmed) {
     blocks.push(

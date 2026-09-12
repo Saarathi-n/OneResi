@@ -35,6 +35,11 @@ export interface TabsProps {
   /** Names the strip. Two tab strips on one screen need two names. */
   readonly label: string;
   readonly size?: 'md' | 'lg' | undefined;
+  /**
+   * `underline` is the document idiom for wide screens; `pill` is the segmented control a
+   * narrow phone column wants — a sunken track with the selection as a sliding capsule.
+   */
+  readonly variant?: 'underline' | 'pill' | undefined;
   readonly className?: string | undefined;
   /** The panel for the current value. Rendered inside a `tabpanel` and cross-faded on change. */
   readonly children?: ReactNode | undefined;
@@ -47,6 +52,7 @@ export function Tabs({
   onValueChange,
   label,
   size = 'md',
+  variant = 'underline',
   className,
   children,
 }: TabsProps): ReactNode {
@@ -55,6 +61,7 @@ export function Tabs({
   const strip = useRef<HTMLDivElement>(null);
   const first = items[0]?.value ?? '';
   const [active, setActive] = useControllable(value, defaultValue ?? first, onValueChange);
+  const pill = variant === 'pill';
 
   const enabled = items.filter((item) => item.disabled !== true);
 
@@ -102,7 +109,10 @@ export function Tabs({
           role="tablist"
           aria-label={label}
           onKeyDown={onKeyDown}
-          className="flex gap-1 overflow-x-auto border-b border-border"
+          className={cn(
+            'flex gap-1 overflow-x-auto',
+            pill ? 'rounded-full bg-surface-sunken p-1' : 'border-b border-border',
+          )}
         >
           {items.map((item) => {
             const selected = item.value === active;
@@ -120,20 +130,30 @@ export function Tabs({
                 tabIndex={selected ? 0 : -1}
                 onClick={() => setActive(item.value)}
                 className={cn(
-                  'focus-ring-inset relative flex shrink-0 items-center gap-2 px-3 pb-2.5 pt-2',
-                  'transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50',
+                  'focus-ring-inset relative flex shrink-0 items-center justify-center gap-2 transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50',
+                  pill ? 'min-h-9 rounded-full px-3.5 py-1.5' : 'px-3 pb-2.5 pt-2',
                   size === 'lg' ? 'type-body' : 'type-label',
                   selected ? 'text-content' : 'text-content-muted hover:text-content',
                 )}
               >
-                {item.pending === true ? <Spinner size={14} /> : item.icon}
-                <span>{item.label}</span>
-                {item.badge !== undefined ? (
-                  <span className="type-micro rounded-pill bg-surface-sunken px-1.5 py-0.5 text-content-muted">
-                    {item.badge}
-                  </span>
+                {pill && selected ? (
+                  <motion.span
+                    layoutId="tab-segment"
+                    transition={tabUnderlineTransition(motionTokens)}
+                    className="absolute inset-0 rounded-full bg-surface shadow-e1"
+                    aria-hidden
+                  />
                 ) : null}
-                {selected ? (
+                <span className="relative inline-flex items-center gap-2">
+                  {item.pending === true ? <Spinner size={14} /> : item.icon}
+                  <span>{item.label}</span>
+                  {item.badge !== undefined ? (
+                    <span className="type-micro rounded-pill bg-surface-sunken px-1.5 py-0.5 text-content-muted">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </span>
+                {!pill && selected ? (
                   <motion.span
                     layoutId="tab-underline"
                     transition={tabUnderlineTransition(motionTokens)}

@@ -1,18 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ErrorState,
+  Money,
   RelativeTime,
   Skeleton,
   StatusPill,
   buttonClass,
+  useToast,
 } from '@oneresi/ui';
 import {
   APPROVAL_STATUS,
+  formatMoney,
   formatPeriod,
   formatCalendarDate,
+  paise,
   type COMPLAINT_STATUS,
   type INVOICE_STATUS,
 } from '@oneresi/contracts';
@@ -25,8 +29,8 @@ import { useFetch, type FetchState } from '@/lib/useFetch';
  * Visual reference: docs/reference-images/05-resident-overview.jpg
  *
  * The household's single surface of truth.
- * - Masthead greeting: 'Gulmohar Court · A-101' in large display/serif typography,
- *   with resident name and notification bell on the right.
+ * - Masthead greeting: the home's label in large display/serif typography, with the resident
+ *   name and notification bell on the right.
  * - Streak badge: 'N months, settled on time' when dues are clear.
  * - 4-tile horizontal action rail: Outstanding dues (mega ₹ amount + inline 'Pay Now' green pill),
  *   Visitor Pass, Complaints, Book Amenity.
@@ -41,6 +45,7 @@ const INVOICES_PATH = '/api/billing/invoices';
 const COMPLAINTS_PATH = '/api/complaints';
 const ENTRIES_PATH = '/api/visitors/entries';
 const NOTICES_PATH = '/api/notices';
+const WAITING_POLL_MS = 15_000;
 
 interface WaitingVisitor {
   readonly logId: number;
@@ -88,6 +93,7 @@ interface NoticeLine {
 
 export default function ResidentHomePage() {
   const guarded = useGuardedSession();
+  const toast = useToast();
   const [waiting, setWaiting] = useState<FetchState<readonly WaitingVisitor[]>>({ state: 'loading' });
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [busyActionId, setBusyActionId] = useState<number | null>(null);
@@ -96,9 +102,6 @@ export default function ResidentHomePage() {
   const complaints = useFetch<readonly ComplaintLine[]>(COMPLAINTS_PATH);
   const entries = useFetch<readonly EntryLine[]>(ENTRIES_PATH);
   const notices = useFetch<readonly NoticeLine[]>(NOTICES_PATH);
-
-  // Live SSE connection to gate for waiting walk-ins
-  const liveSource = useRef<EventSource | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -111,40 +114,41 @@ export default function ResidentHomePage() {
       if (result.ok) setUnreadCount(result.data.count);
     })();
 
-    const source = new EventSource('/api/gate/live', { withCredentials: true });
-    liveSource.current = source;
-    source.addEventListener('waiting', (event) => {
-      try {
-        const frame: unknown = JSON.parse((event as MessageEvent<string>).data);
-        if (!Array.isArray(frame)) return;
-        setWaiting({ state: 'ready', data: frame as readonly WaitingVisitor[] });
-      } catch {
-        // Keep existing good list
-      }
-    });
+    // The waiting queue, re-asked on an interval: an EventSource cannot carry the Bearer token,
+    // and the gate's live stream needs one.
+    const timer = setInterval(() => {
+      void (async () => {
+        const result = await call<readonly WaitingVisitor[]>(WAITING_PATH);
+        if (result.ok) setWaiting({ state: 'ready', data: result.data });
+      })();
+    }, WAITING_POLL_MS);
 
-    return () => {
-      source.close();
-      liveSource.current = null;
-    };
+    return () => clearInterval(timer);
   }, []);
 
-  async function handleWalkInDecision(logId: number, decision: 'ADMIT' | 'REJECT') {
+  async function handleWalkInDecision(logId: number, decision: 'APPROVE' | 'REJECT') {
     setBusyActionId(logId);
-    await call<null>(`/api/visitors/walk-ins/${logId}/decision`, {
+    const result = await call<null>(`/api/visitors/walk-ins/${logId}/decision`, {
       method: 'POST',
       json: { logId, decision },
     });
     setBusyActionId(null);
+    if (!result.ok) {
+      toast.show({
+        title: 'That did not go through',
+        description: result.error.message,
+        tone: 'critical',
+      });
+      return;
+    }
     const updated = await call<readonly WaitingVisitor[]>(WAITING_PATH);
     if (updated.ok) setWaiting({ state: 'ready', data: updated.data });
     entries.reload();
   }
 
   const person = guarded.state === 'signed-in' ? guarded.person : null;
-  const home = person?.home;
-  const residentName = person?.name ?? 'Aarav Sharma';
-  const mastheadUnit = home ? `${home.blockName}-${home.label}` : 'A-101';
+  const home = person?.home ?? null;
+  const homeLabel = home !== null ? `${home.blockName} · ${home.label}` : null;
 
   // Invoice calculations
   const openInvoices = useMemo(() => {
@@ -161,7 +165,6 @@ export default function ResidentHomePage() {
     return openInvoices.reduce((acc, inv) => acc + inv.amountPaise, 0);
   }, [openInvoices]);
 
-  const formattedRupees = (totalOutstandingPaise / 100).toLocaleString('en-IN');
 
   // Streak: consecutive settled invoices
   const streakMonths = paidInvoices.length > 0 && openInvoices.length === 0 ? paidInvoices.length : null;
@@ -198,7 +201,7 @@ export default function ResidentHomePage() {
         <div className="space-y-1.5">
           <div className="flex items-center gap-3">
             <h1 className="font-serif text-3xl font-bold tracking-tight text-content sm:text-4xl lg:text-5xl">
-              Gulmohar Court · {mastheadUnit}
+              {homeLabel ?? 'Your home'}
             </h1>
             {streakMonths !== null ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-positive-border bg-positive-soft px-3 py-1 text-xs font-semibold text-positive shadow-xs">
@@ -212,7 +215,9 @@ export default function ResidentHomePage() {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4 self-start sm:self-auto">
-          <span className="type-title font-medium text-content">{residentName}</span>
+          {person !== null ? (
+            <span className="type-title font-medium text-content">{person.name}</span>
+          ) : null}
           <Link
             href="/home/notifications"
             className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-raised text-content hover:bg-surface-sunken hover:border-border-strong transition-colors"
@@ -234,10 +239,7 @@ export default function ResidentHomePage() {
         <div className="flex flex-col justify-between rounded-2xl border border-border bg-surface-raised p-5 shadow-e1">
           <span className="type-label text-content-muted">Outstanding dues</span>
           <div className="mt-4 flex items-baseline justify-between gap-3">
-            <div className="flex items-baseline font-bold tabular-nums">
-              <span className="mr-0.5 text-2xl font-bold text-gold">₹</span>
-              <span className="type-mega text-content">{formattedRupees}</span>
-            </div>
+            <Money value={paise(totalOutstandingPaise)} size="mega" tone="gold" glow />
             {totalOutstandingPaise > 0 ? (
               <Link
                 href="/home/invoices"
@@ -308,48 +310,46 @@ export default function ResidentHomePage() {
             Needing you
           </h2>
 
-          {waitingVisitors.length > 0 ? (
-            waitingVisitors.map((visitor) => (
-              <div
-                key={visitor.logId}
-                className="rounded-2xl border border-border bg-surface-raised p-5 shadow-e1 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="type-label text-content-muted">Active gate visitor</span>
-                  <span className="type-micro text-content-subtle">
-                    <RelativeTime value={visitor.since} />
-                  </span>
-                </div>
-                <div>
-                  <h3 className="type-body font-semibold text-content">
-                    Walk-in · {visitor.purpose}
-                  </h3>
-                  <p className="type-body text-content-muted mt-0.5">
-                    {visitor.name}
-                    {visitor.phone ? ` (${visitor.phone})` : ''} is at the front gate awaiting entry.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 pt-1">
-                  <button
-                    type="button"
-                    disabled={busyActionId === visitor.logId}
-                    onClick={() => void handleWalkInDecision(visitor.logId, 'ADMIT')}
-                    className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-1.5 text-sm font-semibold text-accent-on hover:bg-accent-hover disabled:opacity-50 transition-colors"
-                  >
-                    {busyActionId === visitor.logId ? 'Updating…' : 'Approve'}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyActionId === visitor.logId}
-                    onClick={() => void handleWalkInDecision(visitor.logId, 'REJECT')}
-                    className="inline-flex items-center justify-center rounded-full border border-border bg-transparent px-5 py-1.5 text-sm font-medium text-content hover:bg-surface-sunken disabled:opacity-50 transition-colors"
-                  >
-                    Decline
-                  </button>
-                </div>
+          {waitingVisitors.map((visitor) => (
+            <div
+              key={visitor.logId}
+              className="rounded-2xl border border-border bg-surface-raised p-5 shadow-e1 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <span className="type-label text-content-muted">Active gate visitor</span>
+                <span className="type-micro text-content-subtle">
+                  <RelativeTime value={visitor.since} />
+                </span>
               </div>
-            ))
-          ) : null}
+              <div>
+                <h3 className="type-body font-semibold text-content">
+                  Walk-in · {visitor.purpose}
+                </h3>
+                <p className="type-body text-content-muted mt-0.5">
+                  {visitor.name}
+                  {visitor.phone ? ` (${visitor.phone})` : ''} is at the front gate awaiting entry.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  disabled={busyActionId === visitor.logId}
+                  onClick={() => void handleWalkInDecision(visitor.logId, 'APPROVE')}
+                  className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-1.5 text-sm font-semibold text-accent-on hover:bg-accent-hover disabled:opacity-50 transition-colors"
+                >
+                  {busyActionId === visitor.logId ? 'Updating…' : 'Approve'}
+                </button>
+                <button
+                  type="button"
+                  disabled={busyActionId === visitor.logId}
+                  onClick={() => void handleWalkInDecision(visitor.logId, 'REJECT')}
+                  className="inline-flex items-center justify-center rounded-full border border-border bg-transparent px-5 py-1.5 text-sm font-medium text-content hover:bg-surface-sunken disabled:opacity-50 transition-colors"
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
 
           {/* Overdue / Unpaid Invoices */}
           {openInvoices.map((inv) => (
@@ -366,10 +366,11 @@ export default function ResidentHomePage() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h3 className="type-body font-semibold text-content">
-                    Maintenance for {formatPeriod(inv.period)} · ₹{(inv.amountPaise / 100).toLocaleString('en-IN')}
+                    Maintenance for {formatPeriod(inv.period)} ·{' '}
+                    {formatMoney(paise(inv.amountPaise), { compact: true })}
                   </h3>
                   <p className="type-body text-content-muted text-sm mt-0.5">
-                    Monthly society dues for Flat {mastheadUnit}.
+                    Monthly society dues.
                   </p>
                 </div>
                 <Link
@@ -438,11 +439,8 @@ export default function ResidentHomePage() {
                   <Icon name="pin" size={12} /> Pinned
                 </span>
               </div>
-              <h3 className="type-body font-semibold text-content">
-                Water tank maintenance · Thursday 10:00 AM
-              </h3>
-              <p className="type-body text-content-muted text-sm leading-relaxed">
-                Borewell motor servicing and overhead tank cleaning scheduled for Thursday. Water supply will pause between 10:00 AM and 2:00 PM.
+              <p className="type-body text-content-muted">
+                Nothing is pinned right now. Whatever the committee pins shows up here.
               </p>
             </div>
           )}
@@ -463,44 +461,9 @@ export default function ResidentHomePage() {
                 </div>
               ))
             ) : (
-              <>
-                <div className="py-3.5 first:pt-0 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="type-label text-content-muted">Notice</span>
-                    <span className="type-micro text-content-subtle">2h ago</span>
-                  </div>
-                  <h4 className="type-body font-semibold text-content">
-                    Borewell pump serviced and operating normally
-                  </h4>
-                  <p className="type-body text-content-muted text-sm line-clamp-2">
-                    Secondary motor replacement completed by the facility team. Regular pumping pressure has resumed across all blocks.
-                  </p>
-                </div>
-                <div className="py-3.5 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="type-label text-content-muted">Recent notice</span>
-                    <span className="type-micro text-content-subtle">3h ago</span>
-                  </div>
-                  <h4 className="type-body font-semibold text-content">
-                    Annual general body meeting notice and agenda
-                  </h4>
-                  <p className="type-body text-content-muted text-sm line-clamp-2">
-                    The general committee meeting will be held this Sunday at the clubhouse hall at 10:30 AM.
-                  </p>
-                </div>
-                <div className="py-3.5 last:pb-0 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="type-label text-content-muted">Recent notice</span>
-                    <span className="type-micro text-content-subtle">1d ago</span>
-                  </div>
-                  <h4 className="type-body font-semibold text-content">
-                    Clubhouse badminton court floor polishing
-                  </h4>
-                  <p className="type-body text-content-muted text-sm line-clamp-2">
-                    Court will remain closed this Friday evening for synthetic surface polish and re-lining.
-                  </p>
-                </div>
-              </>
+              <p className="py-3.5 type-body text-content-muted">
+                No recent notices. Society announcements will appear here.
+              </p>
             )}
           </div>
         </section>
@@ -514,7 +477,7 @@ export default function ResidentHomePage() {
               Household Gate Diary
             </h2>
             <p className="type-micro text-content-subtle">
-              Today’s arrivals and departures at Flat {mastheadUnit}
+              Today’s arrivals and departures{homeLabel !== null ? ` at ${homeLabel}` : ''}
             </p>
           </div>
           <Link href="/home/visitors" className="type-label text-accent hover:text-accent-hover font-semibold">

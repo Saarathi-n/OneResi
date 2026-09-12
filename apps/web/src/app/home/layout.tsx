@@ -27,6 +27,7 @@ const NAV = [
   { href: '/home/complaints', label: 'Complaints' },
   { href: '/home/facilities', label: 'Facilities' },
   { href: '/home/notices', label: 'Notices' },
+  { href: '/gate', label: 'Gate Terminal' },
 ] as const;
 
 const MOBILE_NAV = NAV;

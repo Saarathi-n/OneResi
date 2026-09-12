@@ -205,13 +205,20 @@ export interface WaitingVisitorView {
 }
 
 /**
- * The same queue the gate sees, not one household: every pending walk-in in the society, naming
- * the home each one waits on, so the kiosk can say which flat to call while the visitor stands
- * at the barrier.
+ * The same queue the gate sees, not one household: every walk-in awaiting a household's answer
+ * plus every approved visit not yet recorded as entered, naming the home each one waits on, so
+ * the kiosk can say which flat to call while the visitor stands at the barrier — and then record
+ * the arrival and the exit the approval set in motion.
  */
 export interface SocietyWaitingVisitorView extends WaitingVisitorView {
   /** `Emerald · B-304` — a home named the way every desk surface names one. */
   readonly homeLabel: string;
+  /** Whether the household has answered, and how. */
+  readonly approvalStatus: C.ApprovalStatus;
+  /** Set once the gate recorded the visitor walking in. */
+  readonly enteredAt: Date | null;
+  /** Set once the gate recorded the visitor leaving. */
+  readonly exitedAt: Date | null;
 }
 
 /**
@@ -296,7 +303,7 @@ export interface VisitorsService {
   /** Writes decidedById and decidedAt — the columns UC-05 needs and the previous build never set. */
   decideWalkIn(actor: Actor, input: C.DecideWalkInInput): Promise<Result<null>>;
   waitingForHousehold(actor: Actor): Promise<Result<readonly WaitingVisitorView[]>>;
-  /** Every pending walk-in in the society, each naming the home it waits on — the kiosk's feed. */
+  /** The society's queue of walk-ins awaiting an answer or an arrival — the kiosk's feed. */
   waitingForSociety(actor: Actor): Promise<Result<readonly SocietyWaitingVisitorView[]>>;
   expectedToday(actor: Actor): Promise<Result<readonly PassView[]>>;
   /** The household's visitor log, newest first: the feed on a resident's home. */

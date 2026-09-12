@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   RelativeTime,
   Skeleton,
@@ -29,6 +30,15 @@ const ENTRIES_PATH = '/api/visitors/entries';
 const WAITING_PATH = '/api/visitors/waiting';
 
 const QUICK_CHIPS = ['Cleaner', 'Plumber', 'Guest', 'Delivery'] as const;
+
+const TIME_PRESETS = [
+  { value: '10:00', label: '10:00 AM' },
+  { value: '11:30', label: '11:30 AM' },
+  { value: '13:00', label: '1:00 PM' },
+  { value: '15:00', label: '3:00 PM' },
+  { value: '17:30', label: '5:30 PM' },
+  { value: '19:00', label: '7:00 PM' },
+] as const;
 
 interface PassLine {
   id: number;
@@ -68,6 +78,7 @@ interface DemoWalkIn {
 }
 
 export default function VisitorsPage() {
+  const router = useRouter();
   const passes = useFetch<readonly PassLine[]>(PASSES_PATH);
   const entries = useFetch<readonly EntryLine[]>(ENTRIES_PATH);
   const toast = useToast();
@@ -75,7 +86,7 @@ export default function VisitorsPage() {
   const [visitorName, setVisitorName] = useState('');
   const [purpose, setPurpose] = useState('Guest');
   const [validOn, setValidOn] = useState(() => new Date().toISOString().slice(0, 10));
-  const [expectedTime, setExpectedTime] = useState('03:00 PM');
+  const [expectedTime, setExpectedTime] = useState('15:00');
   const [nameError, setNameError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -168,6 +179,23 @@ export default function VisitorsPage() {
         description: `Code ${cleanCode} copied to clipboard.`,
       });
     }
+  }
+
+  async function handleTestInGate() {
+    const cleanCode = activeCodeDisplay;
+    const rawCode = cleanCode.replace(/\D/g, '');
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(rawCode);
+      } catch {
+        // Fallback to clipboard
+      }
+    }
+    toast.show({
+      title: 'Pass code copied',
+      description: `Code ${cleanCode} copied to clipboard. Opening Gate Terminal…`,
+    });
+    router.push('/gate');
   }
 
   async function handleWalkInDecision(logId: number, decision: 'ADMIT' | 'REJECT', demoItem?: DemoWalkIn) {
@@ -330,27 +358,40 @@ export default function VisitorsPage() {
               ) : null}
             </div>
 
-            {/* Quick Tap Category Chips */}
+            {/* Freeform Purpose Input & Quick Tap Category Chips */}
             <div className="space-y-2">
-              <span className="type-label text-content-muted block">Quick tap chips</span>
-              <div className="flex flex-wrap gap-2">
-                {QUICK_CHIPS.map((chip) => {
-                  const isSelected = purpose.toLowerCase() === chip.toLowerCase();
-                  return (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => setPurpose(chip)}
-                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
-                        isSelected
-                          ? 'bg-accent text-accent-on shadow-xs font-semibold'
-                          : 'bg-surface-sunken text-content hover:bg-border border border-border'
-                      }`}
-                    >
-                      {chip}
-                    </button>
-                  );
-                })}
+              <label htmlFor="visitor-purpose-input" className="type-label text-content-muted block">
+                Purpose of visit
+              </label>
+              <input
+                id="visitor-purpose-input"
+                type="text"
+                placeholder="e.g. Electrician, Parents visiting, Courier, Guest"
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                className="type-body w-full rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-content outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent placeholder:text-content-subtle"
+              />
+              <div className="space-y-1 pt-1">
+                <span className="type-micro text-content-subtle block">Quick presets:</span>
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_CHIPS.map((chip) => {
+                    const isSelected = purpose.toLowerCase() === chip.toLowerCase();
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setPurpose(chip)}
+                        className={`rounded-full px-3.5 py-1 text-xs font-medium transition-all ${
+                          isSelected
+                            ? 'bg-accent text-accent-on shadow-xs font-semibold'
+                            : 'bg-surface-sunken text-content hover:bg-border border border-border'
+                        }`}
+                      >
+                        {chip}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -375,14 +416,33 @@ export default function VisitorsPage() {
                     onChange={(e) => setExpectedTime(e.target.value)}
                     className="type-body w-full bg-transparent text-content outline-none cursor-pointer text-sm"
                   >
-                    <option value="10:00 AM">10:00 AM</option>
-                    <option value="11:30 AM">11:30 AM</option>
-                    <option value="01:00 PM">1:00 PM</option>
-                    <option value="03:00 PM">3:00 PM</option>
-                    <option value="05:30 PM">5:30 PM</option>
-                    <option value="07:00 PM">7:00 PM</option>
+                    {TIME_PRESETS.map((preset) => (
+                      <option key={preset.value} value={preset.value}>
+                        {preset.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="type-micro text-content-subtle mr-1">Time presets:</span>
+                {TIME_PRESETS.map((preset) => {
+                  const isSelected = expectedTime === preset.value;
+                  return (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => setExpectedTime(preset.value)}
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-all ${
+                        isSelected
+                          ? 'bg-accent text-accent-on shadow-xs font-semibold'
+                          : 'bg-surface-sunken text-content-muted hover:text-content hover:bg-border border border-border'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -409,13 +469,13 @@ export default function VisitorsPage() {
               </div>
 
               {/* Physical Tear-off Ticket */}
-              <div className="relative flex rounded-2xl border border-border bg-surface-raised shadow-e1 overflow-hidden">
+              <div className="relative flex rounded-2xl border border-border bg-surface-raised shadow-e1">
                 {/* Left Stub with Perforated Dotted Line & Semi-circle punched notches */}
-                <div className="relative flex w-12 sm:w-14 items-center justify-center border-r-2 border-dashed border-border-strong bg-surface-sunken/40 select-none">
+                <div className="relative flex w-12 sm:w-14 items-center justify-center rounded-l-2xl border-r-2 border-dashed border-border-strong bg-surface-sunken/40 select-none">
                   {/* Top Punched Notch */}
-                  <div className="absolute -top-2.5 -right-2.5 h-5 w-5 rounded-full bg-surface border border-border" />
+                  <div className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-surface-raised border border-border z-10" />
                   {/* Bottom Punched Notch */}
-                  <div className="absolute -bottom-2.5 -right-2.5 h-5 w-5 rounded-full bg-surface border border-border" />
+                  <div className="absolute -bottom-3 -right-3 h-6 w-6 rounded-full bg-surface-raised border border-border z-10" />
 
                   {/* Vertical 'Tear-off slip' text */}
                   <span className="[writing-mode:vertical-rl] rotate-180 text-[11px] font-semibold uppercase tracking-widest text-content-subtle py-4">
@@ -424,7 +484,7 @@ export default function VisitorsPage() {
                 </div>
 
                 {/* Right Main Body of Pass */}
-                <div className="flex flex-1 flex-col items-center justify-center p-6 text-center space-y-2">
+                <div className="flex flex-1 flex-col items-center justify-center p-6 text-center space-y-2 rounded-r-2xl">
                   <span className="type-micro text-content-subtle uppercase tracking-wider font-semibold">
                     Passcode
                   </span>
@@ -438,14 +498,22 @@ export default function VisitorsPage() {
                     {activePassVisitor} · {purpose} · {formatCalendarDate(validOn)}
                   </p>
 
-                  <div className="pt-2">
+                  <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
                     <button
                       type="button"
                       onClick={() => void handleSharePass()}
-                      className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-2 text-sm font-semibold text-accent-on hover:bg-accent-hover transition-colors shadow-xs"
+                      className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-on hover:bg-accent-hover transition-colors shadow-xs"
                     >
                       <Icon name="share" size={16} />
                       Share Pass
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleTestInGate()}
+                      className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-sunken px-5 py-2 text-sm font-semibold text-content hover:bg-border transition-colors shadow-xs"
+                    >
+                      <Icon name="shield" size={16} />
+                      Test in Gate Terminal
                     </button>
                   </div>
                 </div>

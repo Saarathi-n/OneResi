@@ -148,25 +148,29 @@ export default function LedgerPage() {
       setOfflineError('Type the amount you actually received, in rupees.');
       return;
     }
+    const amountPaise = Math.round(rupees * 100);
+    if (amountPaise !== offlineFor.amountPaise) {
+      setOfflineError(
+        `The amount has to match the invoice in full (${formatMoney(paise(offlineFor.amountPaise))}) — part settlement is not supported.`,
+      );
+      return;
+    }
     if (receivedOn === '') {
       setOfflineError('When did the money arrive?');
       return;
     }
     setOfflinePending(true);
     setOfflineError(null);
-    const result = await call<null>(
-      `/api/billing/invoices/${offlineFor.id}/offline-payment`,
-      {
-        method: 'POST',
-        json: {
-          invoiceId: offlineFor.id,
-          amountPaise: Math.round(rupees * 100),
-          method: 'CASH',
-          receivedOn,
-          ...(offlineNote.trim().length === 0 ? {} : { note: offlineNote.trim() }),
-        },
+    const result = await call<null>(`/api/billing/invoices/${offlineFor.id}/offline-payment`, {
+      method: 'POST',
+      json: {
+        invoiceId: offlineFor.id,
+        amountPaise,
+        method: 'CASH',
+        receivedOn,
+        ...(offlineNote.trim().length === 0 ? {} : { note: offlineNote.trim() }),
       },
-    );
+    });
     setOfflinePending(false);
     if (result.ok) {
       setOfflineFor(null);
@@ -241,17 +245,25 @@ export default function LedgerPage() {
 
       <Table
         caption="Society ledger, sorted"
+        minWidth={860}
         columns={[
           {
             id: 'home',
             header: 'Home',
             sortable: true,
+            width: '22%',
             cell: (row) => (
-              <div>
-                <p className="type-body text-content">
+              <div className="min-w-0">
+                <p
+                  className="type-body truncate text-content"
+                  title={`${row.home.blockName} ${row.home.label}`}
+                >
                   {row.home.blockName} {row.home.label}
                 </p>
-                <p className="type-micro text-content-subtle">
+                <p
+                  className="type-micro truncate text-content-subtle"
+                  title={UNIT_TYPE[row.home.type].label}
+                >
                   {UNIT_TYPE[row.home.type].label}
                 </p>
               </div>
@@ -261,13 +273,23 @@ export default function LedgerPage() {
             id: 'period',
             header: 'Period',
             sortable: true,
-            cell: (row) => <span className="type-label">{formatPeriod(row.period)}</span>,
+            width: '13%',
+            cell: (row) => (
+              <div className="truncate" title={formatPeriod(row.period)}>
+                <span className="type-label">{formatPeriod(row.period)}</span>
+              </div>
+            ),
           },
           {
             id: 'dueOn',
             header: 'Due',
             sortable: true,
-            cell: (row) => <span className="type-label">{formatCalendarDateShort(row.dueOn)}</span>,
+            width: '11%',
+            cell: (row) => (
+              <span className="type-label whitespace-nowrap">
+                {formatCalendarDateShort(row.dueOn)}
+              </span>
+            ),
             secondary: true,
           },
           {
@@ -275,26 +297,42 @@ export default function LedgerPage() {
             header: 'Amount',
             align: 'end',
             sortable: true,
+            width: '13%',
             cell: (row) => (
-              <Money value={paise(row.amountPaise)} size="body" compact label={`${row.period} amount`} />
+              <div
+                className="truncate"
+                title={formatMoney(paise(row.amountPaise), { compact: true })}
+              >
+                <Money
+                  value={paise(row.amountPaise)}
+                  size="body"
+                  compact
+                  animated={false}
+                  label={`${row.period} amount`}
+                />
+              </div>
             ),
           },
           {
             id: 'status',
             header: 'Status',
             sortable: true,
+            width: '13%',
             cell: (row) => (
-              <Badge tone={INVOICE_STATUS[row.status].tone} size="sm">
-                {INVOICE_STATUS[row.status].label}
-              </Badge>
+              <div className="whitespace-nowrap" title={INVOICE_STATUS[row.status].label}>
+                <Badge tone={INVOICE_STATUS[row.status].tone} size="sm">
+                  {INVOICE_STATUS[row.status].label}
+                </Badge>
+              </div>
             ),
           },
           {
             id: 'actions',
             header: ' ',
             align: 'end',
+            width: '18%',
             cell: (row) => (
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 whitespace-nowrap">
                 {row.status === 'UNPAID' || row.status === 'OVERDUE' ? (
                   <>
                     <Button
@@ -409,7 +447,11 @@ export default function LedgerPage() {
           <Field
             label="Amount received"
             required
-            hint="Rupees. Type what actually arrived, even if it is less."
+            hint={
+              offlineFor !== null
+                ? `Rupees. The invoice stands at ${formatMoney(paise(offlineFor.amountPaise))} — the amount has to match it in full.`
+                : 'Rupees. The amount has to match the invoice in full.'
+            }
           >
             <Input
               inputMode="decimal"

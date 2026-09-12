@@ -39,6 +39,13 @@ export function currentPerson(): PersonView | null {
   return person;
 }
 
+/** Role destination on sign-in and at the shells: R home, A desk, S gate. */
+export function roleHome(role: PersonView['role']): string {
+  if (role === 'A') return '/desk';
+  if (role === 'S') return '/gate';
+  return '/home';
+}
+
 /** Signs the person in: stores the access token in memory, the person for the shell. */
 export function adoptSession(session: StoredSession): void {
   accessToken = session.accessToken;

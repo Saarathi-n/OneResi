@@ -13,22 +13,27 @@ import {
 import { signOut, useGuardedSession } from '@/lib/session';
 
 /**
- * The committee desk: the second shell (04-product-design.md). Dense, desktop-first, keyboard
- * first — a committee member works through queues, not pages. The command palette (Ctrl-K or the
- * button) jumps anywhere in the desk and the resident screens.
+ * The committee desk: executive command shell. Dense, desktop-first, keyboard
+ * first — a committee member works through operational queues with clear visual hierarchy.
+ * The command palette (Ctrl-K or the button) jumps anywhere in the desk and resident screens.
  */
 
-const NAV = [
+const PRIMARY_NAV = [
   { href: '/desk', label: 'Overview', key: 'q' },
   { href: '/desk/ledger', label: 'Ledger', key: 'l' },
   { href: '/desk/complaints', label: 'Complaints', key: 'c' },
   { href: '/desk/bookings', label: 'Bookings', key: 'b' },
+] as const;
+
+const OPERATIONS_NAV = [
   { href: '/desk/announcements', label: 'Announcements', key: 'a' },
   { href: '/desk/property', label: 'Property', key: 'p' },
   { href: '/desk/facilities', label: 'Amenities', key: 'f' },
   { href: '/desk/reports', label: 'Reports', key: 'r' },
   { href: '/desk/applications', label: 'Applications', key: 'n' },
 ] as const;
+
+const ALL_NAV = [...PRIMARY_NAV, ...OPERATIONS_NAV] as const;
 
 const PALETTE_HINT = 'Ctrl-K jumps anywhere';
 
@@ -63,46 +68,49 @@ export default function DeskLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
-      <header className="sticky top-0 z-20 border-b border-border bg-surface-raised">
-        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2">
-          <Link href="/desk" aria-label="Committee desk home">
-            <Logo variant="wordmark" size={22} />
-          </Link>
-          <span className="type-label ml-2 hidden text-content-subtle sm:inline">
-            Committee desk
-          </span>
-          <nav aria-label="Committee" className="ml-4 flex items-center gap-1">
-            {NAV.map((item) => (
-              <Button
-                key={item.href}
-                variant={pathname === item.href ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => router.push(item.href)}
-                aria-current={pathname === item.href ? 'page' : undefined}
-              >
-                {item.label}
-              </Button>
-            ))}
-          </nav>
-          <div className="ml-auto flex items-center gap-2">
+      <header className="sticky top-0 z-20 border-b border-border bg-surface-raised shadow-xs">
+        {/* Tier 1: Executive Top Bar */}
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
+          <div className="flex items-center gap-3">
+            <Link href="/desk" aria-label="Committee desk home" className="flex items-center gap-2.5">
+              <Logo variant="wordmark" size={24} />
+            </Link>
+            <span className="type-micro hidden rounded-full border border-border bg-surface-sunken px-2.5 py-0.5 font-semibold tracking-wider text-content-subtle sm:inline-block">
+              Committee Desk
+            </span>
+          </div>
+
+          {/* Right-aligned utility actions & search shortcut */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <Button
               variant="secondary"
               size="sm"
               onClick={() => setPaletteOpen(true)}
               leadingIcon={
-                <span className="type-micro whitespace-nowrap rounded-xs border border-border bg-surface-sunken px-1.5 py-0.5 text-content-subtle">
+                <span className="type-micro whitespace-nowrap rounded-xs border border-border bg-surface-sunken px-1.5 py-0.5 font-mono text-content-subtle">
                   Ctrl K
                 </span>
               }
             >
               Jump to
             </Button>
-            <Link href="/home" className={buttonClass('ghost', 'sm')}>
-              Resident view
+            <div className="hidden h-4 w-px bg-border sm:block" aria-hidden />
+            <Link
+              href="/home"
+              className={buttonClass('ghost', 'sm', 'text-content-muted hover:text-content hover:bg-surface-sunken')}
+            >
+              Resident View
+            </Link>
+            <Link
+              href="/gate"
+              className={buttonClass('ghost', 'sm', 'text-content-muted hover:text-content hover:bg-surface-sunken')}
+            >
+              Gate Terminal
             </Link>
             <Button
               variant="ghost"
               size="sm"
+              className="text-content-muted hover:text-content hover:bg-surface-sunken"
               onClick={() => {
                 void handleSignOut().then(() => {
                   toast.show({ title: 'Signed out' });
@@ -113,12 +121,75 @@ export default function DeskLayout({ children }: { children: ReactNode }) {
             </Button>
           </div>
         </div>
+
+        {/* Tier 2: Dedicated Executive Navigation Bar */}
+        <div className="border-t border-border/70 bg-surface-raised/80 backdrop-blur-xs">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 overflow-x-auto px-4 py-2 sm:px-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Primary Tabs */}
+              <nav aria-label="Primary queues" className="flex items-center gap-1.5">
+                {PRIMARY_NAV.map((item) => {
+                  const isActive =
+                    item.href === '/desk'
+                      ? pathname === '/desk'
+                      : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={buttonClass(
+                        isActive ? 'primary' : 'ghost',
+                        'sm',
+                        isActive
+                          ? 'shadow-xs font-semibold'
+                          : 'text-content-muted hover:text-content hover:bg-surface-sunken/70',
+                      )}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {/* Hierarchy Divider */}
+              <div className="hidden h-5 w-px bg-border md:block" aria-hidden />
+
+              {/* Operations / Society Group */}
+              <nav aria-label="Operations and society" className="flex items-center gap-1.5">
+                <span className="type-micro hidden font-semibold uppercase tracking-wider text-content-subtle lg:inline px-1">
+                  Operations
+                </span>
+                {OPERATIONS_NAV.map((item) => {
+                  const isActive =
+                    pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={buttonClass(
+                        isActive ? 'primary' : 'ghost',
+                        'sm',
+                        isActive
+                          ? 'shadow-xs font-semibold'
+                          : 'text-content-muted hover:text-content hover:bg-surface-sunken/70',
+                      )}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
+        </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">{children}</main>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2">
+      <footer className="border-t border-border bg-surface-raised/40">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 sm:px-6">
           <p className="type-micro text-content-subtle">
             {person.name} · {PALETTE_HINT}
           </p>
@@ -153,14 +224,14 @@ function Palette({
 
   const destinations = useMemo(
     () => [
-      ...NAV.map((item) => ({ href: item.href, label: item.label, hint: 'Desk' })),
-      { href: '/home', label: 'Resident home', hint: 'Resident' },
+      ...ALL_NAV.map((item) => ({ href: item.href, label: item.label, hint: 'Desk' })),
+      { href: '/home', label: 'Resident View', hint: 'Resident' },
       { href: '/home/invoices', label: 'Payments', hint: 'Resident' },
       { href: '/home/visitors', label: 'Visitors', hint: 'Resident' },
       { href: '/home/complaints', label: 'Complaints', hint: 'Resident' },
-      { href: '/home/facilities', label: 'Facilities', hint: 'Resident' },
+      { href: '/home/facilities', label: 'Amenities', hint: 'Resident' },
       { href: '/home/notices', label: 'Notices', hint: 'Resident' },
-      { href: '/gate', label: 'Gate kiosk', hint: 'Gate' },
+      { href: '/gate', label: 'Gate Terminal', hint: 'Gate' },
     ],
     [],
   );
@@ -258,12 +329,26 @@ function DeskSkeleton() {
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
       <header className="border-b border-border bg-surface-raised">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2">
-          <Logo variant="wordmark" size={22} />
-          <Skeleton variant="text" width={120} height={20} />
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6">
+          <div className="flex items-center gap-3">
+            <Logo variant="wordmark" size={24} />
+            <Skeleton variant="text" width={100} height={18} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton variant="text" width={90} height={32} />
+            <Skeleton variant="text" width={90} height={32} />
+          </div>
+        </div>
+        <div className="border-t border-border/70 px-4 py-2 sm:px-6">
+          <div className="mx-auto flex max-w-7xl items-center gap-2">
+            <Skeleton variant="text" width={70} height={32} />
+            <Skeleton variant="text" width={70} height={32} />
+            <Skeleton variant="text" width={80} height={32} />
+            <Skeleton variant="text" width={75} height={32} />
+          </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl space-y-4 px-4 py-6">
+      <main className="mx-auto w-full max-w-7xl space-y-4 px-4 py-6 sm:px-6">
         <Skeleton variant="text" width="40%" height={28} />
         <Skeleton variant="block" height={240} />
       </main>

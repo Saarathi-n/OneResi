@@ -11,7 +11,7 @@ import {
   buttonClass,
 } from '@oneresi/ui';
 import { Icon } from '@/components/icons';
-import { signIn } from '@/lib/session';
+import { roleHome, signIn } from '@/lib/session';
 
 /**
  * Sign in — "the gatehouse at dawn".
@@ -30,6 +30,27 @@ const PRODUCT_TRUTHS = [
   'Receipts people can verify.',
   'The gate log households can read.',
   'Maintenance accounted for down to the rupee.',
+] as const;
+
+const DEMO_ROLES = [
+  {
+    role: 'Resident',
+    email: 'saarathin@gmail.com',
+    detail: 'Flat A-101',
+    emoji: '🏠',
+  },
+  {
+    role: 'Gate Staff',
+    email: 'ashvin.ks2024@vitstudent.ac.in',
+    detail: 'Security Kiosk',
+    emoji: '🛡️',
+  },
+  {
+    role: 'Committee',
+    email: 'ashvinksg@gmail.com',
+    detail: 'Desk Admin',
+    emoji: '📋',
+  },
 ] as const;
 
 export default function SignInPage() {
@@ -72,6 +93,33 @@ export default function SignInPage() {
     return () => clearInterval(interval);
   }, []);
 
+  async function handleQuickSignIn(targetEmail: string): Promise<void> {
+    const pwd = 'starling-marble-97-QUAY';
+    setEmail(targetEmail);
+    setPassword(pwd);
+    setFieldErrors({});
+    setPending(true);
+    const result = await signIn(targetEmail, pwd);
+
+    if (result.ok) {
+      try {
+        window.localStorage.setItem(EMAIL_KEY, targetEmail);
+      } catch {
+        // Remembering is a convenience, never a requirement.
+      }
+      setPending(false);
+      setSuccess(true);
+
+      setTimeout(() => {
+        router.push(roleHome(result.data.role));
+      }, 100);
+      return;
+    }
+
+    setPending(false);
+    setFieldErrors({ password: result.error.message });
+  }
+
   async function handleSubmit(): Promise<void> {
     setFieldErrors({});
 
@@ -99,7 +147,7 @@ export default function SignInPage() {
 
       // Brief physical weight pause for admission confirmation before routing
       setTimeout(() => {
-        router.push('/home');
+        router.push(roleHome(result.data.role));
       }, 100);
       return;
     }
@@ -301,6 +349,47 @@ export default function SignInPage() {
                   </Button>
                 </div>
               </form>
+
+              {/* 1-click Quick Demo Role Switcher strip */}
+              <div className="mt-6 pt-5 border-t border-border">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="type-micro text-content-subtle uppercase tracking-wider font-semibold">
+                    Quick demo role switcher
+                  </span>
+                  <span className="type-micro text-accent font-medium">
+                    1-click sign in
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {DEMO_ROLES.map((item) => (
+                    <button
+                      key={item.email}
+                      type="button"
+                      disabled={pending || success}
+                      onClick={() => void handleQuickSignIn(item.email)}
+                      className="group flex flex-col justify-between rounded-xl border border-border bg-surface p-3 text-left shadow-xs transition-all hover:border-border-strong hover:bg-surface-sunken active:scale-[0.98] disabled:opacity-50 cursor-pointer focus-ring"
+                    >
+                      <div className="flex items-center justify-between gap-1 w-full mb-1.5">
+                        <span className="text-base leading-none" aria-hidden>{item.emoji}</span>
+                        <span className="type-micro text-accent font-medium group-hover:underline">
+                          Sign in &rarr;
+                        </span>
+                      </div>
+                      <div>
+                        <p className="type-body text-sm font-semibold text-content leading-snug">
+                          {item.role}
+                        </p>
+                        <p className="type-micro text-content-muted font-medium mt-0.5">
+                          {item.detail}
+                        </p>
+                        <p className="type-micro text-content-subtle truncate mt-0.5 text-[11px]" title={item.email}>
+                          {item.email}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Below the form: Quiet navigation links */}

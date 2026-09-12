@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { Button, Dialog, Skeleton, useToast } from '@oneresi/ui';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Dialog, EmptyState, ErrorState, Skeleton, useToast } from '@oneresi/ui';
 import {
   formatPeriod,
   formatMoney,
   paise,
+  idempotencyKey,
   type PaymentMethod,
 } from '@oneresi/contracts';
 import { call, usePerson } from '@/lib/session';
@@ -51,63 +52,6 @@ const PAYMENT_OPTIONS: readonly PaymentOption[] = [
   { id: 'UPI', label: 'UPI — GPay/PhonePe', saved: true, provider: 'UPI' },
   { id: 'CARD', label: 'Credit/Debit Card', provider: 'Card' },
   { id: 'NETBANKING', label: 'Netbanking', provider: 'Netbanking' },
-];
-
-const REFERENCE_INVOICES: readonly InvoiceLine[] = [
-  {
-    id: 901,
-    period: '2026-09',
-    amountPaise: 350000,
-    dueOn: '2026-09-15T18:30:00.000Z',
-    status: 'UNPAID',
-    receiptNo: 'REC-8841',
-    paidAt: null,
-  },
-  {
-    id: 902,
-    period: '2026-08',
-    amountPaise: 350000,
-    dueOn: '2026-08-15T18:30:00.000Z',
-    status: 'PAID',
-    receiptNo: 'REC-8841',
-    paidAt: '2026-08-10T11:20:00.000Z',
-  },
-  {
-    id: 903,
-    period: '2026-07',
-    amountPaise: 350000,
-    dueOn: '2026-07-15T18:30:00.000Z',
-    status: 'PAID',
-    receiptNo: 'REC-8841',
-    paidAt: '2026-07-12T09:40:00.000Z',
-  },
-  {
-    id: 904,
-    period: '2026-06',
-    amountPaise: 350000,
-    dueOn: '2026-06-15T18:30:00.000Z',
-    status: 'PAID',
-    receiptNo: 'REC-8880',
-    paidAt: '2026-06-11T14:15:00.000Z',
-  },
-  {
-    id: 905,
-    period: '2026-05',
-    amountPaise: 350000,
-    dueOn: '2026-05-15T18:30:00.000Z',
-    status: 'OVERDUE',
-    receiptNo: 'REC-8871',
-    paidAt: null,
-  },
-  {
-    id: 906,
-    period: '2026-04',
-    amountPaise: 350000,
-    dueOn: '2026-04-15T18:30:00.000Z',
-    status: 'PAID',
-    receiptNo: 'REC-8841',
-    paidAt: '2026-04-09T16:00:00.000Z',
-  },
 ];
 
 function loadLastMethod(): PaymentMethod {
@@ -173,43 +117,60 @@ export default function InvoicesPage() {
     amountPaise: number;
   } | null>(null);
 
+  // One key per invoice, minted when the payment is first attempted. Every retry — a double-tap,
+  // a tap after a dropped response — reuses it, which is what makes the retry safe: the server
+  // records the first result against the key instead of taking the money twice.
+  const payKeys = useRef(new Map<number, string>());
+
   useEffect(() => {
     setSelectedMethod(loadLastMethod());
   }, []);
 
-  // Use API rows if populated; fall back to reference rows so gold standard is visible
-  const rawRows =
-    invoices.state.state === 'ready' && invoices.state.data.length > 0
-      ? [...invoices.state.data].sort((a, b) => b.period.localeCompare(a.period))
-      : REFERENCE_INVOICES;
-
-  const [rows, setRows] = useState<readonly InvoiceLine[]>(rawRows);
-
-  useEffect(() => {
-    if (invoices.state.state === 'ready' && invoices.state.data.length > 0) {
-      setRows([...invoices.state.data].sort((a, b) => b.period.localeCompare(a.period)));
-    }
-  }, [invoices.state]);
+  const rows = useMemo(
+    () =>
+      invoices.state.state === 'ready'
+        ? [...invoices.state.data].sort((a, b) => b.period.localeCompare(a.period))
+        : [],
+    [invoices.state],
+  );
 
   const openInvoices = rows.filter((r) => r.status === 'UNPAID' || r.status === 'OVERDUE');
   const primaryDueInvoice = openInvoices[0] ?? rows[0];
 
-  const unitSubtitle = person?.home
-    ? `Gulmohar Court · ${person.home.blockName}-${person.home.label}`
-    : 'Gulmohar Court · A-101';
+  const unitSubtitle =
+    person?.home != null ? `${person.home.blockName}-${person.home.label}` : null;
 
   async function handleSettle(target: InvoiceLine): Promise<void> {
     setPending(true);
     setError(null);
 
+    const key = payKeys.current.get(target.id) ?? idempotencyKey();
+    payKeys.current.set(target.id, key);
+
     const result = await call<InvoiceLine>(`/api/billing/invoices/${target.id}/pay`, {
       method: 'POST',
-      json: { invoiceId: target.id, method: selectedMethod },
+      json: { invoiceId: target.id, method: selectedMethod, idempotencyKey: key },
     });
 
     setPending(false);
 
-    const receiptNo = result.ok ? result.data.receiptNo || 'REC-8841' : 'REC-8841';
+    if (!result.ok || result.data.receiptNo === null) {
+      const message = result.ok
+        ? 'The payment was recorded, but no receipt number came back — check your invoices in a moment.'
+        : result.error.message;
+      setError(message);
+      // The key stays minted for this invoice: if the first attempt landed after all, a retry
+      // replays the same result instead of taking the money twice.
+      toast.show({
+        title: 'The payment did not go through',
+        description: message,
+        tone: 'critical',
+      });
+      return;
+    }
+
+    const receiptNo = result.data.receiptNo;
+    payKeys.current.delete(target.id);
 
     try {
       window.localStorage.setItem(METHOD_KEY, selectedMethod);
@@ -222,22 +183,8 @@ export default function InvoicesPage() {
     setJustPaidReceipt({
       receiptNo,
       period: target.period,
-      amountPaise: target.amountPaise,
+      amountPaise: result.data.amountPaise,
     });
-
-    // Update state locally for immediate visual confirmation
-    setRows((prev) =>
-      prev.map((item) =>
-        item.id === target.id
-          ? {
-              ...item,
-              status: 'PAID',
-              receiptNo,
-              paidAt: new Date().toISOString(),
-            }
-          : item,
-      ),
-    );
 
     invoices.reload();
 
@@ -255,7 +202,9 @@ export default function InvoicesPage() {
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-content">
           Maintenance & Invoices
         </h1>
-        <p className="type-body text-base text-content-muted mt-1 font-medium">{unitSubtitle}</p>
+        {unitSubtitle !== null ? (
+          <p className="type-body text-base text-content-muted mt-1 font-medium">{unitSubtitle}</p>
+        ) : null}
       </header>
 
       {invoices.state.state === 'loading' ? (
@@ -270,6 +219,13 @@ export default function InvoicesPage() {
             <Skeleton variant="block" height={320} />
           </div>
         </div>
+      ) : invoices.state.state === 'failed' ? (
+        <ErrorState title="Your invoices did not load" onRetry={invoices.reload} />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          title="No invoices yet"
+          description="When the society raises a maintenance demand, it appears here with its amount and due date."
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: List of Invoice Rows */}

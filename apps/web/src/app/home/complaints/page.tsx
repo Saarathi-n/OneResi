@@ -21,6 +21,7 @@ import {
   COMPLAINT_CATEGORIES,
   COMPLAINT_CATEGORY,
   COMPLAINT_STATUS,
+  photoVerdict,
   type ComplaintCategory,
   type ComplaintPriority,
   type ComplaintStatus,
@@ -63,6 +64,7 @@ interface ComplaintLine {
   category: ComplaintCategory;
   priority: ComplaintPriority;
   description: string;
+  photoKeys: readonly string[];
   status: ComplaintStatus;
   raisedAt: string;
   resolvedAt: string | null;
@@ -90,6 +92,10 @@ export default function ComplaintsPage() {
   const [category, setCategory] = useState<ComplaintCategory | ''>('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'>('MEDIUM');
+  const [photos, setPhotos] = useState<readonly string[]>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -120,6 +126,83 @@ export default function ComplaintsPage() {
     categoryOffered.current = true;
   }, [complaints.state, category]);
 
+  // Uploads each chosen photo straight away, so a refusal names the one file and the form keeps
+  // the rest. The count rides along so a fourth photo is refused before the complaint is raised.
+  async function addPhotos(selected: FileList | readonly File[] | null): Promise<void> {
+    if (selected === null) return;
+    const files = Array.from(selected);
+    if (files.length === 0) return;
+    setPhotoError(null);
+    setUploading(true);
+    let attached = photos.length;
+    for (const file of files) {
+      const verdict = photoVerdict({
+        type: file.type,
+        sizeBytes: file.size,
+        alreadyAttached: attached,
+      });
+      if (verdict !== null) {
+        setPhotoError(verdict.message);
+        break;
+      }
+      const body = new FormData();
+      body.set('photo', file);
+      body.set('already', String(attached));
+      const result = await call<{ key: string }>('/api/complaints/photos/upload', {
+        method: 'POST',
+        body,
+      });
+      if (!result.ok) {
+        setPhotoError(result.error.message);
+        break;
+      }
+      attached += 1;
+      setPhotos((current) => [...current, result.data.key]);
+    }
+    setUploading(false);
+  }
+
+  function createSamplePhotoBlob(): Promise<Blob> {
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 240;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = 'rgb(243, 244, 246)';
+      ctx.fillRect(0, 0, 320, 240);
+      ctx.fillStyle = 'rgb(15, 118, 110)';
+      ctx.fillRect(16, 16, 288, 208);
+      ctx.fillStyle = 'rgb(255, 255, 255)';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Inspection Photo', 160, 105);
+      ctx.font = '13px sans-serif';
+      ctx.fillStyle = 'rgb(204, 251, 241)';
+      ctx.fillText('Resident Diagnostic Capture', 160, 135);
+    }
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Sample photo creation failed'));
+      }, 'image/png');
+    });
+  }
+
+  async function attachSamplePhoto(): Promise<void> {
+    if (photos.length >= 3) {
+      setPhotoError('A complaint can carry at most 3 photos.');
+      return;
+    }
+    try {
+      const blob = await createSamplePhotoBlob();
+      const file = new File([blob], `sample-${Date.now()}.png`, { type: 'image/png' });
+      await addPhotos([file]);
+    } catch {
+      setPhotoError('Could not attach sample photo.');
+    }
+  }
+
   async function submit(): Promise<void> {
     setCategoryError(null);
     setDescriptionError(null);
@@ -135,7 +218,7 @@ export default function ComplaintsPage() {
     setPending(true);
     const result = await call<ComplaintLine>(COMPLAINTS_PATH, {
       method: 'POST',
-      json: { category, priority, description: description.trim() },
+      json: { category, priority, description: description.trim(), photoKeys: photos },
     });
     setPending(false);
     if (result.ok) {
@@ -147,6 +230,8 @@ export default function ComplaintsPage() {
       setDescription('');
       setCategory('');
       setPriority('MEDIUM');
+      setPhotos([]);
+      setPhotoError(null);
       complaints.reload();
       setExpandedId(result.data.id);
       toast.show({
@@ -238,6 +323,123 @@ export default function ComplaintsPage() {
               onChange={(event) => setDescription(event.target.value)}
             />
           </Field>
+          <Field
+            label="Photos"
+            hint="Up to three. A leaking tap or water seepage says more in a picture."
+            error={photoError ?? undefined}
+          >
+            <div className="space-y-4">
+              {/* Image preview thumbnails when photos exist */}
+              {photos.length > 0 && (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {photos.map((key, index) => (
+                    <div
+                      key={key}
+                      className="group relative aspect-4/3 overflow-hidden rounded-xl border border-border bg-surface-sunken shadow-xs"
+                    >
+                      <img
+                        src={`/api/complaints/photos/file?key=${encodeURIComponent(key)}`}
+                        alt={`Attached photo ${index + 1}`}
+                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                      <span className="absolute bottom-2 left-2 rounded-md bg-black/60 px-2 py-0.5 type-micro text-white backdrop-blur-xs font-medium">
+                        Photo {index + 1}
+                      </span>
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-surface-raised/90 text-content shadow-e1 hover:bg-critical hover:text-white transition-colors focus-ring"
+                        aria-label={`Remove photo ${index + 1}`}
+                        onClick={() => {
+                          setPhotos((current) => current.filter((k) => k !== key));
+                          setPhotoError(null);
+                        }}
+                      >
+                        <span className="text-base font-semibold leading-none">×</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Prominent, clear, tactile dropzone */}
+              {photos.length < 3 ? (
+                <div
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setIsDragging(false);
+                    void addPhotos(event.dataTransfer.files);
+                  }}
+                  className={`group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all ${
+                    isDragging
+                      ? 'border-accent bg-accent-soft/40 ring-2 ring-accent/30'
+                      : 'border-border-strong/70 bg-surface-raised hover:border-accent hover:bg-surface-sunken/40'
+                  }`}
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-sunken text-content-subtle group-hover:bg-accent-soft group-hover:text-accent transition-colors">
+                    <svg
+                      className="h-6 w-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+
+                  <p className="type-body font-medium text-content mt-3">
+                    <label className="cursor-pointer text-accent hover:underline focus-within:underline">
+                      <span>Click to upload</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        className="sr-only"
+                        onChange={(event) => {
+                          const files = event.target.files;
+                          event.target.value = '';
+                          void addPhotos(files);
+                        }}
+                      />
+                    </label>{' '}
+                    <span className="text-content-muted">or drag and drop</span>
+                  </p>
+
+                  <p className="type-micro text-content-subtle mt-1">
+                    JPEG, PNG or WebP up to 5 MB ({3 - photos.length} {3 - photos.length === 1 ? 'photo slot' : 'photo slots'} remaining)
+                  </p>
+                </div>
+              ) : null}
+
+              {/* Action helper bar: "Attach sample photo" helper button */}
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  disabled={uploading || photos.length >= 3}
+                  onClick={() => void attachSamplePhoto()}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-raised px-3.5 py-1.5 type-label font-medium text-content hover:bg-surface-sunken hover:border-border-strong disabled:opacity-50 transition-colors focus-ring"
+                >
+                  <span className="text-accent font-bold leading-none">+</span>
+                  <span>{uploading ? 'Attaching…' : 'Attach sample photo'}</span>
+                </button>
+
+                {photos.length > 0 && (
+                  <span className="type-micro text-content-subtle">
+                    {photos.length} of 3 photos attached
+                  </span>
+                )}
+              </div>
+            </div>
+          </Field>
           {formError !== null ? (
             <p className="type-body text-critical" role="alert">
               {formError}
@@ -303,6 +505,26 @@ export default function ComplaintsPage() {
                       {expandedId === complaint.id ? 'Hide' : 'Track'}
                     </span>
                   </button>
+
+                  {complaint.photoKeys.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {complaint.photoKeys.map((key) => (
+                        <a
+                          key={key}
+                          href={`/api/complaints/photos/file?key=${encodeURIComponent(key)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block h-16 w-16 overflow-hidden rounded-lg border border-border"
+                        >
+                          <img
+                            src={`/api/complaints/photos/file?key=${encodeURIComponent(key)}`}
+                            alt="Attached to this complaint"
+                            className="h-full w-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
 
                   {expandedId === complaint.id ? (
                     <div className="space-y-4 border-t border-border pt-4">

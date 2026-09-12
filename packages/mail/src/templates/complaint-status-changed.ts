@@ -45,7 +45,7 @@ function compose(vars: ComplaintStatusChangedVars): Block[] {
       { label: 'When', value: formatDateTime(vars.updatedAt) },
     ]),
     quote(vars.note, vars.updatedByName),
-    action('See the whole thread', PATHS.complaint(vars.complaintId)),
+    action('See the whole thread', PATHS.complaint),
   ];
 
   if (vars.reopenableUntil !== undefined) {

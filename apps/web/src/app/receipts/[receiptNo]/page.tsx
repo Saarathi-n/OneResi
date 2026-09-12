@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Button, Logo, Skeleton } from '@oneresi/ui';
+import { Button, EmptyState, Logo, Skeleton } from '@oneresi/ui';
 import {
   PAYMENT_METHOD,
   formatPeriod,
@@ -25,6 +25,11 @@ import { call } from '@/lib/session';
  * circular double-ring rubber stamp in emerald ink that stamps in with a spring animation.
  *
  * A dedicated print stylesheet ensures faithful A5 printing.
+ *
+ * The sheet renders exactly what the receipt service returns — total, amount in words, payer,
+ * home, period, method and reference. Nothing is derived, split or filled in here: a receipt
+ * that invents a breakdown is a fabrication, and a lookup that fails is a missing receipt,
+ * never a stand-in document.
  */
 
 interface ReceiptData {
@@ -45,28 +50,10 @@ interface ReceiptData {
   reference: string;
 }
 
-const FALLBACK_RECEIPT: ReceiptData = {
-  receiptNo: 'REC-2026-09-0042',
-  paidAt: '2026-09-12T05:50:00.000Z', // 11:20 AM IST
-  method: 'UPI',
-  amountPaise: 350000,
-  amountInWords: 'Three Thousand Five Hundred Rupees Only',
-  period: '2026-09',
-  payerName: 'Aarav Sharma',
-  home: {
-    unitId: 1,
-    blockName: 'A',
-    label: '101',
-    type: 'FLAT_2BHK',
-    monthlyChargePaise: 350000,
-  },
-  reference: '98402194829',
-};
-
 function formatIstTimestamp(paidAt: string): string {
   try {
     const d = new Date(paidAt);
-    if (isNaN(d.getTime())) return '12 Sep 2026, 11:20 AM IST';
+    if (isNaN(d.getTime())) return '—';
     const day = d.toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
@@ -81,48 +68,27 @@ function formatIstTimestamp(paidAt: string): string {
     });
     return `${day}, ${time} IST`;
   } catch {
-    return '12 Sep 2026, 11:20 AM IST';
+    return '—';
   }
-}
-
-function computeBreakdown(totalPaise: number) {
-  if (totalPaise === 350000) {
-    return {
-      serviceCharge: 200000,
-      sinkingFund: 100000,
-      waterCharge: 50000,
-    };
-  }
-  const sinkingFund = Math.round((totalPaise * 0.2857) / 100) * 100;
-  const waterCharge = Math.round((totalPaise * 0.1429) / 100) * 100;
-  const serviceCharge = totalPaise - sinkingFund - waterCharge;
-  return { serviceCharge, sinkingFund, waterCharge };
 }
 
 export default function ReceiptPage() {
   const params = useParams<{ receiptNo: string }>();
   const receiptNo = typeof params?.receiptNo === 'string' ? params.receiptNo : '';
   const [state, setState] = useState<
-    { state: 'loading' } | { state: 'ready'; data: ReceiptData }
+    { state: 'loading' } | { state: 'ready'; data: ReceiptData } | { state: 'missing' }
   >({ state: 'loading' });
 
   useEffect(() => {
+    if (receiptNo === '') {
+      setState({ state: 'missing' });
+      return;
+    }
     void (async () => {
       const result = await call<ReceiptData>(
-        `/api/billing/receipts/${encodeURIComponent(receiptNo || 'REC-2026-09-0042')}`,
+        `/api/billing/receipts/${encodeURIComponent(receiptNo)}`,
       );
-      if (result.ok) {
-        setState({ state: 'ready', data: result.data });
-      } else {
-        // Fall back to the reference receipt for direct review or unseeded queries
-        setState({
-          state: 'ready',
-          data: {
-            ...FALLBACK_RECEIPT,
-            receiptNo: receiptNo || FALLBACK_RECEIPT.receiptNo,
-          },
-        });
-      }
+      setState(result.ok ? { state: 'ready', data: result.data } : { state: 'missing' });
     })();
   }, [receiptNo]);
 
@@ -163,6 +129,19 @@ export default function ReceiptPage() {
             <Skeleton variant="text" width="50%" height={28} />
             <Skeleton variant="block" height={420} />
           </div>
+        ) : state.state === 'missing' ? (
+          <EmptyState
+            title="Receipt not found"
+            description="No receipt with this number exists, or it belongs to a different home."
+            action={
+              <Link
+                href="/home/invoices"
+                className="type-body text-accent underline decoration-border underline-offset-2 hover:decoration-accent"
+              >
+                Back to your invoices
+              </Link>
+            }
+          />
         ) : (
           <ReceiptSheet data={state.data} />
         )}
@@ -237,26 +216,24 @@ export default function ReceiptPage() {
 }
 
 function ReceiptSheet({ data }: { data: ReceiptData }) {
-  const breakdown = computeBreakdown(data.amountPaise);
   const formattedTotal = formatMoney(paise(data.amountPaise), { compact: true });
-  const formattedServiceCharge = formatMoney(paise(breakdown.serviceCharge), { compact: true });
-  const formattedSinkingFund = formatMoney(paise(breakdown.sinkingFund), { compact: true });
-  const formattedWaterCharge = formatMoney(paise(breakdown.waterCharge), { compact: true });
   const periodLabel = formatPeriod(data.period);
   const flatLabel = `${data.home.blockName}-${data.home.label}`;
-  const occupant = data.payerName || 'Aarav Sharma';
+  const occupant = data.payerName.length > 0 ? data.payerName : '—';
   const displayReceiptNo = data.receiptNo.startsWith('#') ? data.receiptNo : `#${data.receiptNo}`;
 
   return (
     <article
-      className="receipt-sheet relative w-full max-w-[148mm] min-h-[210mm] rounded-sm bg-paper p-8 sm:p-10 text-content edge-light shadow-[0_2px_4px_rgba(33,29,21,0.04),0_12px_28px_-6px_rgba(33,29,21,0.09),0_28px_56px_-12px_rgba(33,29,21,0.13)] border border-border/50 transition-all print:max-w-none print:min-h-0 print:border-none print:shadow-none print:p-0"
+      className="receipt-sheet relative w-full max-w-[148mm] min-h-[210mm] overflow-hidden rounded-sm bg-paper p-8 sm:p-10 text-content edge-light shadow-[0_2px_4px_rgba(33,29,21,0.04),0_12px_28px_-6px_rgba(33,29,21,0.09),0_28px_56px_-12px_rgba(33,29,21,0.13)] border border-border/50 transition-all print:max-w-none print:min-h-0 print:border-none print:shadow-none print:p-0"
       aria-label={`Official Receipt ${data.receiptNo}`}
     >
-      {/* Top perforated tear line with semi-circular edge punch notches */}
+      {/* Top perforated tear line with semi-circular edge punch notches. The sheet clips its own
+          overflow, so the straddling notches render as half-circle bites and can never push the
+          page sideways on a narrow viewport. */}
       <div className="relative mb-8 flex items-center">
         {/* Left punch notch */}
         <div
-          className="notch-cutout absolute -left-[32px] sm:-left-[40px] top-1/2 -translate-y-1/2 size-7 rounded-full bg-surface shadow-[inset_-2px_0_4px_rgba(33,29,21,0.08)] print:hidden"
+          className="notch-cutout absolute -left-[46px] sm:-left-[54px] top-1/2 -translate-y-1/2 size-7 rounded-full bg-surface shadow-[inset_-2px_0_4px_rgba(33,29,21,0.08)] print:hidden"
           aria-hidden="true"
         />
 
@@ -265,21 +242,15 @@ function ReceiptSheet({ data }: { data: ReceiptData }) {
 
         {/* Right punch notch */}
         <div
-          className="notch-cutout absolute -right-[32px] sm:-right-[40px] top-1/2 -translate-y-1/2 size-7 rounded-full bg-surface shadow-[inset_2px_0_4px_rgba(33,29,21,0.08)] print:hidden"
+          className="notch-cutout absolute -right-[46px] sm:-right-[54px] top-1/2 -translate-y-1/2 size-7 rounded-full bg-surface shadow-[inset_2px_0_4px_rgba(33,29,21,0.08)] print:hidden"
           aria-hidden="true"
         />
       </div>
 
-      {/* Society Masthead */}
+      {/* Masthead: the wordmark the receipt was issued under. The service carries no society
+          registration data, so none is invented here. */}
       <div>
-        <h1 className="text-2xl sm:text-[26px] font-bold text-content leading-tight tracking-tight">
-          Gulmohar Court Co-operative
-          <br />
-          Housing Society Ltd.
-        </h1>
-        <p className="type-micro mt-1.5 font-medium text-content-subtle tracking-wide">
-          Official Society Registration Code: 2300507
-        </p>
+        <Logo variant="wordmark" size={28} />
       </div>
 
       {/* Monospace receipt number and timestamp */}
@@ -320,35 +291,23 @@ function ReceiptSheet({ data }: { data: ReceiptData }) {
                 <br />
                 {periodLabel}
               </p>
-              <div className="mt-4 space-y-2 text-content">
-                <p>Service Charge</p>
-                <p>Sinking Fund</p>
-                <p>Water Charge</p>
-              </div>
             </td>
             <td className="py-4 pl-4 text-right">
               <p className="font-semibold text-content tabular-nums">{formattedTotal}</p>
-              <div className="mt-4 space-y-2 text-content tabular-nums">
-                <p>{formattedServiceCharge}</p>
-                <p>{formattedSinkingFund}</p>
-                <p>{formattedWaterCharge}</p>
-              </div>
             </td>
           </tr>
         </tbody>
       </table>
 
-      {/* Mega amount and amount in words */}
+      {/* Mega amount and amount in words, exactly as the service returned them */}
       <div className="mt-7">
         <p className="type-mega font-bold text-content tracking-tight tabular-nums">
           {formattedTotal}
         </p>
-        <p className="type-body font-medium text-content mt-1.5">
-          {data.amountInWords || 'Three Thousand Five Hundred Rupees Only'}
-        </p>
+        <p className="type-body font-medium text-content mt-1.5">{data.amountInWords}</p>
         <p className="type-body text-sm font-medium text-content-muted mt-3">
-          {data.method === 'UPI' ? 'UPI - GPay' : PAYMENT_METHOD[data.method].label} / Ref:{' '}
-          {data.reference || '98402194829'}
+          {PAYMENT_METHOD[data.method].label}
+          {data.reference.length > 0 ? ` · Ref: ${data.reference}` : ''}
         </p>
       </div>
 

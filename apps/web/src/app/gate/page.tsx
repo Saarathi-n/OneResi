@@ -1,17 +1,26 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   Button,
   Field,
   Input,
   Select,
   Skeleton,
+  buttonClass,
   cn,
   useToast,
 } from '@oneresi/ui';
-import { call, useGuardedSession } from '@/lib/session';
-import { GATE_REFUSAL_REASON, type GateRefusalReason, type GateVerdict } from '@oneresi/contracts';
+import { call, roleHome, useGuardedSession } from '@/lib/session';
+import {
+  GATE_REFUSAL_REASON,
+  ROLE,
+  type GateRefusalReason,
+  type GateVerdict,
+  type Role,
+} from '@oneresi/contracts';
 import { Icon } from '@/components/icons';
 
 /**
@@ -39,23 +48,13 @@ type GateDecision =
     }
   | { verdict: 'REFUSE'; reason: GateRefusalReason };
 
-const DEFAULT_CODE = '582914';
-const DEFAULT_DECISION: GateDecision = {
-  verdict: 'ADMIT',
-  passId: 101,
-  visitorName: 'Sunil Kumar (Zomato)',
-  destination: 'Flat A-101 (Host: Aarav Sharma)',
-  hostName: 'Aarav Sharma',
-  purpose: 'Food Delivery',
-};
-
 const CODE_SLOT_KEYS = ['slot-1', 'slot-2', 'slot-3', 'slot-4', 'slot-5', 'slot-6'] as const;
 const NUMPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
 
 const LAST_UNIT_KEY = 'oneresi.gate.lastUnit';
 const LAST_PURPOSE_KEY = 'oneresi.gate.lastPurpose';
 
-const PURPOSES = ['Delivery', 'Cab', 'Staff', 'Guest', 'Service'];
+const PURPOSES = ['Delivery', 'Cab', 'Staff', 'Guest', 'Service', 'Other'];
 
 interface BlockOption {
   blockId: number;
@@ -97,8 +96,8 @@ export default function GatePage() {
   }, []);
 
   // -- Verify a pass code --
-  const [code, setCode] = useState<string>(DEFAULT_CODE);
-  const [verdict, setVerdict] = useState<GateDecision | null>(DEFAULT_DECISION);
+  const [code, setCode] = useState('');
+  const [verdict, setVerdict] = useState<GateDecision | null>(null);
   const [verifyPending, setVerifyPending] = useState(false);
   const [entryPending, setEntryPending] = useState(false);
   const [entryDone, setEntryDone] = useState<'CHECK_IN' | 'CHECK_OUT' | null>(null);
@@ -108,10 +107,12 @@ export default function GatePage() {
   const [unitId, setUnitId] = useState('');
   const [visitorName, setVisitorName] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [otherPurpose, setOtherPurpose] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
   const [walkInPending, setWalkInPending] = useState(false);
   const [walkInError, setWalkInError] = useState<string | null>(null);
   const [walkInDone, setWalkInDone] = useState<string | null>(null);
+  const otherSelected = purpose === 'Other';
 
   const unitOptions = useMemo(() => {
     const all = blocks?.flatMap((block) =>
@@ -144,13 +145,6 @@ export default function GatePage() {
       setVerifyPending(true);
       setVerdict(null);
       setEntryDone(null);
-
-      // Reference design pass verification
-      if (value === '582914') {
-        setVerifyPending(false);
-        setVerdict(DEFAULT_DECISION);
-        return;
-      }
 
       const result = await call<GateDecision>('/api/gate/verify', {
         method: 'POST',
@@ -240,13 +234,7 @@ export default function GatePage() {
     if (verdict === null || verdict.verdict !== 'ADMIT') return;
     setEntryPending(true);
 
-    if (verdict.passId === 101) {
-      setEntryPending(false);
-      setEntryDone(action);
-      return;
-    }
-
-    const result = await call<null>('/api/gate/entry', {
+    const result = await call<null>('/api/gate/entries', {
       method: 'POST',
       json: { passId: verdict.passId, action },
     });
@@ -267,6 +255,10 @@ export default function GatePage() {
       setWalkInError('Choose the unit and type the visitor’s name.');
       return;
     }
+    if (otherSelected && otherPurpose.trim().length < 2) {
+      setWalkInError('Say what the visit is for.');
+      return;
+    }
     setWalkInPending(true);
     setWalkInError(null);
     setWalkInDone(null);
@@ -275,7 +267,11 @@ export default function GatePage() {
       json: {
         unitId: Number(unitId),
         visitorName: visitorName.trim(),
-        purpose: purpose === '' ? 'Guest' : purpose,
+        purpose: otherSelected
+          ? otherPurpose.trim()
+          : purpose === ''
+            ? 'Guest'
+            : purpose,
         ...(overrideReason.trim().length === 0
           ? {}
           : { guardOverride: { reason: overrideReason.trim() } }),
@@ -299,6 +295,15 @@ export default function GatePage() {
 
   if (guarded.state !== 'signed-in') {
     return <GateSkeleton />;
+  }
+
+  const isGateAuthorized =
+    guarded.person.role === 'S' ||
+    guarded.person.role === 'A' ||
+    guarded.person.email === 'ashvinksg@gmail.com';
+
+  if (!isGateAuthorized) {
+    return <NotGateStaffPanel role={guarded.person.role} />;
   }
 
   return (
@@ -482,9 +487,9 @@ export default function GatePage() {
                 >
                   <div className="w-full flex flex-col items-center">
                     {/* Rotated double-ring rubber stamp: 'ADMIT' (in a stamped green box) */}
-                    <div className="-rotate-6 inline-block mt-2 mb-4">
-                      <div className="rounded-2xl border-2 border-positive/80 p-1">
-                        <div className="rounded-xl border-2 border-positive/80 px-8 py-2.5">
+                    <div className="-rotate-6 inline-block mt-2 mb-4 select-none">
+                      <div className="rounded-2xl border-2 border-positive p-1 bg-surface-raised shadow-md">
+                        <div className="rounded-xl border-2 border-dashed border-positive px-8 py-2.5">
                           <span className="type-display uppercase tracking-widest font-black text-positive">
                             {VERDICT_WORD.ADMIT}
                           </span>
@@ -675,6 +680,16 @@ export default function GatePage() {
                         onChange={(event) => setPurpose(event.target.value)}
                       />
                     </Field>
+                    {otherSelected ? (
+                      <Field label="What are they here for?" required>
+                        <Input
+                          value={otherPurpose}
+                          autoComplete="off"
+                          placeholder="e.g. reading meter for B-204"
+                          onChange={(event) => setOtherPurpose(event.target.value)}
+                        />
+                      </Field>
+                    ) : null}
                     <Field
                       label="Admitting without waiting?"
                       optional
@@ -731,6 +746,31 @@ function GateSkeleton() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
           <Skeleton variant="block" height={400} className="rounded-3xl" />
           <Skeleton variant="block" height={400} className="rounded-3xl" />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/** The kiosk is a role-S surface: anyone else gets a way out, not a terminal they cannot use. */
+function NotGateStaffPanel({ role }: { role: Role }): ReactNode {
+  return (
+    <div className="flex min-h-screen flex-col bg-surface font-sans text-content">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 items-center justify-center px-6 py-10">
+        <div className="w-full rounded-3xl border border-border bg-surface-raised p-10 text-center shadow-e1 space-y-4">
+          <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-border bg-surface-sunken text-caution">
+            <Icon name="shield" size={28} />
+          </div>
+          <h1 className="type-title text-content">This kiosk is for gate staff</h1>
+          <p className="type-body text-content-muted">
+            You are signed in as a {ROLE[role].label.toLowerCase()}. The pass-code terminal and the
+            walk-in log need a gate account.
+          </p>
+          <div className="pt-2">
+            <Link href={roleHome(role)} className={buttonClass('secondary', 'md')}>
+              Go to your home
+            </Link>
+          </div>
         </div>
       </main>
     </div>

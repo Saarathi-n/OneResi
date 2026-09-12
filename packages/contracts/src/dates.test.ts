@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formatCalendarDate, formatCalendarDateShort, formatPeriod } from './dates.js';
+import {
+  formatCalendarDate,
+  formatCalendarDateShort,
+  formatPeriod,
+  istDayString,
+} from './dates.js';
 
 /**
  * A stored day renders as that day everywhere: the formatters pin UTC so a due date cannot move
@@ -40,5 +45,26 @@ describe('formatPeriod', () => {
 
   it('falls back to the raw string when it does not parse', () => {
     expect(formatPeriod('mismatch')).toBe('mismatch');
+  });
+});
+
+describe('istDayString', () => {
+  it('agrees with UTC while both calendars share a day', () => {
+    expect(istDayString(new Date('2026-09-12T10:00:00.000Z'))).toBe('2026-09-12');
+  });
+
+  it('has already rolled over when UTC has five and a half hours of evening left', () => {
+    expect(istDayString(new Date('2026-09-12T18:30:00.000Z'))).toBe('2026-09-13');
+    expect(istDayString(new Date('2026-09-12T20:30:00.000Z'))).toBe('2026-09-13');
+  });
+
+  it('stays on the old day one minute before the IST rollover', () => {
+    expect(istDayString(new Date('2026-09-12T18:29:59.000Z'))).toBe('2026-09-12');
+  });
+
+  it('reads the clock when no instant is given', () => {
+    const now = new Date();
+    const expected = new Date(now.getTime() + 330 * 60_000).toISOString().slice(0, 10);
+    expect(istDayString(now)).toBe(expected);
   });
 });

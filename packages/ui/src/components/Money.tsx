@@ -24,6 +24,10 @@ import { Skeleton } from './Skeleton.js';
  * previous value on a change) — for the one figure a screen is about. While the count runs the
  * glyphs render plain, because per-glyph entrances would churn against a value that is itself
  * moving; the count is the animation.
+ *
+ * The per-glyph rise needs a row's height to itself. In a dense table it collides with the rows
+ * above and below — `py-1.5` is less than the rise — so lists pass `animated={false}` and get
+ * the amount as plain, immediate text.
  */
 export interface MoneyProps {
   readonly value: Paise;
@@ -36,6 +40,11 @@ export interface MoneyProps {
   readonly glow?: boolean | undefined;
   /** Counts up to the value on load. One hero figure per screen; never a list. */
   readonly countUp?: boolean | undefined;
+  /**
+   * The per-glyph rise on load. Default on, for a figure standing in space; off for a table
+   * cell, where the motion crashes into the neighbouring rows.
+   */
+  readonly animated?: boolean | undefined;
   readonly pending?: boolean | undefined;
   /** Names the amount for a reader who arrives at it out of context. */
   readonly label?: string | undefined;
@@ -63,6 +72,7 @@ export function Money({
   tone = 'default',
   glow = false,
   countUp = false,
+  animated = true,
   pending = false,
   label,
   className,
@@ -118,30 +128,36 @@ export function Money({
       )}
       {...(label !== undefined ? { 'aria-label': `${label}: ${announce}` } : {})}
     >
-      {/* The amount is announced once, as one string. A per-glyph span would otherwise be read
-          out digit by digit, so every glyph below is hidden from readers. */}
-      <span className="sr-only">{announce}</span>
-      {/* eslint-disable react/no-array-index-key -- an amount's glyphs are fixed positions
-          that never reorder; the position is the identity. */}
-      {countUp
-        ? text.split('').map((glyph, index) => (
-            <span key={`${index}:${glyph}`} aria-hidden className="inline-block">
-              {glyph === ' ' ? ' ' : glyph}
-            </span>
-          ))
-        : text.split('').map((glyph, index) => (
-            <motion.span
-              key={`${index}:${glyph}`}
-              aria-hidden
-              initial={{ y: rise, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={motionTokens.tween('slow')}
-              className="inline-block"
-            >
-              {glyph === ' ' ? ' ' : glyph}
-            </motion.span>
-          ))}
-      {/* eslint-enable react/no-array-index-key */}
+      {animated ? (
+        <>
+          {/* The amount is announced once, as one string. A per-glyph span would otherwise be read
+              out digit by digit, so every glyph below is hidden from readers. */}
+          <span className="sr-only">{announce}</span>
+          {/* eslint-disable react/no-array-index-key -- an amount's glyphs are fixed positions
+              that never reorder; the position is the identity. */}
+          {countUp
+            ? text.split('').map((glyph, index) => (
+                <span key={`${index}:${glyph}`} aria-hidden className="inline-block">
+                  {glyph === ' ' ? ' ' : glyph}
+                </span>
+              ))
+            : text.split('').map((glyph, index) => (
+                <motion.span
+                  key={`${index}:${glyph}`}
+                  aria-hidden
+                  initial={{ y: rise, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={motionTokens.tween('slow')}
+                  className="inline-block"
+                >
+                  {glyph === ' ' ? ' ' : glyph}
+                </motion.span>
+              ))}
+          {/* eslint-enable react/no-array-index-key */}
+        </>
+      ) : (
+        text
+      )}
     </span>
   );
 }

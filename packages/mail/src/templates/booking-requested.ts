@@ -41,7 +41,7 @@ function compose(vars: BookingRequestedVars): Block[] {
       { label: 'Requested by', value: vars.residentName },
       { label: 'Home', value: vars.home },
     ]),
-    action('Confirm or decline', PATHS.bookingReview(vars.bookingId)),
+    action('Confirm or decline', PATHS.bookingReview),
     note(
       'The slot is held while this is pending, so nobody else can take it. Declining releases it ' +
         'immediately.',

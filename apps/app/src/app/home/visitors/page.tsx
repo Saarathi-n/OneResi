@@ -101,6 +101,7 @@ export default function VisitorsPage(): ReactNode {
       }
     >
       <Tabs
+        variant="pill"
         label="Visitor views"
         value={view}
         onValueChange={setView}
@@ -114,6 +115,7 @@ export default function VisitorsPage(): ReactNode {
         {view === 'passes' ? (
           <AsyncView
             state={passes.state}
+            reloading={passes.reloading}
             skeleton={<CardListSkeleton rows={3} />}
             empty={
               <EmptyVisitors
@@ -148,6 +150,7 @@ export default function VisitorsPage(): ReactNode {
         {view === 'expected' ? (
           <AsyncView
             state={expected.state}
+            reloading={expected.reloading}
             skeleton={<CardListSkeleton rows={2} />}
             empty={
               <EmptyVisitors
@@ -174,6 +177,7 @@ export default function VisitorsPage(): ReactNode {
         {view === 'waiting' ? (
           <AsyncView
             state={waiting.state}
+            reloading={waiting.reloading}
             skeleton={<CardListSkeleton rows={1} />}
             empty={
               <EmptyVisitors
@@ -211,6 +215,7 @@ export default function VisitorsPage(): ReactNode {
         {view === 'entries' ? (
           <AsyncView
             state={entries.state}
+            reloading={entries.reloading}
             skeleton={<CardListSkeleton rows={4} />}
             empty={
               <EmptyVisitors

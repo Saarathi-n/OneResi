@@ -223,6 +223,123 @@ export interface VisitorsDeps {
 export function visitorsService(deps: VisitorsDeps): VisitorsService {
   const { store, limiter, clock } = deps;
 
+  /** The pass half of recordEntry: the guarded ACTIVE -> USED transition and its log row (D-40). */
+  async function recordPassEntry(
+    passId: number,
+    action: 'CHECK_IN' | 'CHECK_OUT',
+    idempotencyKey: string | undefined,
+  ): Promise<Result<null>> {
+    const pass = await store.findPassById(passId);
+    if (pass === null) return errors.notFound('pass');
+    const today = utcDay(clock.now());
+
+    if (action === 'CHECK_IN') {
+      if (
+        pass.status === 'USED' &&
+        pass.enteredAt !== null &&
+        pass.exitedAt === null &&
+        utcDay(pass.validOn) === today
+      ) {
+        // The retry of a check-in that already happened is a success, not a second row (D-40).
+        return ok(null);
+      }
+      if (pass.status !== 'ACTIVE') {
+        return errors.stateNotAllowed('This pass can no longer be checked in.');
+      }
+      if (utcDay(pass.validOn) !== today) {
+        return errors.stateNotAllowed('This pass is not valid today.');
+      }
+
+      const at = clock.now();
+      const residents = await store.findResidentsForUnit(pass.unitId);
+      const updated = await store.checkInPass(
+        { passId: pass.id, at, idempotencyKey: idempotencyKey ?? null },
+        {
+          // The resident pre-authorised this visit the day they issued the pass.
+          passId: pass.id,
+          unitId: pass.unitId,
+          walkInName: null,
+          walkInPhone: null,
+          walkInPurpose: null,
+          approvalStatus: 'NOT_REQUIRED',
+          decidedById: null,
+          decidedAt: null,
+          overrideReason: null,
+          enteredAt: at,
+          createdAt: at,
+        },
+        arrivedEvents(residents, pass.visitorName, pass.purpose, idempotencyKey ?? C.idempotencyKey()),
+      );
+      if (updated === null) {
+        return errors.stateNotAllowed('This pass can no longer be checked in.');
+      }
+      return ok(null);
+    }
+
+    // CHECK_OUT
+    if (pass.enteredAt === null) {
+      return errors.stateNotAllowed('There is no open entry for this pass.');
+    }
+    if (pass.exitedAt !== null) {
+      return errors.alreadyDone('This visitor has already checked out.');
+    }
+    const log = await store.checkOutPass(pass.id, clock.now());
+    if (log === null) {
+      return errors.stateNotAllowed('There is no open entry for this pass.');
+    }
+    return ok(null);
+  }
+
+  /**
+   * The walk-in half of recordEntry: the household has answered, and the gate records what its
+   * answer set in motion — the visitor walking in, then leaving. Idempotent the same way a pass
+   * check-in is: a retried stamp is a success, never a second one.
+   */
+  async function recordWalkInEntry(
+    logId: number,
+    action: 'CHECK_IN' | 'CHECK_OUT',
+  ): Promise<Result<null>> {
+    const log = await store.findLogById(logId);
+    if (log === null) return errors.notFound('visit');
+
+    if (action === 'CHECK_IN') {
+      if (log.enteredAt !== null && log.exitedAt === null) {
+        // The retry of an arrival already recorded is a success, not a second stamp (D-40).
+        return ok(null);
+      }
+      if (log.approvalStatus !== 'APPROVED') {
+        return errors.stateNotAllowed('The household has not let this visitor in.');
+      }
+      if (log.exitedAt !== null) {
+        return errors.stateNotAllowed('This visit is already over.');
+      }
+
+      const at = clock.now();
+      const residents = await store.findResidentsForUnit(log.unitId);
+      const stamped = await store.stampWalkInEntry(
+        { logId: log.id, at },
+        arrivedEvents(residents, log.walkInName ?? '', log.walkInPurpose ?? '', C.idempotencyKey()),
+      );
+      if (stamped === null) {
+        return errors.stateNotAllowed('The household has not let this visitor in.');
+      }
+      return ok(null);
+    }
+
+    // CHECK_OUT
+    if (log.enteredAt === null) {
+      return errors.stateNotAllowed('There is no open entry for this visit.');
+    }
+    if (log.exitedAt !== null) {
+      return errors.alreadyDone('This visitor has already checked out.');
+    }
+    const closed = await store.stampWalkInExit(log.id, clock.now());
+    if (closed === null) {
+      return errors.stateNotAllowed('There is no open entry for this visit.');
+    }
+    return ok(null);
+  }
+
   return {
     async issuePass(actor, input): Promise<Result<PassView>> {
       if (actor.unitId === null) return errors.forbidden('issue a visitor pass');
@@ -305,7 +422,7 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
     },
 
     async verifyCode(actor, input, meta): Promise<Result<GateDecision>> {
-      if (actor.role !== 'S') return errors.forbidden('work the gate');
+      if (actor.role !== 'S' && actor.role !== 'A') return errors.forbidden('work the gate');
 
       // Counted before anything is looked up, so a miss costs an enumerator exactly what a hit
       // costs (D-40's enumeration note).
@@ -334,71 +451,20 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
     },
 
     async recordEntry(actor, input): Promise<Result<null>> {
-      if (actor.role !== 'S') return errors.forbidden('work the gate');
+      if (actor.role !== 'S' && actor.role !== 'A') return errors.forbidden('work the gate');
 
-      const pass = await store.findPassById(input.passId);
-      if (pass === null) return errors.notFound('pass');
-      const today = utcDay(clock.now());
-
-      if (input.action === 'CHECK_IN') {
-        if (
-          pass.status === 'USED' &&
-          pass.enteredAt !== null &&
-          pass.exitedAt === null &&
-          utcDay(pass.validOn) === today
-        ) {
-          // The retry of a check-in that already happened is a success, not a second row (D-40).
-          return ok(null);
-        }
-        if (pass.status !== 'ACTIVE') {
-          return errors.stateNotAllowed('This pass can no longer be checked in.');
-        }
-        if (utcDay(pass.validOn) !== today) {
-          return errors.stateNotAllowed('This pass is not valid today.');
-        }
-
-        const at = clock.now();
-        const residents = await store.findResidentsForUnit(pass.unitId);
-        const updated = await store.checkInPass(
-          { passId: pass.id, at, idempotencyKey: input.idempotencyKey ?? null },
-          {
-            // The resident pre-authorised this visit the day they issued the pass.
-            passId: pass.id,
-            unitId: pass.unitId,
-            walkInName: null,
-            walkInPhone: null,
-            walkInPurpose: null,
-            approvalStatus: 'NOT_REQUIRED',
-            decidedById: null,
-            decidedAt: null,
-            overrideReason: null,
-            enteredAt: at,
-            createdAt: at,
-          },
-          arrivedEvents(residents, pass.visitorName, pass.purpose, input.idempotencyKey ?? C.idempotencyKey()),
-        );
-        if (updated === null) {
-          return errors.stateNotAllowed('This pass can no longer be checked in.');
-        }
-        return ok(null);
+      if (input.walkInLogId !== undefined) {
+        return recordWalkInEntry(input.walkInLogId, input.action);
       }
-
-      // CHECK_OUT
-      if (pass.enteredAt === null) {
-        return errors.stateNotAllowed('There is no open entry for this pass.');
+      if (input.passId === undefined) {
+        // The contract's refine makes this unreachable; the guard keeps the type honest.
+        return errors.invalid('Name the pass or the walk-in log, exactly one.', 'passId');
       }
-      if (pass.exitedAt !== null) {
-        return errors.alreadyDone('This visitor has already checked out.');
-      }
-      const log = await store.checkOutPass(pass.id, clock.now());
-      if (log === null) {
-        return errors.stateNotAllowed('There is no open entry for this pass.');
-      }
-      return ok(null);
+      return recordPassEntry(input.passId, input.action, input.idempotencyKey);
     },
 
     async logWalkIn(actor, input): Promise<Result<{ logId: number }>> {
-      if (actor.role !== 'S') return errors.forbidden('log a walk-in');
+      if (actor.role !== 'S' && actor.role !== 'A') return errors.forbidden('log a walk-in');
 
       const home = await store.findHome(input.unitId);
       // A retired home receives no visitors, and to the guard it simply does not exist.
@@ -518,7 +584,15 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
       // a committee account has no business watching who is standing at the barrier.
       if (actor.role !== 'S') return errors.forbidden("see the society's waiting visitors");
       const logs = await store.findPendingWalkInsForSociety();
-      return ok(logs.map((log) => ({ ...waitingView(log), homeLabel: homeLabel(log.home) })));
+      return ok(
+        logs.map((log) => ({
+          ...waitingView(log),
+          homeLabel: homeLabel(log.home),
+          approvalStatus: log.approvalStatus,
+          enteredAt: log.enteredAt,
+          exitedAt: log.exitedAt,
+        })),
+      );
     },
 
     async entriesForHousehold(actor): Promise<Result<readonly EntryLogView[]>> {

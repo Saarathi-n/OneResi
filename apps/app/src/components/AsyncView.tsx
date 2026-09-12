@@ -12,6 +12,11 @@ import type { AsyncState } from '../hooks/useAsync';
 
 export interface AsyncViewProps<T> {
   readonly state: AsyncState<T>;
+  /**
+   * True while a background reload refreshes data the person is already looking at: the previous
+   * content stays up, gently dimmed. The skeleton is for the first load only.
+   */
+  readonly reloading?: boolean;
   /** What the skeleton roughly looks like — rows, cards, whatever this screen lists. */
   readonly skeleton: ReactNode;
   /** Empty is the caller's to explain: it knows what an empty answer means here. */
@@ -23,6 +28,7 @@ export interface AsyncViewProps<T> {
 
 export function AsyncView<T>({
   state,
+  reloading = false,
   skeleton,
   empty,
   render,
@@ -50,11 +56,15 @@ export function AsyncView<T>({
   }
 
   const data = state.data;
-  if (empty !== undefined && isEmptyAnswer(data)) {
-    return <>{empty}</>;
-  }
-
-  return <>{render(data)}</>;
+  const content =
+    empty !== undefined && isEmptyAnswer(data) ? <>{empty}</> : <>{render(data)}</>;
+  if (!reloading) return content;
+  return (
+    <div aria-busy className="opacity-60 transition-opacity">
+      <span className="sr-only">Refreshing</span>
+      {content}
+    </div>
+  );
 }
 
 function isEmptyAnswer(data: unknown): boolean {

@@ -75,3 +75,15 @@ export function formatPeriod(period: string): string {
   return `${LONG_MONTHS[parsed.getUTCMonth()]} ${parsed.getUTCFullYear()}`;
 }
 
+/**
+ * The day it is right now, as the calendar the society lives on sees it: IST, which has no DST,
+ * so a fixed offset is exact. `new Date().toISOString().slice(0, 10)` answers the same question
+ * in UTC and is wrong for five and a half hours of every Indian evening.
+ *
+ * @param now The instant to read; defaults to the current time.
+ */
+export function istDayString(now: Date = new Date()): string {
+  const shifted = new Date(now.getTime() + 330 * 60_000);
+  return shifted.toISOString().slice(0, 10);
+}
+

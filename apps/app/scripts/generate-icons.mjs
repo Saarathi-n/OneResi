@@ -16,26 +16,28 @@ const sharpPath = path.join(repoRoot, 'node_modules/.pnpm/sharp@0.34.5/node_modu
 const sharp = (await import(pathToFileURL(sharpPath).href)).default;
 
 const HOUSE = 'M11.06 2.62Q12 1.82 12.94 2.62L21.44 9.86Q22 10.34 22 11.08V20.2Q22 22 20.2 22H3.8Q2 22 2 20.2V11.08Q2 10.34 2.56 9.86Z';
-const NUMERAL = 'M8.42 9.95L10.7 8H13.3V19.2H10.7V11.02L9.91 11.7Z';
+const NUMERAL = 'M7.69 8.86L10.65 6.32H14.03V20.88H10.65V10.25L9.63 11.13Z';
 
 const outDir = path.join(repoRoot, 'apps/app/public/icons');
 await mkdir(outDir, { recursive: true });
 
 /**
- * The mark as a standalone SVG. `markScale`/`markOffset` place it: 1 means it fills the
- * viewBox edge to edge (the right look for a regular icon), smaller values keep the mark
- * inside the maskable safe zone (the central 80% circle where launchers may crop).
+ * The mark as a standalone SVG. The path lives on a 24-unit grid, so `k` maps it onto the
+ * canvas (`markScale` 1 means the mark fills the tile edge to edge — the right look for a
+ * regular icon; smaller values keep it inside the maskable safe zone, the central 80% circle
+ * where launchers may crop) and `pad` centres the result, with a 2% optical drop.
  */
 function iconSvg({ size, markScale = 1 }) {
-  const translate = (size * (1 - markScale)) / 2;
+  const k = (markScale * size) / 24;
+  const pad = (size - 24 * k) / 2;
+  const nudge = size * 0.02;
   return Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
       `<rect width="${size}" height="${size}" fill="#1d6853"/>` +
-      `<g transform="translate(${translate} ${translate}) scale(${markScale})">` +
-      `<g transform="translate(0 ${size * 0.02})">` +
+      `<g transform="translate(${pad} ${pad + nudge}) scale(${k})">` +
       `<path d="${HOUSE}" fill="#ffffff" fill-rule="evenodd"/>` +
       `<path d="${NUMERAL}" fill="#1d6853"/>` +
-      `</g></g>` +
+      `</g>` +
       `</svg>`,
   );
 }

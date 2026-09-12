@@ -627,6 +627,22 @@ export interface VisitorStore {
    */
   checkOutPass(passId: number, at: Date): Promise<StoredVisitorLog | null>;
 
+  /**
+   * One transaction: stamps `enteredAt` on an approved walk-in's log row — the arrival the
+   * household's approval was waiting for. Null when the log is not APPROVED or already carries an
+   * entry: the stamp is a guarded transition, not an assignment.
+   */
+  stampWalkInEntry(
+    input: { readonly logId: number; readonly at: Date },
+    events: readonly OutboxEventInput[],
+  ): Promise<StoredVisitorLog | null>;
+
+  /**
+   * One transaction: stamps `exitedAt` on a walk-in's open log row. Null when there is no open
+   * entry to close.
+   */
+  stampWalkInExit(logId: number, at: Date): Promise<StoredVisitorLog | null>;
+
   /** One transaction: the walk-in row and its events (D-21, D-29). */
   createWalkInLog(input: NewVisitorLog, events: readonly OutboxEventInput[]): Promise<StoredVisitorLog>;
 
@@ -635,7 +651,12 @@ export interface VisitorStore {
   /** The household's undecided walk-ins, oldest first — the queue a resident answers. */
   findPendingWalkIns(unitId: number): Promise<readonly StoredVisitorLog[]>;
 
-  /** Every household's undecided walk-ins, oldest first, each with its home joined — the gate's queue. */
+  /**
+   * The gate's queue: every household's walk-in awaiting an answer, plus the ones already
+   * approved but not yet recorded as entered, oldest first, each with its home joined. Walk-in
+   * rows only — a pass's own log row enters with its check-in. A visit leaves the queue when the
+   * household turns it away or the visit closes with an exit.
+   */
   findPendingWalkInsForSociety(): Promise<readonly (StoredVisitorLog & { home: StoredHome })[]>;
 
   /**
@@ -854,14 +875,18 @@ export interface ComplaintStore {
   /**
    * One transaction: the status change, its attributed update row, and the events. The store
    * applies only a transition the contract's state machine permits from the CURRENT status —
-   * the caller has already validated it, so null means the world changed underneath. Entering
-   * RESOLVED sets `resolvedAt`; a RESOLVED -> OPEN move clears it and advances `reopenCount` —
-   * a reopen, whoever made it; nothing else touches the timestamp (D-20).
+   * the caller has already validated it, so null means the world changed underneath. A
+   * `statusAfter` equal to the current status is also accepted: that is a re-prioritisation,
+   * which moves the urgency without moving the state. Entering RESOLVED sets `resolvedAt`; a
+   * RESOLVED -> OPEN move clears it and advances `reopenCount` — a reopen, whoever made it;
+   * nothing else touches the timestamp (D-20).
    */
   applyComplaintUpdate(
     input: {
       readonly complaintId: number;
       readonly statusAfter: C.ComplaintStatus;
+      /** Present when the desk re-prioritised; absent leaves the stored priority alone. */
+      readonly priority?: C.ComplaintPriority;
       readonly updatedById: number;
       readonly note: string;
       readonly at: Date;

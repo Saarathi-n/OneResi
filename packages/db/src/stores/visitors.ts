@@ -164,6 +164,36 @@ export function visitorStore(db: Db): VisitorStore {
       });
     },
 
+    async stampWalkInEntry(input, events) {
+      return db.$transaction(async (tx) => {
+        // The guarded stamp: only an APPROVED walk-in with no entry yet moves, so two concurrent
+        // confirmations cannot both write, and an unanswered visit records nothing.
+        const applied = await tx.visitorLog.updateMany({
+          where: { id: input.logId, approvalStatus: 'APPROVED', enteredAt: null },
+          data: { enteredAt: input.at },
+        });
+        if (applied.count === 0) return null;
+
+        await writeEvents(tx, events);
+        const stamped = await tx.visitorLog.findUniqueOrThrow({ where: { id: input.logId } });
+        return toLog(stamped);
+      });
+    },
+
+    async stampWalkInExit(logId, at) {
+      return db.$transaction(async (tx) => {
+        // The same conditional stamp checkOutPass keeps: an open entry closes exactly once.
+        const applied = await tx.visitorLog.updateMany({
+          where: { id: logId, enteredAt: { not: null }, exitedAt: null },
+          data: { exitedAt: at },
+        });
+        if (applied.count === 0) return null;
+
+        const closed = await tx.visitorLog.findUniqueOrThrow({ where: { id: logId } });
+        return toLog(closed);
+      });
+    },
+
     async createWalkInLog(input, events) {
       return db.$transaction(async (tx) => {
         const row = await tx.visitorLog.create({
@@ -201,10 +231,15 @@ export function visitorStore(db: Db): VisitorStore {
     },
 
     async findPendingWalkInsForSociety() {
-      // The kiosk's queue: the same pending rows without the household filter, each joined to
-      // its home so the gate can say which flat a visitor is waiting on.
+      // The kiosk's queue: the same rows without the household filter, each joined to its home so
+      // the gate can say which flat a visitor waits on — and, once the household has answered,
+      // record the arrival its approval set in motion. Walk-in rows only: a pass's own log row
+      // enters with its check-in. A visit leaves when it is turned away or closed with an exit.
       const rows = await db.visitorLog.findMany({
-        where: { approvalStatus: 'PENDING' },
+        where: {
+          passId: null,
+          OR: [{ approvalStatus: 'PENDING' }, { approvalStatus: 'APPROVED', exitedAt: null }],
+        },
         include: { unit: { include: unitInclude } },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       });

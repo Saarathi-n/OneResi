@@ -4,8 +4,8 @@ import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { formatMoney, paise } from '@oneresi/contracts';
-import { useToast } from '@oneresi/ui';
+import { paise } from '@oneresi/contracts';
+import { Money, useToast } from '@oneresi/ui';
 import { Icon } from '@/components/icons';
 import { Shell } from '@/components/Shell';
 import type { TabDef } from '@/components/BottomTabs';
@@ -18,9 +18,10 @@ import type { EntryLogWire, InvoiceWire, NoticeWire, NotificationsWire, WaitingV
 /**
  * Gold standard PWA Mobile Home (Prompt 24, Ref 24):
  * "The morning glance":
- * - Translucent frosted glass header with resident name ('Aarav Sharma'), home ('Gulmohar Court · A-101'), and notification bell pulsing on new.
- * - Outstanding Dues hero card: 'Outstanding Dues: ₹4,850' with inline 'Pay Now' green pill button.
- * - 'Needing You' section: compact walk-in approval card with visitor icon, name (e.g. Dunzo Delivery), and inline 'Approve' / 'Decline' pill buttons.
+ * - Translucent frosted glass header with the resident's name, home, and notification bell.
+ * - Outstanding Dues hero card: the real total with inline 'Pay Now' green pill button.
+ * - 'Needing You' section: compact walk-in approval card with visitor icon, name, and inline
+ *   'Approve' / 'Decline' pill buttons — success only ever toasted on a succeeded request.
  * - Quick action pills grid (6 rounded pill chips: 'New Pass', 'Complaints', 'Bookings', etc.).
  * - 'Society Notices': pinned notice card with 'Pinned' badge.
  * - 'Recent Gate Entries': timeline feed with timestamps.
@@ -43,10 +44,10 @@ const QUICK_ACTIONS = [
   { label: 'More', href: '/home/more' },
 ] as const;
 
-function formatEntryTime(isoString: string): string {
+function formatEntryTime(isoString: string): string | null {
   try {
     const date = new Date(isoString);
-    if (Number.isNaN(date.getTime())) return '7:46 PM';
+    if (Number.isNaN(date.getTime())) return null;
     return date
       .toLocaleTimeString('en-IN', {
         hour: 'numeric',
@@ -55,7 +56,7 @@ function formatEntryTime(isoString: string): string {
       })
       .toUpperCase();
   } catch {
-    return '7:46 PM';
+    return null;
   }
 }
 
@@ -98,16 +99,19 @@ export default function ResidentHomePage(): ReactNode {
     if (pendingDecision !== null) return;
     setPendingDecision({ id: visitor.logId, type: decision });
 
-    if (visitor.logId > 0) {
-      await simple<null>(`/api/visitors/walk-ins/${visitor.logId}/decision`, {
-        method: 'POST',
-        json: { logId: visitor.logId, decision },
-      });
+    const result = await simple<null>(`/api/visitors/walk-ins/${visitor.logId}/decision`, {
+      method: 'POST',
+      json: { logId: visitor.logId, decision },
+    });
+    setPendingDecision(null);
+
+    if (!result.ok) {
+      toast.show({ title: 'That did not go through', description: result.error.message, tone: 'critical' });
+      waiting.reload();
+      return;
     }
 
     setDecidedIds((prev) => new Set([...prev, visitor.logId]));
-    setPendingDecision(null);
-
     toast.show({
       title: decision === 'APPROVE' ? `${visitor.name} is on the way in` : `${visitor.name} was turned away`,
       description: 'The gate has been told.',
@@ -122,58 +126,36 @@ export default function ResidentHomePage(): ReactNode {
       ? invoices.state.data.filter((invoice) => invoice.status === 'UNPAID' || invoice.status === 'OVERDUE')
       : [];
   const totalDuesPaise = paise(dueInvoices.reduce((sum, inv) => sum + (inv.amountPaise as number), 0));
-  const duesDisplay = dueInvoices.length > 0 ? formatMoney(totalDuesPaise) : '₹4,850';
 
-  const unread = notifications.state.state === 'ready' ? notifications.state.data.count : 1;
+  const unread = notifications.state.state === 'ready' ? notifications.state.data.count : 0;
 
-  const residentName = person?.name ?? 'Aarav Sharma';
+  const residentName = person?.name ?? '';
   const residentHome =
     person !== null && person.home !== null
-      ? `Gulmohar Court · ${person.home.blockName}-${person.home.label}`
-      : 'Gulmohar Court · A-101';
+      ? `${person.home.blockName} · ${person.home.label}`
+      : 'OneResi';
 
   const liveWaiting = waiting.state.state === 'ready' ? waiting.state.data : [];
-  const waitingVisitors: readonly { readonly logId: number; readonly name: string; readonly purpose: string }[] =
-    liveWaiting.length > 0
-      ? liveWaiting.filter((item) => !decidedIds.has(item.logId))
-      : decidedIds.has(0)
-        ? []
-        : [
-            {
-              logId: 0,
-              name: 'Dunzo Delivery',
-              purpose: 'Delivery',
-            },
-          ];
+  const waitingVisitors = liveWaiting.filter((item) => !decidedIds.has(item.logId));
 
   const pinnedNotice =
     notices.state.state === 'ready'
       ? notices.state.data.find((notice) => notice.pinned) ?? notices.state.data[0]
       : undefined;
-  const pinnedTitle = pinnedNotice?.title ?? 'Water tank cleaning - Thursday';
 
   const gateEntries =
-    entries.state.state === 'ready' && entries.state.data.length > 0
-      ? entries.state.data.slice(0, 3).map((entry) => ({
-          id: entry.logId,
-          title: entry.visitorName || 'Gate Entries',
-          subtitle: entry.enteredAt ? `Came in · ${entry.purpose}` : entry.purpose,
-          timestamp: entry.enteredAt ? formatEntryTime(entry.enteredAt) : '7:46 PM',
-        }))
-      : [
-          {
-            id: 1,
-            title: 'Gate Entries',
-            subtitle: '29 Jun 2021 · 11:06 AM',
-            timestamp: '7:46 PM',
-          },
-          {
-            id: 2,
-            title: 'Swiggy Delivery',
-            subtitle: 'Today · 1:15 PM',
-            timestamp: '1:18 PM',
-          },
-        ];
+    entries.state.state === 'ready'
+      ? entries.state.data.slice(0, 3).map((entry) => {
+          const arrived = entry.enteredAt !== null;
+          const at = arrived ? formatEntryTime(entry.enteredAt) : null;
+          return {
+            id: entry.logId,
+            title: entry.visitorName,
+            subtitle: arrived ? `Came in · ${entry.purpose}` : entry.purpose,
+            timestamp: at,
+          };
+        })
+      : [];
 
   const notificationBellAffordance = (
     <Link
@@ -185,7 +167,6 @@ export default function ResidentHomePage(): ReactNode {
       {unread > 0 ? (
         <span className="absolute top-2 right-2 flex size-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-on ring-2 ring-surface-raised">
           {unread > 9 ? '9+' : unread}
-          <span className="absolute inset-0 rounded-full bg-accent animate-ping opacity-75" />
         </span>
       ) : null}
     </Link>
@@ -214,9 +195,7 @@ export default function ResidentHomePage(): ReactNode {
         >
           <p className="type-label font-medium text-content">Outstanding Dues:</p>
           <div className="mt-2 flex items-baseline justify-between gap-3">
-            <span className="type-mega font-bold text-content tabular-nums">
-              {duesDisplay}
-            </span>
+            <Money value={totalDuesPaise} size="mega" tone="gold" glow />
             <button
               type="button"
               onClick={() => {
@@ -309,18 +288,27 @@ export default function ResidentHomePage(): ReactNode {
         {/* 4. Society Notices */}
         <section aria-label="Society Notices" className="flex flex-col gap-2.5">
           <h2 className="type-title font-semibold text-content">Society Notices</h2>
-          <Link
-            href="/home/notices"
-            className="group block rounded-2xl border border-border/80 bg-surface-raised p-4 shadow-e1 transition-all hover:border-border-strong hover:shadow-e2 focus-ring"
-          >
-            <span className="inline-flex items-center gap-1 rounded-full bg-surface-sunken px-2.5 py-0.5 type-micro font-medium text-content-muted">
-              <span aria-hidden>📌</span>
-              <span>Pinned</span>
-            </span>
-            <h3 className="mt-2.5 type-body font-semibold text-content group-hover:text-accent transition-colors">
-              {pinnedTitle}
-            </h3>
-          </Link>
+          {pinnedNotice !== undefined ? (
+            <Link
+              href="/home/notices"
+              className="group block rounded-2xl border border-border/80 bg-surface-raised p-4 shadow-e1 transition-all hover:border-border-strong hover:shadow-e2 focus-ring"
+            >
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface-sunken px-2.5 py-0.5 type-micro font-medium text-content-muted">
+                <span aria-hidden>📌</span>
+                <span>Pinned</span>
+              </span>
+              <h3 className="mt-2.5 type-body font-semibold text-content group-hover:text-accent transition-colors">
+                {pinnedNotice.title}
+              </h3>
+            </Link>
+          ) : (
+            <Link
+              href="/home/notices"
+              className="block rounded-2xl border border-border/80 bg-surface-raised p-4 shadow-e1 transition-all hover:border-border-strong hover:shadow-e2 focus-ring"
+            >
+              <p className="type-body text-content-muted">No notices yet. Society announcements land here.</p>
+            </Link>
+          )}
         </section>
 
         {/* 5. Recent Gate Entries */}
@@ -336,21 +324,29 @@ export default function ResidentHomePage(): ReactNode {
           </div>
 
           <div className="relative flex flex-col gap-4 pl-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
-            {gateEntries.map((item) => (
-              <div key={item.id} className="relative flex items-start justify-between gap-3">
-                <span
-                  className="absolute -left-6 top-1.5 size-2.5 rounded-full bg-border-strong ring-4 ring-surface"
-                  aria-hidden
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="type-body font-semibold text-content truncate">{item.title}</p>
-                  <p className="type-micro text-content-subtle truncate mt-0.5">{item.subtitle}</p>
+            {gateEntries.length === 0 ? (
+              <p className="type-body text-content-muted">
+                No gate entries yet. Everyone the gate logs for your flat shows up here.
+              </p>
+            ) : (
+              gateEntries.map((item) => (
+                <div key={item.id} className="relative flex items-start justify-between gap-3">
+                  <span
+                    className="absolute -left-6 top-1.5 size-2.5 rounded-full bg-border-strong ring-4 ring-surface"
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="type-body font-semibold text-content truncate">{item.title}</p>
+                    <p className="type-micro text-content-subtle truncate mt-0.5">{item.subtitle}</p>
+                  </div>
+                  {item.timestamp !== null ? (
+                    <span className="type-label font-medium text-content tabular-nums shrink-0">
+                      {item.timestamp}
+                    </span>
+                  ) : null}
                 </div>
-                <span className="type-label font-medium text-content tabular-nums shrink-0">
-                  {item.timestamp}
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </section>
       </div>

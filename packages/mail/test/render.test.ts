@@ -304,7 +304,7 @@ describe('the September invoice, from the JSON a handler writes', () => {
     expect(rendered.variables['amount']).toBe('₹4,800.00');
     expect(rendered.variables['dueDate']).toBe('15 Sep 2026');
     expect(rendered.variables['period']).toBe('September 2026');
-    expect(rendered.text).toContain(`${ORIGIN}/a/dues/204`);
+    expect(rendered.text).toContain(`${ORIGIN}/a/home/invoices`);
     expect(rendered.text).toContain('₹4,800.00');
   });
 });
@@ -321,7 +321,7 @@ describe('particular messages', () => {
     expect(rendered.subject).toBe('Receipt REC-2026-09-00042 — maintenance for September 2026');
     expect(rendered.variables['amountInWords']).toBe('Four thousand eight hundred rupees only');
     expect(rendered.variables['method']).toBe('UPI');
-    expect(rendered.text).toContain(`${ORIGIN}/a/receipts/REC-2026-09-00042`);
+    expect(rendered.text).toContain(`${ORIGIN}/receipts/REC-2026-09-00042`);
   });
 
   it('renders enumerations through their label maps (D-55)', () => {

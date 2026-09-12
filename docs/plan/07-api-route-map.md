@@ -85,12 +85,11 @@ The receipt also renders as its own server route, `/receipts/[receiptNo]` on web
 | POST | `/api/gate/verify` | `C.VerifyPassInput` | `visitors.verifyCode(actor, input, meta)` | role S |
 | POST | `/api/gate/entry` | `C.RecordEntryInput` | `visitors.recordEntry(actor, input)` | role S |
 | POST | `/api/gate/walk-ins` | `C.LogWalkInInput` | `visitors.logWalkIn(actor, input)` | role S |
-| GET | `/api/gate/live` (SSE) | — | polls `visitors.waitingForHousehold` | resident, EventSource |
 
 The gate routes live under their own prefix so the kiosk's surface is auditable as a unit — the
-kiosk screen renders a decision, never a row (D-40). The SSE stream is thin: an interval re-calling
-the waiting read and emitting on change, with a comment heartbeat. It is a wrapper over an
-existing service, not a new use case.
+kiosk screen renders a decision, never a row (D-40). Live surfaces poll `/api/visitors/waiting`
+on an interval: an EventSource cannot carry the Bearer header the API authenticates with, so an
+SSE wrapper over the same read served nobody.
 
 ## Complaints
 
