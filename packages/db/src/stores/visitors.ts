@@ -237,6 +237,41 @@ export function visitorStore(db: Db): VisitorStore {
       }));
     },
 
+    async findLogsForSociety(limit) {
+      // The society's whole gate log, newest first, with the same joins the household feed keeps
+      // plus the home — one query for the visitors report and the dashboard's traffic figure.
+      const rows = await db.visitorLog.findMany({
+        include: {
+          pass: { select: { visitorName: true, purpose: true } },
+          decidedBy: { select: { name: true } },
+          unit: { include: { block: true } },
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: limit,
+      });
+      return rows.map((row) => ({
+        logId: row.id,
+        kind: row.passId === null ? ('WALK_IN' as const) : ('PASS' as const),
+        visitorName: row.walkInName ?? row.pass?.visitorName ?? '',
+        purpose: row.walkInPurpose ?? row.pass?.purpose ?? '',
+        approvalStatus: row.approvalStatus as C.ApprovalStatus,
+        decidedByName: row.decidedBy?.name ?? null,
+        overrideReason: row.overrideReason,
+        enteredAt: row.enteredAt,
+        exitedAt: row.exitedAt,
+        createdAt: row.createdAt,
+        home: {
+          unitId: row.unit.id,
+          blockId: row.unit.blockId,
+          blockName: row.unit.block.name,
+          label: row.unit.label,
+          type: row.unit.type as C.UnitType,
+          monthlyChargePaise: row.unit.monthlyChargePaise as C.Paise,
+          active: row.unit.active,
+        },
+      }));
+    },
+
     async decideWalkInLog(input, events) {
       return db.$transaction(async (tx) => {
         // A decision is a guarded transition, not an assignment: only a PENDING visit moves.

@@ -639,6 +639,15 @@ export interface VisitorStore {
   findPendingWalkInsForSociety(): Promise<readonly (StoredVisitorLog & { home: StoredHome })[]>;
 
   /**
+   * Every household's gate log, newest first, each with its home joined — the society's record
+   * of who walked in and out (the visitors report and the dashboard's traffic figure). Same
+   * joins and mapping as `findLogsForUnit`, one query for the whole society.
+   */
+  findLogsForSociety(
+    limit: number,
+  ): Promise<readonly (StoredVisitorEntry & { home: StoredHome })[]>;
+
+  /**
    * The household's gate log, newest first, joined so every row names its visitor — the feed on
    * a resident's home. `limit` is the caller's rule; the store truncates and orders, it does not
    * decide what "recent" means.

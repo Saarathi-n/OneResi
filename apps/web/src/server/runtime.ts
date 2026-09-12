@@ -22,6 +22,7 @@ import {
   noticesService,
   notificationsService,
   propertyService,
+  reportsService,
   bcryptHasher,
   createConsolePushTransport,
   inAppNotification,
@@ -79,6 +80,7 @@ interface Runtime {
   readonly notices: ReturnType<typeof noticesService>;
   readonly notifications: ReturnType<typeof notificationsService>;
   readonly property: ReturnType<typeof propertyService>;
+  readonly reports: ReturnType<typeof reportsService>;
 }
 
 let shutdownRegistered = false;
@@ -194,6 +196,13 @@ async function buildRuntime(): Promise<BuiltRuntime> {
     notices: noticesService({ store: noticesStore(db), clock }),
     notifications,
     property: propertyService({ store: propertyStore(db) }),
+    reports: reportsService({
+      billing: billingStore(db),
+      complaints: complaintStore(db),
+      visitors: visitorStore(db),
+      facilities: facilitiesStore(db),
+      clock,
+    }),
     mailWorker,
     pushWorker,
     inAppWorker,

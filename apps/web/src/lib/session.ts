@@ -135,6 +135,16 @@ export async function call<T>(
   return { ok: true, data: JSON.parse(text) as T };
 }
 
+/**
+ * The headers `call()` would attach, for the one place that needs the raw Response rather than
+ * parsed JSON: a file download. Returns null when there is no session — the caller's 401 path
+ * is the sign-in redirect, the same event `call()` produces.
+ */
+export function authHeaders(): Record<string, string> | null {
+  if (accessToken === null) return null;
+  return { authorization: `Bearer ${accessToken}` };
+}
+
 /** Loads the session at mount from the refresh cookie. Null when there is nobody. */
 export async function loadSession(): Promise<PersonView | null> {
   const ok = await refresh();

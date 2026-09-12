@@ -17,4 +17,5 @@ export * from './complaints.js';
 export * from './facilities.js';
 export * from './notices.js';
 export * from './notifications.js';
+export * from './reports.js';
 export * from './push-transport.js';

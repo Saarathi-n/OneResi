@@ -369,6 +369,41 @@ class MemoryVisitorStore implements VisitorStore {
     );
   }
 
+  findLogsForSociety(
+    limit: number,
+  ): Promise<readonly (import('./store.js').StoredVisitorEntry & { home: import('./store.js').StoredHome })[]> {
+    // The society feed, the same mapping with every unit's home joined.
+    const ordered = [...this.logs]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id - a.id)
+      .slice(0, limit);
+    return Promise.resolve(
+      ordered.flatMap((log) => {
+        const home = this.homeFor(log.unitId);
+        if (home === null) return [];
+        const pass = log.passId === null ? undefined : this.passes.find((p) => p.id === log.passId);
+        const decider =
+          log.decidedById === null
+            ? undefined
+            : this.residents.find((r) => r.id === log.decidedById);
+        return [
+          {
+            logId: log.id,
+            kind: log.passId === null ? ('WALK_IN' as const) : ('PASS' as const),
+            visitorName: log.walkInName ?? pass?.visitorName ?? '',
+            purpose: log.walkInPurpose ?? pass?.purpose ?? '',
+            approvalStatus: log.approvalStatus,
+            decidedByName: decider?.name ?? null,
+            overrideReason: log.overrideReason,
+            enteredAt: log.enteredAt,
+            exitedAt: log.exitedAt,
+            createdAt: log.createdAt,
+            home,
+          },
+        ];
+      }),
+    );
+  }
+
   decideWalkInLog(
     input: {
       logId: number;

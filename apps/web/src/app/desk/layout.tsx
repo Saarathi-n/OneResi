@@ -20,12 +20,14 @@ import { signOut, useGuardedSession } from '@/lib/session';
  */
 
 const NAV = [
-  { href: '/desk', label: 'Queue', key: 'q' },
+  { href: '/desk', label: 'Overview', key: 'q' },
   { href: '/desk/ledger', label: 'Ledger', key: 'l' },
   { href: '/desk/complaints', label: 'Complaints', key: 'c' },
   { href: '/desk/bookings', label: 'Bookings', key: 'b' },
   { href: '/desk/announcements', label: 'Announcements', key: 'a' },
   { href: '/desk/property', label: 'Property', key: 'p' },
+  { href: '/desk/reports', label: 'Reports', key: 'r' },
+  { href: '/desk/applications', label: 'Applications', key: 'n' },
 ] as const;
 
 const PALETTE_HINT = 'Ctrl-K jumps anywhere';

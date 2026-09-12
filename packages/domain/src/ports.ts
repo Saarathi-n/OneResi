@@ -383,6 +383,47 @@ export interface PropertyService {
   updateUnit(actor: Actor, input: C.UpdateUnitInput): Promise<Result<null>>;
 }
 
+// ---------------------------------------------------------------- reports and dashboard
+
+/**
+ * The committee's exports: one CSV, one kind, one date range. `rows` is the parsed cells with
+ * the header first — the route turns it into text/csv, the service never formats strings a
+ * spreadsheet would misread. An empty range is a header-only file with a note, never an error
+ * (UC-27 alternative flow 4a).
+ */
+export interface ReportsService {
+  csv(actor: Actor, query: C.ReportQuery): Promise<
+    Result<{
+      readonly filename: string;
+      readonly header: readonly string[];
+      readonly rows: readonly (readonly string[])[];
+      readonly empty: boolean;
+    }>
+  >;
+
+  /**
+   * The dashboard's five figures and their trends (UC-26): collections against dues for the
+   * current period, open complaints by status, visitor entries today, facility bookings this
+   * month, each with the previous period's value to draw the delta against. Zero values when
+   * the period has no data — a dashboard never errors over an empty month.
+   */
+  dashboard(actor: Actor): Promise<
+    Result<{
+      readonly period: string;
+      readonly collectionsPaise: number;
+      readonly duesPaise: number;
+      readonly previousCollectionsPaise: number;
+      readonly openComplaints: number;
+      readonly inProgressComplaints: number;
+      readonly resolvedComplaints: number;
+      readonly visitorsToday: number;
+      readonly visitorsYesterday: number;
+      readonly bookingsThisMonth: number;
+      readonly bookingsLastMonth: number;
+    }>
+  >;
+}
+
 export interface NotificationsService {
   unread(actor: Actor): Promise<Result<{ count: number; items: readonly NoticeItem[] }>>;
   markRead(actor: Actor, ids: readonly number[]): Promise<Result<null>>;
