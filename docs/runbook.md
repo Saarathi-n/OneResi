@@ -143,6 +143,20 @@ terraform plan && terraform apply
 still hold data — set `environment = "dev"` and `allow_destroy_with_data = true` in tfvars to
 allow a full teardown, and only when you mean it.
 
+#### The two dev screens
+
+Two development-only pages wrap the operations above, both committee sign-in, both 404 in
+production:
+
+- **`/dev/sync`** — the database bridge: compare local and cloud, plan and write the property
+  registry down or up (the same operations as `db:diff`, `db:pull`, `db:push`, over the same
+  scripts). Needs `DATABASE_URL` in the dev server's environment — `pnpm cloud:env` prints the
+  export line; paste it into the shell that starts the dev server and restart.
+- **`/dev/cloud`** — the deployment console: Terraform's state and outputs, the ECS service's
+  running count, the database's status, the month's spend against the budget, and the operations
+  plan / apply / stop / start / destroy. Apply runs only after a plan in the same server process
+  found changes; destroy asks for the stack's own name and then still faces the stack's guards.
+
 ### Static checks and gates
 
 ```bash

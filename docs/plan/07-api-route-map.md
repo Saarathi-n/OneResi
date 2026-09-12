@@ -14,7 +14,7 @@ streams: neither invents a path.
 
 - **Actor resolution.** `resolveActor(bearerToken)` runs before the handler body. 401 on failure.
   The handler then calls the service with the `Actor`. Deny by default — no role check is inverted.
-- **RequestMeta.** `ip` from `x-forwarded-for` (first hop) falling back to the socket address,
+- **RequestMeta.** `ip` from `x-forwarded-for` (the viewer's hop — second-to-last when our ALB appended the last one, D-83) falling back to `x-real-ip`,
   `userAgent` from the request header, `correlationId` from `x-request-id` or generated. Meta rides
   every service call that takes one — it is what the outbox correlates by.
 - **Tokens.** Access token: `Authorization: Bearer <jwt>`, held in client memory only (15-minute
@@ -101,6 +101,14 @@ existing service, not a new use case.
 | POST | `/api/complaints` | `C.RaiseComplaintInput` | `complaints.raise(actor, input)` | resident |
 | POST | `/api/complaints/[id]/updates` | `C.UpdateComplaintInput` | `complaints.update(actor, input)` | role A |
 | POST | `/api/complaints/[id]/reopen` | `C.ReopenComplaintInput` | `complaints.reopen(actor, input)` | resident, window |
+| POST | `/api/complaints/photos/upload` | multipart: `photo`, `already` | the `photoVerdict` rule, then the file at its key | resident |
+| GET | `/api/complaints/photos/file` | query `key` (`PHOTO_KEY_SHAPE`) | the stored bytes, `content-type` by extension | signed in |
+
+The photo pair is the one multipart surface: validation lives in `C.photoVerdict` (type, size,
+count — UC-06 step 4), the key convention is the S3 object key both deployments share
+(`uploads/complaints/<uuid>.<ext>`), and the serve route checks the shape before reading so a
+traversal attempt is an `INVALID_INPUT` rather than a file it can name. The `already` count
+rides the upload so a fourth photo is refused before the form is submitted.
 
 ## Facilities
 
@@ -113,6 +121,9 @@ existing service, not a new use case.
 | GET | `/api/facilities/bookings/society` | — | `facilities.bookingsForSociety(actor)` | role A |
 | POST | `/api/facilities/bookings/[id]/cancel` | `C.CancelBookingInput` | `facilities.cancel(actor, input)` | resident |
 | POST | `/api/facilities/bookings/[id]/decision` | `C.DecideBookingInput` | `facilities.decide(actor, input)` | role A |
+| GET | `/api/facilities/manage` | — | `facilities.listAll(actor)` | role A |
+| POST | `/api/facilities/manage` | `C.CreateFacilityInput` | `facilities.create(actor, input)` | role A |
+| PATCH | `/api/facilities/manage/[facilityId]` | `C.UpdateFacilityInput` | `facilities.update(actor, input)` | role A |
 
 ## Notices and notifications
 
@@ -143,6 +154,29 @@ browser sends it but not stored — the push service announces the real expiry b
 | POST | `/api/property/blocks` | `C.CreateBlockInput` | `property.createBlock(actor, input)` | role A |
 | POST | `/api/property/units` | `C.CreateUnitInput` | `property.createUnit(actor, input)` | role A |
 | PATCH | `/api/property/units/[id]` | `C.UpdateUnitInput` | `property.updateUnit(actor, input)` | role A |
+
+## Reports and dashboard (committee)
+
+| Method | Path | Contract | Service call | Who |
+|---|---|---|---|---|
+| GET | `/api/reports` | query: `ReportQuery` | `reports.csv(actor, query)` — streamed as `text/csv` | role A |
+| GET | `/api/dashboard` | — | `reports.dashboard(actor)` | role A |
+
+The reports route is the one file download: the service returns parsed cells, the route is the
+only place quoting happens (RFC 4180 — a comma inside a resident's note cannot split a row), the
+`content-disposition` names the file, and an empty range is a header-only file flagged in
+`x-report-empty` rather than an error.
+
+## Development consoles (never in production)
+
+| Method | Path | What it does | Who |
+|---|---|---|---|
+| GET/POST | `/api/dev/sync` | runs `db-diff`/`db-pull`/`db-push` and returns their output | role A, dev only |
+| GET/POST | `/api/dev/cloud` | Terraform state/outputs/status probes; plan, apply, stop, start, destroy | role A, dev only |
+
+Both 404 when `NODE_ENV=production`. The sync page (`/dev/sync`) and the cloud console
+(`/dev/cloud`) are the screens over them: every write is two presses — the plan first, the
+apply unlocked only after it — and nothing the caller types reaches a command line.
 
 ## What is deliberately absent
 
