@@ -23,7 +23,7 @@
 ########################################################################################################
 # base — pnpm, and the two libraries Prisma's engine needs on Alpine
 ########################################################################################################
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 
 RUN apk add --no-cache libc6-compat openssl
 
@@ -89,7 +89,7 @@ RUN set -eu; \
 ########################################################################################################
 # runtime — what the service runs
 ########################################################################################################
-FROM node:20-alpine AS runtime
+FROM node:24-alpine AS runtime
 
 RUN apk add --no-cache openssl \
     && addgroup --system --gid 1001 oneresi \
