@@ -3,24 +3,24 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
-  Badge,
   Button,
   Card,
   CardBody,
-  CardHeader,
   ErrorState,
   Money,
+  ProgressRing,
   Skeleton,
+  buttonClass,
 } from '@oneresi/ui';
-import { paise } from '@oneresi/contracts';
+import { formatMoney, formatPeriod, paise } from '@oneresi/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 
 /**
- * The desk's overview: the society at one glance (UC-26). Five figures — collections against
- * dues, the complaint queue by state, gate traffic, facility usage — each with the previous
- * period beside it so the trend is visible without a chart. Zero values when a month is empty:
- * a dashboard explains an empty month, it never errors over one.
+ * The desk's overview, built as a bento: one figure owns the screen — collected this period, in
+ * the money metal, counting itself up — and everything else tiles around it at a lower voice.
+ * The pulse strip along the bottom is the committee's answer to "is anything on fire": the gate,
+ * the queue, the amenities, one line, no chart.
  */
 
 interface Figures {
@@ -44,13 +44,24 @@ interface ApplicationLine {
 }
 
 function Trend({ now, before, suffix = '' }: { now: number; before: number; suffix?: string }) {
-  // The trend line under a figure: where the number moved, in words. Same period reads as
-  // "level" — a flat trend is information, not a failure.
-  if (before === now) return <span className="type-micro text-content-subtle">level with the period before</span>;
+  // The trend line under a figure: where the number moved, in words, on a soft pill. Same
+  // period reads as "level" — a flat trend is information, not a failure. Money trends speak
+  // money; counts speak counts (they carry their own suffix).
+  if (before === now)
+    return (
+      <span className="type-micro rounded-pill bg-surface-sunken px-2.5 py-1 text-content-subtle">
+        level with the period before
+      </span>
+    );
   const up = now > before;
-  const delta = Math.abs(now - before);
+  const delta =
+    suffix === '' ? formatMoney(paise(Math.abs(now - before))) : String(Math.abs(now - before));
   return (
-    <span className={`type-micro ${up ? 'text-positive' : 'text-critical'}`}>
+    <span
+      className={`type-micro rounded-pill px-2.5 py-1 ${
+        up ? 'bg-positive-soft text-positive' : 'bg-surface-sunken text-critical'
+      }`}
+    >
       {up ? '▲' : '▼'} {delta}
       {suffix === '' ? ' vs last period' : suffix}
     </span>
@@ -72,10 +83,12 @@ export default function OverviewPage() {
     return (
       <div className="space-y-6">
         <Skeleton variant="text" width={220} height={32} />
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="block" height={130} />
-          ))}
+        <div className="grid gap-3 lg:grid-cols-3">
+          <Skeleton variant="block" height={240} className="lg:col-span-2" />
+          <Skeleton variant="block" height={240} />
+          <Skeleton variant="block" height={150} />
+          <Skeleton variant="block" height={150} />
+          <Skeleton variant="block" height={150} />
         </div>
       </div>
     );
@@ -92,19 +105,18 @@ export default function OverviewPage() {
   }
 
   const f = figures.state.data;
-  const collectionRate =
-    f.collectionsPaise + f.duesPaise === 0
-      ? null
-      : Math.round((f.collectionsPaise / (f.collectionsPaise + f.duesPaise)) * 100);
+  const raised = f.collectionsPaise + f.duesPaise;
+  const collectionRate = raised === 0 ? null : Math.round((f.collectionsPaise / raised) * 100);
+  const settledSociety = f.duesPaise === 0 && f.collectionsPaise > 0;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="type-display text-content">Overview</h1>
-        <p className="type-body mt-1 text-content-muted">
-          The society at a glance for {f.period} — money, complaints, the gate, the amenities.
+      <header>
+        <p className="type-micro uppercase tracking-[0.22em] text-content-subtle">
+          Committee desk · {formatPeriod(f.period)}
         </p>
-      </div>
+        <h1 className="type-display mt-1 text-content">The month so far.</h1>
+      </header>
 
       {waiting !== null && waiting.length > 0 ? (
         <Card elevation={0} className="border border-accent bg-accent-soft">
@@ -124,62 +136,131 @@ export default function OverviewPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Card elevation={1}>
-          <CardHeader title="Collected this period" />
-          <CardBody>
-            <Money value={paise(f.collectionsPaise)} size="title" label="collections" />
-            <div className="mt-1 flex items-center gap-2">
-              {collectionRate !== null ? (
-                <Badge tone={collectionRate >= 80 ? 'positive' : 'caution'} size="sm">
-                  {collectionRate}% of raised
-                </Badge>
-              ) : null}
+      <div className="grid gap-3 lg:grid-cols-3">
+        {/* The figure the screen is about. */}
+        <section
+          className={`hero-wash edge-light clip-ticket shadow-e2 rounded-2xl p-6 lg:col-span-2 ${
+            settledSociety ? 'bg-accent-soft' : ''
+          }`}
+        >
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <p className="type-micro uppercase tracking-[0.22em] text-content-subtle">
+                Collected this period
+              </p>
+              <div className="mt-2">
+                <Money
+                  value={paise(f.collectionsPaise)}
+                  size="mega"
+                  countUp
+                  tone="gold"
+                  glow
+                  label="collected this period"
+                />
+              </div>
+              <div className="mt-3">
+                <Trend now={f.collectionsPaise} before={f.previousCollectionsPaise} />
+              </div>
             </div>
+            {collectionRate !== null ? (
+              <ProgressRing
+                value={collectionRate}
+                size={84}
+                thickness={7}
+                label="share of this period's dues gathered"
+                tone={collectionRate >= 80 ? 'positive' : 'caution'}
+              >
+                <span className="type-label">{collectionRate}%</span>
+              </ProgressRing>
+            ) : null}
+          </div>
+          <p className="type-label mt-4 text-content-muted">
+            {settledSociety
+              ? 'Every invoice settled. The whole society, paid in full.'
+              : raised === 0
+                ? `Nothing raised for ${formatPeriod(f.period)} yet.`
+                : `${formatPeriod(f.period)} is ${collectionRate ?? 0}% gathered.`}
+          </p>
+        </section>
+
+        {/* The remainder, at a lower voice. */}
+        <Card elevation={1} className="flex flex-col justify-between">
+          <CardBody>
+            <p className="type-micro uppercase tracking-[0.22em] text-content-subtle">Still owed</p>
             <div className="mt-2">
-              <Trend now={f.collectionsPaise} before={f.previousCollectionsPaise} />
+              <Money value={paise(f.duesPaise)} size="title" label="outstanding dues" />
             </div>
-          </CardBody>
-        </Card>
-
-        <Card elevation={1}>
-          <CardHeader title="Still owed" />
-          <CardBody>
-            <Money value={paise(f.duesPaise)} size="title" label="outstanding dues" />
             <p className="type-micro mt-2 text-content-subtle">
-              unsettled invoices for {f.period}
+              unsettled for {formatPeriod(f.period)}
             </p>
+            <Link
+              href="/desk/ledger"
+              className={`${buttonClass('ghost', 'sm')} mt-3 -ml-3`}
+            >
+              Open the ledger →
+            </Link>
           </CardBody>
         </Card>
 
         <Card elevation={1}>
-          <CardHeader title="Complaints" />
-          <CardBody className="space-y-1">
-            <p className="type-title text-content">
+          <CardBody>
+            <p className="type-micro uppercase tracking-[0.22em] text-content-subtle">Complaints</p>
+            <p className="type-title mt-2 text-content">
               {f.openComplaints} open · {f.inProgressComplaints} in progress
             </p>
-            <p className="type-micro text-content-subtle">
+            <p className="type-micro mt-2 text-content-subtle">
               {f.resolvedComplaints} resolved or closed all-time
             </p>
-            <Link href="/desk/complaints" className="type-micro text-accent underline-offset-2 hover:underline">
+            <Link
+              href="/desk/complaints"
+              className={`${buttonClass('ghost', 'sm')} mt-3 -ml-3`}
+            >
               Work the queue →
             </Link>
           </CardBody>
         </Card>
 
         <Card elevation={1}>
-          <CardHeader title="Gate traffic" />
           <CardBody>
-            <p className="type-title text-content">{f.visitorsToday} today</p>
+            <p className="type-micro uppercase tracking-[0.22em] text-content-subtle">The gate</p>
+            <p className="type-title mt-2 text-content">{f.visitorsToday} through today</p>
             <div className="mt-2">
-              <Trend now={f.visitorsToday} before={f.visitorsYesterday} suffix=" more/less than yesterday" />
+              <Trend now={f.visitorsToday} before={f.visitorsYesterday} suffix=" vs yesterday" />
             </div>
-            <p className="type-micro mt-2 text-content-subtle">
-              {f.bookingsThisMonth} amenity bookings this month
-              {f.bookingsLastMonth > 0 ? ` (${f.bookingsThisMonth >= f.bookingsLastMonth ? '▲' : '▼'} ${Math.abs(f.bookingsThisMonth - f.bookingsLastMonth)})` : ''}
-            </p>
           </CardBody>
         </Card>
+
+        <Card elevation={1}>
+          <CardBody>
+            <p className="type-micro uppercase tracking-[0.22em] text-content-subtle">Amenities</p>
+            <p className="type-title mt-2 text-content">
+              {f.bookingsThisMonth} booking{f.bookingsThisMonth === 1 ? '' : 's'}
+            </p>
+            <div className="mt-2">
+              <Trend now={f.bookingsThisMonth} before={f.bookingsLastMonth} suffix=" vs last month" />
+            </div>
+            <Link
+              href="/desk/bookings"
+              className={`${buttonClass('ghost', 'sm')} mt-3 -ml-3`}
+            >
+              Decisions waiting →
+            </Link>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* The pulse: the society, alive, on one line. */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-pill border border-border bg-surface-raised px-5 py-2.5 edge-light">
+        <span className="flex items-center gap-2" aria-hidden>
+          <span className="inline-block size-2 rounded-pill bg-positive motion-safe:animate-pulse" />
+        </span>
+        <p className="type-label text-content-muted">
+          {f.visitorsToday} through the gate today
+          <span aria-hidden className="px-2 text-border-strong">·</span>
+          {f.openComplaints + f.inProgressComplaints} complaints being worked
+          <span aria-hidden className="px-2 text-border-strong">·</span>
+          {f.bookingsThisMonth} booking{f.bookingsThisMonth === 1 ? '' : 's'} this month
+        </p>
       </div>
     </div>
   );

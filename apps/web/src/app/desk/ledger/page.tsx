@@ -23,6 +23,7 @@ import {
   type InvoiceStatus,
   type UnitType,
   formatCalendarDateShort,
+  formatPeriod,
 } from '@oneresi/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
@@ -260,13 +261,13 @@ export default function LedgerPage() {
             id: 'period',
             header: 'Period',
             sortable: true,
-            cell: (row) => row.period,
+            cell: (row) => <span className="type-label">{formatPeriod(row.period)}</span>,
           },
           {
             id: 'dueOn',
             header: 'Due',
             sortable: true,
-            cell: (row) => formatCalendarDateShort(row.dueOn),
+            cell: (row) => <span className="type-label">{formatCalendarDateShort(row.dueOn)}</span>,
             secondary: true,
           },
           {
@@ -275,7 +276,7 @@ export default function LedgerPage() {
             align: 'end',
             sortable: true,
             cell: (row) => (
-              <Money value={paise(row.amountPaise)} size="body" label={`${row.period} amount`} />
+              <Money value={paise(row.amountPaise)} size="body" compact label={`${row.period} amount`} />
             ),
           },
           {
@@ -316,9 +317,9 @@ export default function LedgerPage() {
                 ) : row.status === 'PAID' && row.receiptNo !== null ? (
                   <a
                     href={`/receipts/${row.receiptNo}`}
-                    className="type-label text-accent underline underline-offset-2"
+                    className="type-mono text-accent underline decoration-border underline-offset-2 hover:decoration-accent"
                   >
-                    Receipt
+                    {row.receiptNo}
                   </a>
                 ) : null}
               </div>
@@ -327,6 +328,7 @@ export default function LedgerPage() {
         ]}
         rows={rows}
         rowKey={(row) => String(row.id)}
+        dense
         sort={sort}
         onSortChange={setSort}
         pending={ledger.state.state === 'loading'}

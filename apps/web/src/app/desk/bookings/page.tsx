@@ -146,7 +146,7 @@ export default function BookingsPage() {
             id: 'facility',
             header: 'Facility',
             sortable: true,
-            cell: (row) => row.facilityName,
+            cell: (row) => <span className="type-label">{row.facilityName}</span>,
           },
           {
             id: 'date',
@@ -202,6 +202,7 @@ export default function BookingsPage() {
         ]}
         rows={rows}
         rowKey={(row) => String(row.id)}
+        dense
         sort={sort}
         onSortChange={setSort}
         pending={bookings.state.state === 'loading'}

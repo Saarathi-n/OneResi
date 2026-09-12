@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  Badge,
   Button,
   Logo,
   Skeleton,
@@ -90,7 +89,11 @@ export default function DeskLayout({ children }: { children: ReactNode }) {
               variant="secondary"
               size="sm"
               onClick={() => setPaletteOpen(true)}
-              leadingIcon={<Badge tone="neutral" size="sm">Ctrl-K</Badge>}
+              leadingIcon={
+                <span className="type-micro whitespace-nowrap rounded-xs border border-border bg-surface-sunken px-1.5 py-0.5 text-content-subtle">
+                  Ctrl K
+                </span>
+              }
             >
               Jump to
             </Button>
@@ -192,7 +195,7 @@ function Palette({
       role="presentation"
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-surface-raised shadow-e4"
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface-glass shadow-e4 backdrop-blur-xl edge-light"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-label="Jump to"
@@ -222,7 +225,7 @@ function Palette({
           }}
           placeholder="Where are you going?"
           aria-label="Search destinations"
-          className="type-body w-full border-b border-border bg-surface px-4 py-3 text-content outline-none"
+          className="type-body w-full border-b border-border bg-transparent px-4 py-3 text-content outline-none placeholder:text-content-subtle"
         />
         <ul className="max-h-80 overflow-y-auto py-1">
           {matches.map((destination, index) => (

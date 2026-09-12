@@ -8,6 +8,36 @@
  * timezone to UTC, so a stored day renders as that day, everywhere, exactly as it was written.
  */
 
+const SHORT_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
+
+const LONG_MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
 /**
  * One stored calendar day as `15 Sep 2026` — `day month year`, the order the app reads dates in.
  *
@@ -19,12 +49,10 @@ export function formatCalendarDate(iso: string): string {
   const day = iso.slice(0, 10);
   const parsed = new Date(`${day}T00:00:00.000Z`);
   if (Number.isNaN(parsed.getTime())) return day;
-  return parsed.toLocaleDateString('en-IN', {
-    timeZone: 'UTC',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  const d = parsed.getUTCDate();
+  const m = SHORT_MONTHS[parsed.getUTCMonth()];
+  const y = parsed.getUTCFullYear();
+  return `${d} ${m} ${y}`;
 }
 
 /** The same day as `15/09/2026`, the order a ledger column usually wants. */
@@ -32,12 +60,10 @@ export function formatCalendarDateShort(iso: string): string {
   const day = iso.slice(0, 10);
   const parsed = new Date(`${day}T00:00:00.000Z`);
   if (Number.isNaN(parsed.getTime())) return day;
-  return parsed.toLocaleDateString('en-IN', {
-    timeZone: 'UTC',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  const d = String(parsed.getUTCDate()).padStart(2, '0');
+  const m = String(parsed.getUTCMonth() + 1).padStart(2, '0');
+  const y = parsed.getUTCFullYear();
+  return `${d}/${m}/${y}`;
 }
 
 /** A `YYYY-MM` billing period as `September 2026`, pinned to UTC like every date here. A period
@@ -46,5 +72,6 @@ export function formatCalendarDateShort(iso: string): string {
 export function formatPeriod(period: string): string {
   const parsed = new Date(`${period.slice(0, 7)}-01T00:00:00.000Z`);
   if (Number.isNaN(parsed.getTime())) return period;
-  return parsed.toLocaleDateString('en-IN', { timeZone: 'UTC', month: 'long', year: 'numeric' });
+  return `${LONG_MONTHS[parsed.getUTCMonth()]} ${parsed.getUTCFullYear()}`;
 }
+
