@@ -22,6 +22,8 @@ import type { BookingWire, FacilityWire, SlotWire } from '@/lib/types';
  * a train.
  */
 
+const DATE_KEY = 'oneresi.facility.date';
+
 export default function FacilitiesPage(): ReactNode {
   const reduced = useReducedMotion();
   const toast = useToast();
@@ -218,13 +220,24 @@ function AvailabilitySheet({
   readonly onRequested: () => void;
 }): ReactNode {
   const toast = useToast();
-  const [date, setDate] = useState(todayInput());
+  const [date, setDate] = useState(todayInput);
   const [slots, setSlots] = useState<readonly SlotWire[] | null>(null);
   const [selected, setSelected] = useState<SlotWire | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
+
+  // The day you were last looking at is the day you probably want again — restored only if it
+  // has not slipped into the past.
+  useEffect(() => {
+    try {
+      const last = window.localStorage.getItem(DATE_KEY);
+      if (last !== null && last >= todayInput()) setDate(last);
+    } catch {
+      // Remembering is a convenience, never a requirement.
+    }
+  }, []);
 
   const load = useCallback(
     async (on: string): Promise<void> => {
@@ -265,6 +278,11 @@ function AvailabilitySheet({
     });
     setPending(false);
     if (result.ok) {
+      try {
+        window.localStorage.setItem(DATE_KEY, date);
+      } catch {
+        // Remembering is a convenience, never a requirement.
+      }
       onRequested();
       return;
     }

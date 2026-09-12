@@ -12,6 +12,7 @@ import {
   ErrorState,
   Field,
   Input,
+  RelativeTime,
   Select,
   Skeleton,
   StatusPill,
@@ -346,12 +347,7 @@ export default function VisitorsPage() {
                   </p>
                   <p className="type-micro text-content-subtle">
                     {entry.kind === 'PASS' ? 'On a pass' : 'Walk-in'} ·{' '}
-                    {new Date(entry.at).toLocaleString('en-IN', {
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    <RelativeTime value={entry.at} />
                     {entry.overrideReason !== null ? ' · guard let them in directly' : ''}
                   </p>
                 </div>
@@ -447,11 +443,7 @@ function WaitingPanel({
                 {visitor.name} · {visitor.purpose}
               </p>
               <p className="type-micro mt-1 text-content-muted">
-                waiting since{' '}
-                {new Date(visitor.since).toLocaleTimeString('en-IN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                <RelativeTime value={visitor.since} />
               </p>
             </div>
             <div className="flex shrink-0 gap-2">

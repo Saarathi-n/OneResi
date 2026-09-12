@@ -57,7 +57,7 @@ export default function ReceiptPage() {
   }, [receiptNo]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface-sunken print:bg-white">
+    <div className="flex min-h-dvh flex-col bg-surface-sunken print:bg-paper">
       <header className="border-b border-border bg-surface-raised print:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <Link href="/home" aria-label="Back to OneResi">

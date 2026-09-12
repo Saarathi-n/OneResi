@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button, Card, Field, PriorityPill, RelativeTime, Select, Sheet, StatusPill, Textarea, useToast } from '@oneresi/ui';
 import * as C from '@oneresi/contracts';
@@ -30,6 +30,19 @@ const PRIORITY_OPTIONS = C.COMPLAINT_PRIORITIES.map((priority) => ({
   value: priority,
   label: C.COMPLAINT_PRIORITY[priority].label,
 }));
+
+const CATEGORY_KEY = 'oneresi.complaint.category';
+
+function loadLastCategory(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const raw = window.localStorage.getItem(CATEGORY_KEY);
+    if (raw !== null && (C.COMPLAINT_CATEGORIES as readonly string[]).includes(raw)) return raw;
+  } catch {
+    // Remembering is a convenience, never a requirement.
+  }
+  return '';
+}
 
 export default function ComplaintsPage(): ReactNode {
   const reduced = useReducedMotion();
@@ -211,6 +224,11 @@ function RaiseSheet({
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<{ category?: string; description?: string }>({});
 
+  // The last kind this household reported is the likely kind again.
+  useEffect(() => {
+    setCategory(loadLastCategory());
+  }, []);
+
   async function submit(): Promise<void> {
     if (pending) return;
     const problems: { category?: string; description?: string } = {};
@@ -234,6 +252,11 @@ function RaiseSheet({
     });
     setPending(false);
     if (result.ok) {
+      try {
+        window.localStorage.setItem(CATEGORY_KEY, category);
+      } catch {
+        // Remembering is a convenience, never a requirement.
+      }
       onRaised();
       return;
     }

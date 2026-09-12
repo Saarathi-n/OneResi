@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Button,
@@ -37,6 +37,19 @@ const RESIDENT_METHODS = (['UPI', 'CARD', 'NETBANKING'] as const).map((method) =
   value: method,
   label: C.PAYMENT_METHOD[method].label,
 }));
+
+const METHOD_KEY = 'oneresi.payment.method';
+
+function loadLastMethod(): C.PaymentMethod {
+  if (typeof window === 'undefined') return 'UPI';
+  try {
+    const raw = window.localStorage.getItem(METHOD_KEY);
+    if (raw === 'UPI' || raw === 'CARD' || raw === 'NETBANKING') return raw;
+  } catch {
+    // Remembering is a convenience, never a requirement.
+  }
+  return 'UPI';
+}
 
 export default function InvoicesPage(): ReactNode {
   const reduced = useReducedMotion();
@@ -167,6 +180,11 @@ function PaySheet({
   const [failed, setFailed] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
 
+  // The method you paid with last time is the one you probably will again.
+  useEffect(() => {
+    setMethod(loadLastMethod());
+  }, []);
+
   // Minted once for this sheet. Every retry of this payment — a double-tap, a tap after a dropped
   // response — reuses it, which is exactly what makes the retry safe: the server records the first
   // result against the key and hands back the same receipt instead of taking the money twice.
@@ -188,6 +206,11 @@ function PaySheet({
     });
     setPending(false);
     if (outcome.ok) {
+      try {
+        window.localStorage.setItem(METHOD_KEY, method);
+      } catch {
+        // Remembering is a convenience, never a requirement.
+      }
       onPaid();
       return;
     }
