@@ -81,9 +81,9 @@ for local data, and `SEED_PASSWORD` sets a different one):
 
 | Account | Role | What it reaches |
 |---|---|---|
-| `committee@oneresi.in` | Committee | The desk: registration queue, billing, complaints, bookings, notices, property |
-| `gate@oneresi.in` | Gate staff | The kiosk: verify a pass, record an entry, log a walk-in |
-| `saarathi@oneresi.in` | Resident | The app: dues, receipts, complaints, bookings, visitors |
+| `ashvinksg@gmail.com` | Committee | The desk: registration queue, billing, complaints, bookings, notices, property |
+| `ashvin.ks2024@vitstudent.ac.in` | Gate staff | The kiosk: verify a pass, record an entry, log a walk-in |
+| `saarathin@gmail.com` | Resident | The app: dues, receipts, complaints, bookings, visitors |
 
 Two more residents sit in the registration queue with status PENDING — `vikram@oneresi.in`, with
 a live claim to a flat that is not on the register yet, and `kabir.chowdhury@gmail.com` — so the

@@ -35,9 +35,9 @@ const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
 const DB_FILE = join(repoRoot, process.env.LOCAL_DB_FILE ?? '.data/oneresi.db');
 const SEED_PASSWORD = process.env.SEED_PASSWORD ?? 'starling-marble-97-QUAY';
 
-const COMMITTEE = 'committee@oneresi.in';
-const GATE = 'gate@oneresi.in';
-const RESIDENT = 'saarathi@oneresi.in';
+const COMMITTEE = 'ashvinksg@gmail.com';
+const GATE = 'ashvin.ks2024@vitstudent.ac.in';
+const RESIDENT = 'saarathin@gmail.com';
 /** The account this run registers, approves, re-passwords and reset-tests. Fixed: one run per fresh seed. */
 const E2E_EMAIL = 'e2e.walker@oneresi.example';
 const E2E_PASSWORD = 'Trail-Map-4821';

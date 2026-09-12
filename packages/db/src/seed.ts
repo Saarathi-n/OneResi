@@ -24,7 +24,7 @@
  *     midnight. All timestamps are derived from it with fixed offsets, never from new Date()
  *     scattered through the data.
  *
- * The account bootstrap invariant is preserved: `committee@oneresi.in` is the FIRST account
+ * The account bootstrap invariant is preserved: `ashvinksg@gmail.com` is the FIRST account
  * created, role 'A', status ACTIVE. Registration grants the first-ever account immediate
  * membership and queues everyone after it (packages/domain/src/accounts.ts), so as long as the
  * committee exists and is ACTIVE, the post-seed registration queue behaves exactly as the
@@ -50,8 +50,8 @@ const DEMO_PASSWORD = process.env.SEED_PASSWORD ?? 'starling-marble-97-QUAY';
 /** Frozen once; see the module header for why. */
 const SEED_NOW = new Date();
 
-const COMMITTEE_EMAIL = 'committee@oneresi.in';
-const GATE_EMAIL = 'gate@oneresi.in';
+const COMMITTEE_EMAIL = 'ashvinksg@gmail.com';
+const GATE_EMAIL = 'ashvin.ks2024@vitstudent.ac.in';
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
@@ -153,10 +153,10 @@ interface PersonSpec {
 // The committee account is FIRST: the first-ever account is the one registration admits without a
 // queue, and the runbook documents this email as the desk sign-in. Everyone after it queues.
 const PEOPLE: readonly PersonSpec[] = [
-  { email: COMMITTEE_EMAIL, name: 'Vasanthi Raman', phone: '+919847051201', role: 'A', status: 'ACTIVE', unitLabel: 'V-04', joinedDay: -620 },
+  { email: COMMITTEE_EMAIL, name: 'Ashvin K S', phone: '+919847051201', role: 'A', status: 'ACTIVE', unitLabel: 'V-04', joinedDay: -620 },
   { email: GATE_EMAIL, name: 'Narayana Swamy', phone: '+919590212246', role: 'S', status: 'ACTIVE', unitLabel: null, joinedDay: -430 },
 
-  { email: 'saarathi@oneresi.in', name: 'Saarathi Niranjan Kumar', phone: '+919972204518', role: 'R', status: 'ACTIVE', unitLabel: 'A-101', joinedDay: -540 },
+  { email: 'saarathin@gmail.com', name: 'Saarathi Niranjan Kumar', phone: '+919972204518', role: 'R', status: 'ACTIVE', unitLabel: 'A-101', joinedDay: -540 },
   { email: 'priya.sharma79@gmail.com', name: 'Priya Sharma', phone: '+919820335167', role: 'R', status: 'ACTIVE', unitLabel: 'A-102', joinedDay: -520 },
   { email: 'rajesh.menon@gmail.com', name: 'Rajesh Menon', phone: '+919845661209', role: 'R', status: 'ACTIVE', unitLabel: 'A-103', joinedDay: -505 },
   { email: 'lakshmi.menon@gmail.com', name: 'Lakshmi Menon', phone: '+919845662384', role: 'R', status: 'ACTIVE', unitLabel: 'A-103', joinedDay: -505 },
@@ -1617,7 +1617,7 @@ if (import.meta.filename === process.argv[1]) {
   const credentials = [
     [COMMITTEE_EMAIL, password],
     [GATE_EMAIL, password],
-    ['saarathi@oneresi.in', password],
+    ['saarathin@gmail.com', password],
   ] as const;
   for (const [email, pwd] of credentials) {
     process.stdout.write(`${email.padEnd(28)}${pwd}\n`);

@@ -439,7 +439,7 @@ const GUARD: Actor = {
   name: 'Main Gate',
   role: 'S',
   unitId: null,
-  email: 'gate@oneresi.in',
+  email: 'ashvin.ks2024@vitstudent.ac.in',
 };
 
 /**

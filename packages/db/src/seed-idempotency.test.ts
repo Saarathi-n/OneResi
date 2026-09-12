@@ -37,7 +37,7 @@ let second: DatabaseChecksum;
 let adminBefore: { createdAt: Date; updatedAt: Date; passwordHash: string } | null;
 let adminAfter: { createdAt: Date; updatedAt: Date; passwordHash: string } | null;
 
-const ADMIN_EMAIL = 'committee@oneresi.in';
+const ADMIN_EMAIL = 'ashvinksg@gmail.com';
 
 beforeAll(async () => {
   const opened = await testDatabase();

@@ -14,7 +14,7 @@ The local database already exists at `.data/oneresi.db`, migrated and seeded. To
 nothing: `pnpm db:reset && pnpm db:migrate && pnpm db:seed`.
 
 Seeded accounts, password printed by the seed (generated, not hardcoded):
-`committee@oneresi.in` · `gate@oneresi.in` · `saarathi@oneresi.in`
+`ashvinksg@gmail.com` · `ashvin.ks2024@vitstudent.ac.in` · `saarathin@gmail.com`
 
 ## Start here
 
