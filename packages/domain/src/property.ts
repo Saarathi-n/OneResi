@@ -1,4 +1,4 @@
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import { ok } from './ports.js';
 import type { Actor, PropertyService, Result } from './ports.js';
 import { errors } from './errors.js';

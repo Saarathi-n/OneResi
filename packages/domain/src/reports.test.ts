@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import { reportsService } from './reports.js';
 import type { Clock } from './clock.js';
 import type {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Card, Field, Input, Select, Textarea } from '@oneresi/ui';
+import { Button, Card, Field, Input, Select, Textarea } from '@grihaone/ui';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
 import { useAsync } from '@/hooks/useAsync';

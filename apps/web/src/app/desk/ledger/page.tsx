@@ -14,7 +14,7 @@ import {
   Textarea,
   useToast,
   type SortState,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import {
   INVOICE_STATUS,
   UNIT_TYPE,
@@ -24,7 +24,7 @@ import {
   type UnitType,
   formatCalendarDateShort,
   formatPeriod,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 
@@ -436,7 +436,7 @@ export default function LedgerPage() {
       <Dialog
         open={offlineFor !== null}
         onClose={() => setOfflineFor(null)}
-        title="Record money received outside OneResi"
+        title="Record money received outside GrihaOne"
         description={
           offlineFor !== null
             ? `${offlineFor.home.blockName} ${offlineFor.home.label} · ${offlineFor.period}`

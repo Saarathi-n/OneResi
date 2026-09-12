@@ -1,4 +1,4 @@
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import type {
   Actor,
   AccountsService,

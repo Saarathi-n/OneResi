@@ -1,4 +1,4 @@
-import { PAYMENT_METHOD, PAYMENT_METHODS, type Paise } from '@oneresi/contracts';
+import { PAYMENT_METHOD, PAYMENT_METHODS, type Paise } from '@grihaone/contracts';
 import { action, details, heading, note, para, renderHtml, renderText } from '../document.js';
 import { asObject, date, money, oneOf, period as periodValue, str } from '../decode.js';
 import {

@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import type * as C from '@oneresi/contracts';
+import type * as C from '@grihaone/contracts';
 import { adoptSession, clearAccessToken, onSessionDropped, simple } from './api';
 import type { PersonWire, SessionWire } from './types';
 
@@ -45,7 +45,7 @@ export function SessionProvider({ children }: { readonly children: ReactNode }):
   const [status, setStatus] = useState<SessionStatus>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const raw = window.sessionStorage.getItem('oneresi.app.session');
+        const raw = window.sessionStorage.getItem('grihaone.app.session');
         if (raw) {
           const parsed = JSON.parse(raw) as SessionWire;
           if (parsed.accessExpiresAt && new Date(parsed.accessExpiresAt).getTime() > Date.now()) {

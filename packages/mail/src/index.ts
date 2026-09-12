@@ -1,5 +1,5 @@
 /**
- * `@oneresi/mail` — templates, a renderer, two providers, and the outbox worker.
+ * `@grihaone/mail` — templates, a renderer, two providers, and the outbox worker.
  *
  * How it fits together (docs/plan/02-architecture.md):
  *
@@ -16,7 +16,7 @@
  *
  * `./testing` is deliberately a separate entry point, so the matcher and the test doubles never end up
  * in an application bundle. The two AWS-specific modules are separate too — `./providers/ses` and
- * `./providers/ses-events` — so importing `@oneresi/mail` in a local console-mode run pulls in no AWS
+ * `./providers/ses-events` — so importing `@grihaone/mail` in a local console-mode run pulls in no AWS
  * SDK at all; `selectProvider()` loads the SES one on demand.
  */
 

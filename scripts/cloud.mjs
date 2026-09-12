@@ -96,7 +96,7 @@ async function main() {
           'text',
         ]),
       );
-      const url = `postgresql://${encodeURIComponent(secret.username)}:${encodeURIComponent(secret.password)}@${endpoint}/oneresi?sslmode=require`;
+      const url = `postgresql://${encodeURIComponent(secret.username)}:${encodeURIComponent(secret.password)}@${endpoint}/grihaone?sslmode=require`;
       process.stdout.write(`\n  # one line, one shell:\n  export DATABASE_URL='${url.replace(/'/g, "'\\''")}'\n  export DB_TARGET=cloud\n\n`);
       break;
     }

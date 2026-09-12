@@ -2,8 +2,8 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Card, CodeDisplay, Field, Input, Sheet, StatusPill, Tabs, useToast } from '@oneresi/ui';
-import * as C from '@oneresi/contracts';
+import { Button, Card, CodeDisplay, Field, Input, Sheet, StatusPill, Tabs, useToast } from '@grihaone/ui';
+import * as C from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';

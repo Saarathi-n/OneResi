@@ -3,8 +3,8 @@
  * Runs the Prisma CLI against whichever target is live, so nobody has to remember which
  * `--schema` flag pairs with which `DATABASE_URL`.
  *
- *   DB_TARGET=local pnpm --filter @oneresi/db migrate:dev
- *   DB_TARGET=cloud pnpm --filter @oneresi/db migrate
+ *   DB_TARGET=local pnpm --filter @grihaone/db migrate:dev
+ *   DB_TARGET=cloud pnpm --filter @grihaone/db migrate
  *
  * `generate` is the exception: client generation needs no database at all, so it generates BOTH
  * clients (SQLite and PostgreSQL) regardless of the live target — the root `pnpm db:generate`

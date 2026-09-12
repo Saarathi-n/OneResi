@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { cn } from '@oneresi/ui';
+import { cn } from '@grihaone/ui';
 import { Icon, type IconName } from './icons';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 

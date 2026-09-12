@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import * as C from '@oneresi/contracts';
-import type { OutboxEventInput } from '@oneresi/domain';
+import * as C from '@grihaone/contracts';
+import type { OutboxEventInput } from '@grihaone/domain';
 import type { Db } from '../client.js';
 import { accountStore } from './accounts.js';
 
@@ -46,7 +46,7 @@ function anEvent(type: OutboxEventInput['type']): OutboxEventInput {
   return {
     type,
     channel: 'EMAIL',
-    payload: { name: 'Asha', email: 'asha@oneresi.test' },
+    payload: { name: 'Asha', email: 'asha@grihaone.test' },
     correlationId: `corr-${eventCounter}`,
   };
 }
@@ -76,7 +76,7 @@ describe('createAccount', () => {
     const created = await mustCreate(store, 
       {
         name: 'Asha',
-        email: 'asha@oneresi.test',
+        email: 'asha@grihaone.test',
         phone: '+919876500001',
         passwordHash: '$2b$12$stored',
         role: 'R',
@@ -92,7 +92,7 @@ describe('createAccount', () => {
     expect(created.status).toBe('PENDING');
     expect(created.passwordChangedAt?.toISOString()).toBe(stamp.toISOString());
 
-    const byEmail = await store.findAccountByEmail('asha@oneresi.test');
+    const byEmail = await store.findAccountByEmail('asha@grihaone.test');
     expect(byEmail?.id).toBe(created.id);
     const byId = await store.findAccountById(created.id);
     expect(byId?.passwordHash).toBe('$2b$12$stored');
@@ -103,12 +103,12 @@ describe('createAccount', () => {
     expect(row.type).toBe('resident.registered');
     expect(row.channel).toBe('EMAIL');
     expect(row.status).toBe('PENDING');
-    expect(JSON.parse(row.payload)).toEqual({ name: 'Asha', email: 'asha@oneresi.test' });
+    expect(JSON.parse(row.payload)).toEqual({ name: 'Asha', email: 'asha@grihaone.test' });
   });
 
   it('a duplicate email is null, with the events rolled back with the account (D-82)', async () => {
     const store = accountStore(db);
-    const taken = `taken-${eventCounter}@oneresi.test`;
+    const taken = `taken-${eventCounter}@grihaone.test`;
     await aUser(db, { email: taken });
     const event = anEvent('resident.registered');
 
@@ -143,7 +143,7 @@ describe('createAccount', () => {
     const created = await mustCreate(store, 
       {
         name: 'Claimant',
-        email: `claimant-${eventCounter}@oneresi.test`,
+        email: `claimant-${eventCounter}@grihaone.test`,
         phone: '+919876500003',
         passwordHash: '$2b$12$x',
         role: 'R',
@@ -183,7 +183,7 @@ describe('createAccount', () => {
     const first = await mustCreate(store, 
       {
         name: 'Reapplicant',
-        email: `again-a-${eventCounter}@oneresi.test`,
+        email: `again-a-${eventCounter}@grihaone.test`,
         phone: '+919876500004',
         passwordHash: '$2b$12$x',
         role: 'R',
@@ -197,7 +197,7 @@ describe('createAccount', () => {
     const second = await mustCreate(store, 
       {
         name: 'Reapplicant',
-        email: `again-b-${eventCounter}@oneresi.test`,
+        email: `again-b-${eventCounter}@grihaone.test`,
         phone: '+919876500005',
         passwordHash: '$2b$12$x',
         role: 'R',
@@ -501,7 +501,7 @@ describe('listPendingApplications', () => {
     const unitless = await mustCreate(store, 
       {
         name: 'First Applicant',
-        email: `queue-a-${eventCounter}@oneresi.test`,
+        email: `queue-a-${eventCounter}@grihaone.test`,
         phone: '+919876500021',
         passwordHash: '$2b$12$x',
         role: 'R',
@@ -515,7 +515,7 @@ describe('listPendingApplications', () => {
     const claimant = await mustCreate(store, 
       {
         name: 'Second Applicant',
-        email: `queue-b-${eventCounter}@oneresi.test`,
+        email: `queue-b-${eventCounter}@grihaone.test`,
         phone: '+919876500022',
         passwordHash: '$2b$12$x',
         role: 'R',
@@ -543,7 +543,7 @@ describe('listPendingApplications', () => {
 
     const first = mine.find((application) => application.userId === unitless.id);
     expect(first?.name).toBe('First Applicant');
-    expect(first?.email).toBe(`queue-a-${eventCounter}@oneresi.test`);
+    expect(first?.email).toBe(`queue-a-${eventCounter}@grihaone.test`);
     expect(first?.claim).toBeNull();
     expect(first?.appliedAt instanceof Date).toBe(true);
 
@@ -564,7 +564,7 @@ describe('the registration decision', () => {
     const applicant = await mustCreate(store, 
       {
         name: 'Approved Applicant',
-        email: `approved-${eventCounter}@oneresi.test`,
+        email: `approved-${eventCounter}@grihaone.test`,
         phone: '+919876500006',
         passwordHash: '$2b$12$x',
         role: 'R',
@@ -651,7 +651,7 @@ describe('the registration decision', () => {
     const applicant = await mustCreate(store, 
       {
         name: 'Declined Applicant',
-        email: `declined-${eventCounter}@oneresi.test`,
+        email: `declined-${eventCounter}@grihaone.test`,
         phone: '+919876500007',
         passwordHash: '$2b$12$x',
         role: 'R',
@@ -695,7 +695,7 @@ describe('the registration decision', () => {
     const applicant = await mustCreate(store, 
       {
         name: 'Reopened Applicant',
-        email: `reopened-${eventCounter}@oneresi.test`,
+        email: `reopened-${eventCounter}@grihaone.test`,
         phone: '+919876500008',
         passwordHash: '$2b$12$x',
         role: 'R',
@@ -746,7 +746,7 @@ describe('the registration decision', () => {
     const settled = await mustCreate(store, 
       {
         name: 'Settled Applicant',
-        email: `settled-${eventCounter}@oneresi.test`,
+        email: `settled-${eventCounter}@grihaone.test`,
         phone: '+919876500009',
         passwordHash: '$2b$12$x',
         role: 'R',

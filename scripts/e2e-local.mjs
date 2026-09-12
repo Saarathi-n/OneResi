@@ -7,7 +7,7 @@
  *
  * It is written to run ONCE against a FRESH seed, in order, and says so if it does not get one:
  *   pnpm db:reset && pnpm db:seed
- *   APP_ORIGIN=http://localhost:3000 pnpm --filter @oneresi/web dev   # another terminal
+ *   APP_ORIGIN=http://localhost:3000 pnpm --filter @grihaone/web dev   # another terminal
  *   node scripts/e2e-local.mjs
  *
  * The APP_ORIGIN export matters: without it the outbox's mail rows sit PENDING with
@@ -16,7 +16,7 @@
  * What it needs and why:
  *   - the three seeded sign-ins (committee, gate, one resident) — the fixed seed password,
  *     overridable with SEED_PASSWORD;
- *   - read access to the SQLite file (default .data/oneresi.db, overridable with LOCAL_DB_FILE)
+ *   - read access to the SQLite file (default .data/grihaone.db, overridable with LOCAL_DB_FILE)
  *     for exactly two things no HTTP response can show: the rendered password-reset link, and
  *     the outbox row behind it. Reads are opened read-only per query and retried on a busy lock.
  *
@@ -32,14 +32,14 @@ import { DatabaseSync } from 'node:sqlite';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
-const DB_FILE = join(repoRoot, process.env.LOCAL_DB_FILE ?? '.data/oneresi.db');
+const DB_FILE = join(repoRoot, process.env.LOCAL_DB_FILE ?? '.data/grihaone.db');
 const SEED_PASSWORD = process.env.SEED_PASSWORD ?? 'starling-marble-97-QUAY';
 
 const COMMITTEE = 'ashvinksg@gmail.com';
 const GATE = 'ashvin.ks2024@vitstudent.ac.in';
 const RESIDENT = 'saarathin@gmail.com';
 /** The account this run registers, approves, re-passwords and reset-tests. Fixed: one run per fresh seed. */
-const E2E_EMAIL = 'e2e.walker@oneresi.example';
+const E2E_EMAIL = 'e2e.walker@grihaone.example';
 const E2E_PASSWORD = 'Trail-Map-4821';
 const E2E_REPASSWORD = 'Harbor-Lamp-9073';
 const E2E_RESET_PASSWORD = 'Cedar-Ridge-5562';

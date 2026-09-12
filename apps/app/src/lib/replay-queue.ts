@@ -12,7 +12,7 @@ import { call } from './api';
  * POST the contract accepts as JSON.
  */
 
-const STORAGE_KEY = 'oneresi.replay.v1';
+const STORAGE_KEY = 'grihaone.replay.v1';
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // a week-old queued write is stale, not pending
 
 export interface QueuedWrite {

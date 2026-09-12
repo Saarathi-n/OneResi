@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Logo, buttonClass } from '@oneresi/ui';
+import { Logo, buttonClass } from '@grihaone/ui';
 
 /**
  * The public landing page. Aligned directly to docs/reference-images/01-marketing-landing.jpg
@@ -79,7 +79,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="border-b border-border bg-surface-raised/80 backdrop-blur-md sticky top-0 z-30">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" aria-label="OneResi home" className="flex items-center gap-2">
+          <Link href="/" aria-label="GrihaOne home" className="flex items-center gap-2">
             <Logo variant="wordmark" size={30} />
           </Link>
 
@@ -152,7 +152,7 @@ export default function LandingPage() {
                     <span className="size-2.5 rounded-full bg-caution/80" />
                     <span className="size-2.5 rounded-full bg-positive/80" />
                     <span className="ml-2 text-content-subtle text-[11px] font-mono">
-                      oneresi.in/{activeTab === 'dashboard' ? 'home' : `home/${activeTab}`}
+                      grihaone.in/{activeTab === 'dashboard' ? 'home' : `home/${activeTab}`}
                     </span>
                   </div>
                   <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] text-content-subtle">
@@ -164,7 +164,7 @@ export default function LandingPage() {
                 <div className="grid grid-cols-[88px_1fr] sm:grid-cols-[116px_1fr] min-h-[330px] text-left">
                   {/* Mini Sidebar */}
                   <div className="border-r border-border bg-surface-sunken/60 p-3 space-y-3 text-[11px]">
-                    <div className="font-semibold text-content text-xs tracking-tight">OneResi</div>
+                    <div className="font-semibold text-content text-xs tracking-tight">GrihaOne</div>
                     <div className="space-y-1">
                       {TABS.map((tab) => {
                         const isActive = activeTab === tab.id;
@@ -540,7 +540,7 @@ export default function LandingPage() {
                     <h4 className="type-label text-base font-semibold text-content">Zero transaction cuts</h4>
                   </div>
                   <p className="type-body text-sm text-content-muted pl-10">
-                    Direct bank and UPI settlement straight into your society account. OneResi takes 0% cut from your hard-earned maintenance collections.
+                    Direct bank and UPI settlement straight into your society account. GrihaOne takes 0% cut from your hard-earned maintenance collections.
                   </p>
                 </div>
               </div>
@@ -558,7 +558,7 @@ export default function LandingPage() {
               Built with real paper physics for Indian housing societies
             </h2>
             <p className="type-body text-content-muted mt-3">
-              Most society software treats gated communities as advertising portals or surveillance conduits. OneResi is designed with a fundamentally different philosophy: paper dignity, architectural permanence, and deep respect for community members.
+              Most society software treats gated communities as advertising portals or surveillance conduits. GrihaOne is designed with a fundamentally different philosophy: paper dignity, architectural permanence, and deep respect for community members.
             </p>
           </div>
 
@@ -569,7 +569,7 @@ export default function LandingPage() {
               </div>
               <h3 className="type-title text-lg font-bold text-content">The Physics of Real Paper</h3>
               <p className="type-body text-sm text-content-muted leading-relaxed">
-                Indian society administration runs on physical trust: stamped receipts, tear-off passes, and ledger books. OneResi re-creates these tactile materials digitally — warm ivory paper, edge light along raised sheets, micro-perforations, and authentic double-ringed rubber stamps.
+                Indian society administration runs on physical trust: stamped receipts, tear-off passes, and ledger books. GrihaOne re-creates these tactile materials digitally — warm ivory paper, edge light along raised sheets, micro-perforations, and authentic double-ringed rubber stamps.
               </p>
               <div className="pt-2">
                 <span className="stamp text-[10px] text-accent border-accent">STAMPED RECEIPT</span>

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 /**
  * A minimal stroke icon set for the tab bar and inline affordances. lucide-react belongs to
- * @oneresi/ui, not to this package, so the handful of glyphs the app itself needs are drawn here
+ * @grihaone/ui, not to this package, so the handful of glyphs the app itself needs are drawn here
  * — 24px grid, currentColor, stroke only, so they inherit content colour and tone.
  */
 

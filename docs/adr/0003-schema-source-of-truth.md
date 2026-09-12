@@ -6,11 +6,11 @@
 
 Two submitted artifacts describe the data model and they disagree.
 
-`project/OneResi/er.mmd` carries the fuller column set, including `password_hash`, the
+`project/GrihaOne/er.mmd` carries the fuller column set, including `password_hash`, the
 `created_at` and `resolved_at` timestamps, and the `created_by`, `updated_by`, `generated_by` and
 `approved_by` foreign keys.
 
-`project/OneResi/oneresi_ddl.sql` carries the precise constraints — primary keys, unique
+`project/GrihaOne/grihaone_ddl.sql` carries the precise constraints — primary keys, unique
 constraints and check constraints — but drops ten columns the ER model has. It was written to
 import into Oracle SQL Developer Data Modeler and render clean connector lines, and the omissions
 follow from that purpose rather than from a design decision.
@@ -47,7 +47,7 @@ documented correction.
 
 - The entity count stays at twelve and every relationship in the submitted ER diagram is unchanged,
   so the use case, class, sequence and activity models remain valid.
-- `oneresi_ddl.sql` is regenerated from the reconciled model before the final report, and the delta
+- `grihaone_ddl.sql` is regenerated from the reconciled model before the final report, and the delta
   tables in `data-model.md` become the errata list explaining the difference.
 - One migration is hand-edited rather than generated, because Prisma cannot express a filtered
   unique index in `schema.prisma`.

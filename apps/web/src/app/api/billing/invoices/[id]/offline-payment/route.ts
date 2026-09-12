@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { RecordOfflinePaymentInput } from '@oneresi/contracts';
+import { RecordOfflinePaymentInput } from '@grihaone/contracts';
 import { services } from '@/server/runtime';
 import { actor, invalidInput, parseBody, toResponse } from '@/server/http';
 

@@ -1,5 +1,5 @@
 /**
- * OneResi design tokens.
+ * GrihaOne design tokens.
  *
  * One semantic layer. Application code never names a raw colour — it names a role, and the
  * role resolves per theme. Every token carries a dark value from the first commit.
@@ -7,7 +7,7 @@
  * Wiring, once per application:
  *
  *   @import "tailwindcss";
- *   @import "@oneresi/ui/tokens.css";
+ *   @import "@grihaone/ui/tokens.css";
  *   @source "../../../packages/ui/src";
  *
  * The `@source` line is required: the components in this package emit utility classes that
@@ -202,10 +202,10 @@
   --space-12: 48px;
   --space-16: 64px;
 
-  /* type. The application supplies --font-oneresi-sans from a self-hosted variable font, so
+  /* type. The application supplies --font-grihaone-sans from a self-hosted variable font, so
      the result is identical on every platform instead of whatever the system provides. */
-  --font-oneresi-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-oneresi-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', monospace;
+  --font-grihaone-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-grihaone-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', monospace;
 }
 
 /* ------------------------------------------------- the Tailwind theme layer
@@ -230,8 +230,8 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-oneresi-sans);
-  --font-mono: var(--font-oneresi-mono);
+  --font-sans: var(--font-grihaone-sans);
+  --font-mono: var(--font-grihaone-mono);
 
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
@@ -295,7 +295,7 @@
    default rather than the one a media query has to rescue. */
 
 .type-display {
-  font-family: var(--font-oneresi-sans);
+  font-family: var(--font-grihaone-sans);
   font-size: 28px;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -305,7 +305,7 @@
 /* The one bold number a screen is about. Once per screen, if that — a hero figure stops being
    one the moment every figure is one. */
 .type-mega {
-  font-family: var(--font-oneresi-sans);
+  font-family: var(--font-grihaone-sans);
   font-size: 40px;
   line-height: 1.05;
   letter-spacing: -0.025em;
@@ -314,7 +314,7 @@
 }
 
 .type-title {
-  font-family: var(--font-oneresi-sans);
+  font-family: var(--font-grihaone-sans);
   font-size: 20px;
   line-height: 1.25;
   letter-spacing: -0.01em;
@@ -322,14 +322,14 @@
 }
 
 .type-body {
-  font-family: var(--font-oneresi-sans);
+  font-family: var(--font-grihaone-sans);
   font-size: 15px;
   line-height: 1.55;
   font-weight: 400;
 }
 
 .type-label {
-  font-family: var(--font-oneresi-sans);
+  font-family: var(--font-grihaone-sans);
   font-size: 13px;
   line-height: 1.35;
   letter-spacing: 0.005em;
@@ -337,14 +337,14 @@
 }
 
 .type-micro {
-  font-family: var(--font-oneresi-sans);
+  font-family: var(--font-grihaone-sans);
   font-size: 11px;
   line-height: 1.3;
   font-weight: 500;
 }
 
 .type-mono {
-  font-family: var(--font-oneresi-mono);
+  font-family: var(--font-grihaone-mono);
   font-size: 15px;
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
@@ -355,7 +355,7 @@
    mobile Safari zooms the whole page when the field takes focus, which on a form the length of
    registration loses the reader's place four times. */
 .type-input {
-  font-family: var(--font-oneresi-sans);
+  font-family: var(--font-grihaone-sans);
   font-size: 16px;
   line-height: 1.4;
   font-weight: 400;
@@ -368,7 +368,7 @@
 /* A code is read aloud across a gate, so it is monospaced, tabular, and larger than body. The
    kiosk step has to be legible from a metre away. */
 .type-code {
-  font-family: var(--font-oneresi-mono);
+  font-family: var(--font-grihaone-mono);
   font-size: 24px;
   line-height: 1.1;
   font-weight: 600;
@@ -377,7 +377,7 @@
 }
 
 .type-code-kiosk {
-  font-family: var(--font-oneresi-mono);
+  font-family: var(--font-grihaone-mono);
   font-size: 40px;
   line-height: 1.05;
   font-weight: 600;
@@ -434,7 +434,7 @@
   outline-offset: -2px;
 }
 
-@keyframes oneresi-shimmer {
+@keyframes grihaone-shimmer {
   from {
     background-position: 200% 0;
   }
@@ -451,15 +451,15 @@
     var(--surface-sunken) 84%
   );
   background-size: 200% 100%;
-  animation: oneresi-shimmer 1400ms linear infinite;
+  animation: grihaone-shimmer 1400ms linear infinite;
 }
-@keyframes oneresi-spin {
+@keyframes grihaone-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes oneresi-pulse {
+@keyframes grihaone-pulse {
   50% {
     opacity: 0.35;
   }
@@ -467,7 +467,7 @@
 
 /* Pending is a state, so it always shows. Rotation is the part that can go. */
 .spinner {
-  animation: oneresi-spin 700ms linear infinite;
+  animation: grihaone-spin 700ms linear infinite;
 }
 
 /* The one place a stylesheet reads the preference. Everything animated in JavaScript goes
@@ -480,7 +480,7 @@
   }
 
   .spinner {
-    animation: oneresi-pulse 900ms ease-in-out infinite;
+    animation: grihaone-pulse 900ms ease-in-out infinite;
   }
 }
 

@@ -1,6 +1,6 @@
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import type { Db, Prisma } from '../client.js';
-import type { FacilitiesStore } from '@oneresi/domain';
+import type { FacilitiesStore } from '@grihaone/domain';
 import {
   bookingInclude,
   hoursTouched,

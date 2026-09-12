@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Badge, Card } from '@oneresi/ui';
+import { Badge, Card } from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { Shell } from '@/components/Shell';
 import { simple } from '@/lib/api';

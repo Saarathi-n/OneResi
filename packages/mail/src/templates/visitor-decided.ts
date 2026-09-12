@@ -1,4 +1,4 @@
-import { APPROVAL_STATUS } from '@oneresi/contracts';
+import { APPROVAL_STATUS } from '@grihaone/contracts';
 import { action, details, heading, note, para, renderHtml, renderText } from '../document.js';
 import { asObject, date, oneOf, str } from '../decode.js';
 import { formatDateTime } from '../format.js';
@@ -10,7 +10,7 @@ import type { Block, MailTemplate, RenderContext, Wire } from '../types.js';
  *
  * Both facts in it — who decided and when — are columns the previous build never wrote, so there was
  * no record of which resident admitted a visitor, which for a gate audit log is the one fact worth
- * having (D-21). The decision renders through the label map from `@oneresi/contracts`, never as the
+ * having (D-21). The decision renders through the label map from `@grihaone/contracts`, never as the
  * raw value (D-55).
  */
 

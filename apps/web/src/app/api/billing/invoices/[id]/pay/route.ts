@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { PayInvoiceInput } from '@oneresi/contracts';
+import { PayInvoiceInput } from '@grihaone/contracts';
 import { services } from '@/server/runtime';
 import { actor, invalidInput, parseBody, toResponse } from '@/server/http';
 

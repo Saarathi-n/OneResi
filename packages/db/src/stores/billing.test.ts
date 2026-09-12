@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import * as C from '@oneresi/contracts';
-import type { OutboxEventInput } from '@oneresi/domain';
+import * as C from '@grihaone/contracts';
+import type { OutboxEventInput } from '@grihaone/domain';
 import type { Db } from '../client.js';
 import { billingStore } from './billing.js';
 

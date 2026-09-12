@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Button, Field, Input, Logo, Skeleton } from '@oneresi/ui';
+import { Button, Field, Input, Logo, Skeleton } from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { simple } from '@/lib/api';
 import { screenClass } from '@/lib/motion';

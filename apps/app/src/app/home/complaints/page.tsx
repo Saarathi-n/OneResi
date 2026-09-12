@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Card, Field, PriorityPill, RelativeTime, Select, Sheet, StatusPill, Textarea, useToast } from '@oneresi/ui';
-import * as C from '@oneresi/contracts';
+import { Button, Card, Field, PriorityPill, RelativeTime, Select, Sheet, StatusPill, Textarea, useToast } from '@grihaone/ui';
+import * as C from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
@@ -31,7 +31,7 @@ const PRIORITY_OPTIONS = C.COMPLAINT_PRIORITIES.map((priority) => ({
   label: C.COMPLAINT_PRIORITY[priority].label,
 }));
 
-const CATEGORY_KEY = 'oneresi.complaint.category';
+const CATEGORY_KEY = 'grihaone.complaint.category';
 
 function loadLastCategory(): string {
   if (typeof window === 'undefined') return '';

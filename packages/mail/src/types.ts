@@ -1,4 +1,4 @@
-import type { OutboxEventType, Paise } from '@oneresi/contracts';
+import type { OutboxEventType, Paise } from '@grihaone/contracts';
 
 /**
  * Everything the mail package agrees with the rest of the system about, in one file.

@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 /**
  * The marketing site and the committee's desk, plus every API route. Built into the same
- * container image as @oneresi/app; the task's router sends "/" and "/admin/*" here and "/a/*"
+ * container image as @grihaone/app; the task's router sends "/" and "/admin/*" here and "/a/*"
  * to the app. See docs/plan/02-architecture.md.
  */
 const nextConfig: NextConfig = {
@@ -10,14 +10,14 @@ const nextConfig: NextConfig = {
   // ./src/index.ts) and import each other with compiled-style `.js` specifiers — what tsc emits
   // for ESM. Bundler resolution understands the `.js` → `.ts` alias, but webpack (which Next's
   // build uses for these externals) does not apply it outside the app's own directory, so every
-  // `./enums.js` inside @oneresi/contracts resolves to nothing. `extensionAlias` teaches webpack
+  // `./enums.js` inside @grihaone/contracts resolves to nothing. `extensionAlias` teaches webpack
   // the same substitution.
   webpack: (config) => {
     config.resolve.extensionAlias = {
       '.js': ['.ts', '.tsx', '.js'],
       '.mjs': ['.mts', '.mjs'],
     };
-    // `@oneresi/contracts` mixes pure presentation exports (`formatMoney`, descriptor maps) with
+    // `@grihaone/contracts` mixes pure presentation exports (`formatMoney`, descriptor maps) with
     // server-only crypto helpers (`packages/contracts/src/tokens.ts`, which imports `node:crypto`).
     // Any client component that so much as imports the barrel — `Money` does, for `formatMoney` —
     // drags `node:crypto` into a client bundle, and webpack's client compiler refuses the

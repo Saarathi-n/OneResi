@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import * as C from '@oneresi/contracts';
-import { Button, Card } from '@oneresi/ui';
+import * as C from '@grihaone/contracts';
+import { Button, Card } from '@grihaone/ui';
 import { call } from '@/lib/api';
 import { verdictClass } from '@/lib/motion';
 import { enqueue, newIdempotencyKey } from '@/lib/replay-queue';

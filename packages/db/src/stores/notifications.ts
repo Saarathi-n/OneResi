@@ -1,5 +1,5 @@
 import type { Db } from '../client.js';
-import type { NotificationsStore } from '@oneresi/domain';
+import type { NotificationsStore } from '@grihaone/domain';
 import { toNotification, toPushSubscription } from './shared.js';
 
 /**

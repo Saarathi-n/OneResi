@@ -1,4 +1,4 @@
-# OneResi — Rebuild Plan
+# GrihaOne — Rebuild Plan
 
 Read in this order.
 
@@ -26,8 +26,8 @@ Fargate task ever bills.
 | Path | Role |
 |---|---|
 | `C:\Developer\Learning\...\DA-related` | **Constraint.** The SRS, 29 use cases, ER model, DDL, UML, and the DA1 deck. What was promised to the teacher. Read-only input to this plan. |
-| `C:\Developer\Code\OneResi` | The current build. Source of the defect register. Becomes reference-only. |
-| `C:\Developer\Code\OneResi - Copy` | This repo. Where the rebuild lands. Currently holds only `docs/`. |
+| `C:\Developer\Code\GrihaOne` | The current build. Source of the defect register. Becomes reference-only. |
+| `C:\Developer\Code\GrihaOne - Copy` | This repo. Where the rebuild lands. Currently holds only `docs/`. |
 
 ## Decisions taken in this plan
 
@@ -55,9 +55,9 @@ document named.
 
 Answer these when convenient; nothing in phase 0 is blocked on them.
 
-1. **This repo has only `docs/`** — no `app/`, no `infra/`. Was `OneResi - Copy` meant as a
+1. **This repo has only `docs/`** — no `app/`, no `infra/`. Was `GrihaOne - Copy` meant as a
    clean slate for the rebuild, or did the copy not finish? I am planning for a clean slate
-   here with `OneResi` as reference. Say if you want it the other way round.
+   here with `GrihaOne` as reference. Say if you want it the other way round.
 2. **ADR 0003 is still "Proposed · awaiting Ashvin's decision"** and the code has already
    drifted from it in both directions. I am treating it as accepted. Confirm and I will mark
    it so, or amend it.

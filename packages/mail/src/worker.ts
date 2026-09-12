@@ -1,4 +1,4 @@
-import { getDb, type Db } from '@oneresi/db';
+import { getDb, type Db } from '@grihaone/db';
 import { describeError, isPermanent } from './errors.js';
 import { decodeMailJob } from './payload.js';
 import { deliver, selectProvider } from './providers/index.js';

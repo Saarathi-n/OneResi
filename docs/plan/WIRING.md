@@ -28,20 +28,20 @@ install happens at integration. Concurrent installs corrupt the lockfile.
 
 Everything meets at two places and nowhere else.
 
-**`@oneresi/contracts`** — enumerations with display labels, `Paise`, Zod schemas, limits, state
+**`@grihaone/contracts`** — enumerations with display labels, `Paise`, Zod schemas, limits, state
 machines. Already built. This is the only vocabulary shared across streams. If two streams need to
 agree on a value, it belongs here, and it is a request rather than an edit.
 
-**`@oneresi/domain` service interfaces** — `packages/domain/src/ports.ts`. Every use case is a
+**`@grihaone/domain` service interfaces** — `packages/domain/src/ports.ts`. Every use case is a
 function taking a validated input and an actor, returning a result or a typed domain error. Route
 handlers call these; nothing else contains a rule.
 
 ```
 apps/web ─┐
-          ├─→ @oneresi/domain ─→ @oneresi/db ─→ sqlite | postgresql
+          ├─→ @grihaone/domain ─→ @grihaone/db ─→ sqlite | postgresql
 apps/app ─┘         │
-                    └─→ outbox row ─→ @oneresi/mail worker ─→ console | SES
-   both ────────────→ @oneresi/ui  (no data access, ever)
+                    └─→ outbox row ─→ @grihaone/mail worker ─→ console | SES
+   both ────────────→ @grihaone/ui  (no data access, ever)
 ```
 
 ## Rules that hold across every stream

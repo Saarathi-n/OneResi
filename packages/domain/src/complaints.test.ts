@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import { complaintsService } from './complaints.js';
 import type { Clock } from './clock.js';
 import type {
@@ -286,7 +286,7 @@ const ADMIN: Actor = {
   name: 'Committee Chair',
   role: 'A',
   unitId: null,
-  email: 'chair@oneresi.in',
+  email: 'chair@grihaone.in',
 };
 
 const GUARD: Actor = {
@@ -311,7 +311,7 @@ function seededWorld(store: MemoryComplaintStore): { unitId: number; otherUnitId
   store.seedResident(unitId, 'Vikram Rao', 'vikram@example.com');
   store.seedResident(otherUnitId, 'Priya Sharma', 'priya@example.com');
   // The committee desk's actor is a person row too, so update rows can be attributed.
-  store.seedPerson(902, 'Committee Chair', 'chair@oneresi.in');
+  store.seedPerson(902, 'Committee Chair', 'chair@grihaone.in');
   return { unitId, otherUnitId };
 }
 

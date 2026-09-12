@@ -6,8 +6,8 @@ import {
   RelativeTime,
   Skeleton,
   useToast,
-} from '@oneresi/ui';
-import { formatCalendarDate, type PASS_STATUS } from '@oneresi/contracts';
+} from '@grihaone/ui';
+import { formatCalendarDate, type PASS_STATUS } from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 import { call } from '@/lib/session';
 import { useFetch, type FetchState } from '@/lib/useFetch';
@@ -160,7 +160,7 @@ export default function VisitorsPage() {
 
   async function handleSharePass() {
     const cleanCode = activeCodeDisplay;
-    const text = `OneResi Gate Pass for ${activePassVisitor}\nPass code: ${cleanCode}\nShow this code to security at the main gate for Flat A-101.`;
+    const text = `GrihaOne Gate Pass for ${activePassVisitor}\nPass code: ${cleanCode}\nShow this code to security at the main gate for Flat A-101.`;
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({

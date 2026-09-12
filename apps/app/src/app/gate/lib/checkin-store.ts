@@ -19,7 +19,7 @@ export interface OpenCheckIn {
   readonly checkedInAt: string;
 }
 
-const STORAGE_KEY = 'oneresi.gate.checkins.v1';
+const STORAGE_KEY = 'grihaone.gate.checkins.v1';
 
 interface StoredDay {
   readonly date: string;
@@ -92,7 +92,7 @@ export function removeOpenCheckIn(passId: number): void {
 }
 
 /** The last unit a walk-in was logged for, so the next one starts one tap from done. */
-const WALK_IN_PREFILL_KEY = 'oneresi.gate.walkin.v1';
+const WALK_IN_PREFILL_KEY = 'grihaone.gate.walkin.v1';
 
 export interface WalkInPrefill {
   readonly blockId: number;

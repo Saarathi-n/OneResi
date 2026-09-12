@@ -1,10 +1,10 @@
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import type { Db, Prisma } from '../client.js';
 import type {
   BillingStore,
   OutboxEventInput,
   StoredInvoice,
-} from '@oneresi/domain';
+} from '@grihaone/domain';
 import {
   isUniqueViolation,
   invoiceInclude,

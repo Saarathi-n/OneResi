@@ -48,7 +48,7 @@ confirmation, and re-read both sides afterwards to verify every registry row con
 
 Two dialect differences would have made this painful, and both are removed by decisions that are better
 anyway. Money becomes integer paise, so there is no `Decimal`. Enumerations become string unions in
-`@oneresi/contracts`, stored as `String` and validated by Zod at the edges, because Prisma cannot
+`@grihaone/contracts`, stored as `String` and validated by Zod at the edges, because Prisma cannot
 express an `enum` on SQLite — the generator refuses a base schema containing one, along with `Decimal`,
 `Json`, `Bytes`, scalar lists and `@db.*` attributes. No `CHECK` constraint is emitted on either engine:
 the column is text on both, the request boundary is where a bad value is refused, and the enumeration

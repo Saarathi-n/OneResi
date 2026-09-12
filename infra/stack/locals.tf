@@ -49,7 +49,7 @@ locals {
   # bought, which is what makes the `Secure` session cookie work with nothing purchased (D-08).
   app_url = local.use_custom_domain ? "https://${var.app_domain}" : "https://${aws_cloudfront_distribution.app.domain_name}"
 
-  # SSM lives under /oneresi/<environment>/ and the task role is scoped to exactly that subtree.
+  # SSM lives under /grihaone/<environment>/ and the task role is scoped to exactly that subtree.
   ssm_prefix     = "/${var.project_name}/${var.environment}"
   ssm_arn_prefix = "arn:${local.partition}:ssm:${var.aws_region}:${local.account_id}:parameter/${var.project_name}/${var.environment}"
 

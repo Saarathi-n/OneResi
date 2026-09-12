@@ -25,4 +25,4 @@ export const MARK_PATH = `${HOUSE}${NUMERAL}`;
 export const MARK_VIEW_BOX = '0 0 24 24';
 
 /** The product name, spelled one way, in one place. */
-export const WORDMARK = 'OneResi';
+export const WORDMARK = 'GrihaOne';

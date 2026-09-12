@@ -16,8 +16,8 @@ import {
   Skeleton,
   Textarea,
   useToast,
-} from '@oneresi/ui';
-import { ANNOUNCEMENT_CATEGORY, type AnnouncementCategory } from '@oneresi/contracts';
+} from '@grihaone/ui';
+import { ANNOUNCEMENT_CATEGORY, type AnnouncementCategory } from '@grihaone/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 
@@ -43,7 +43,7 @@ const CATEGORIES = Object.keys(ANNOUNCEMENT_CATEGORY).map((value) => ({
 }));
 
 /** The category published last time — notices usually travel in the same channel. */
-const CATEGORY_KEY = 'oneresi.notice.category';
+const CATEGORY_KEY = 'grihaone.notice.category';
 
 export default function AnnouncementsPage() {
   const notices = useFetch<readonly NoticeLine[]>('/api/notices');

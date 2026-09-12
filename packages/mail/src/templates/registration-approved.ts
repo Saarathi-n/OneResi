@@ -39,7 +39,7 @@ function compose(vars: RegistrationApprovedVars): Block[] {
   ];
 }
 
-export const subject = (): string => 'Your OneResi account is ready';
+export const subject = (): string => 'Your GrihaOne account is ready';
 
 export const text = (vars: RegistrationApprovedVars, context: RenderContext): string =>
   renderText(compose(vars), context);

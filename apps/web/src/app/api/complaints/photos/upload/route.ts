@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ACCEPTED_PHOTO_TYPES, photoVerdict } from '@oneresi/contracts';
+import { ACCEPTED_PHOTO_TYPES, photoVerdict } from '@grihaone/contracts';
 import { actor, toResponse } from '@/server/http';
 
 /**
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // The one rule, stated once in @oneresi/contracts so the form and the tests read the same
+  // The one rule, stated once in @grihaone/contracts so the form and the tests read the same
   // verdict the route does (UC-06 step 4). The count arrives with the upload so a fourth photo
   // is refused here, not at the submit the photos precede.
   const already = Number(form?.get('already') ?? '0');

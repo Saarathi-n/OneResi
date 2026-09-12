@@ -111,7 +111,7 @@ resource "aws_db_instance" "main" {
   allow_major_version_upgrade = false
   apply_immediately           = local.allow_destructive
 
-  db_name               = "oneresi"
+  db_name               = "grihaone"
   username              = var.db_username
   allocated_storage     = var.db_allocated_storage
   max_allocated_storage = var.db_max_allocated_storage

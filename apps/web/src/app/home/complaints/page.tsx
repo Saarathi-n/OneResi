@@ -16,7 +16,7 @@ import {
   StatusPill,
   Textarea,
   useToast,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import {
   COMPLAINT_CATEGORIES,
   COMPLAINT_CATEGORY,
@@ -25,7 +25,7 @@ import {
   type ComplaintCategory,
   type ComplaintPriority,
   type ComplaintStatus,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 
@@ -37,7 +37,7 @@ import { useFetch } from '@/lib/useFetch';
 
 const COMPLAINTS_PATH = '/api/complaints';
 
-const CATEGORY_KEY = 'oneresi.complaint.category';
+const CATEGORY_KEY = 'grihaone.complaint.category';
 
 function loadLastCategory(): ComplaintCategory | null {
   if (typeof window === 'undefined') return null;

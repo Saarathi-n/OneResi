@@ -1,4 +1,4 @@
-import { OUTBOX_EVENT_TYPES, type OutboxEventType } from '@oneresi/contracts';
+import { OUTBOX_EVENT_TYPES, type OutboxEventType } from '@grihaone/contracts';
 import { asObject, emailAddress, optStr } from './decode.js';
 import { PayloadError } from './errors.js';
 import { isTemplateId, type MailJob, type TemplateId } from './types.js';
@@ -15,7 +15,7 @@ import { isTemplateId, type MailJob, type TemplateId } from './types.js';
  *
  * ```json
  * {
- *   "to":       { "email": "priya@oneresi.local", "name": "Priya Menon" },
+ *   "to":       { "email": "priya@grihaone.local", "name": "Priya Menon" },
  *   "template": "invoice.raised",
  *   "vars":     { "recipientName": "Priya Menon", "amountPaise": 480000, "dueOn": "2026-09-15" }
  * }

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Card, Field, Input, Money, Sheet, StatusPill, Tabs, useToast } from '@oneresi/ui';
-import * as C from '@oneresi/contracts';
+import { Button, Card, Field, Input, Money, Sheet, StatusPill, Tabs, useToast } from '@grihaone/ui';
+import * as C from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
@@ -22,7 +22,7 @@ import type { BookingWire, FacilityWire, SlotWire } from '@/lib/types';
  * a train.
  */
 
-const DATE_KEY = 'oneresi.facility.date';
+const DATE_KEY = 'grihaone.facility.date';
 
 export default function FacilitiesPage(): ReactNode {
   const reduced = useReducedMotion();

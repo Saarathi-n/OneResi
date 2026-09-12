@@ -1,4 +1,4 @@
-# OneResi — a design prompt for every page
+# GrihaOne — a design prompt for every page
 
 One copy-paste prompt per page, for the UI agent working in this repository. Each prompt is
 self-contained: the standing rules, the page's job, its data, and one strong creative direction.
@@ -8,7 +8,7 @@ Work them in any order; each ends verified.
 
 ## Standing rules (baked into every prompt, stated once here)
 
-> You are restyling ONE page of OneResi, a residential society app for Indian gated communities.
+> You are restyling ONE page of GrihaOne, a residential society app for Indian gated communities.
 > Hard rules: (0) before implementing or modifying any UI, inspect the corresponding visual reference
 > in `docs/reference-images/` (cataloged in `docs/reference-images/README.md`) as the gold standard for
 > layout, spacing, and hierarchy; (1) every color, radius, shadow and type size comes from
@@ -16,12 +16,12 @@ Work them in any order; each ends verified.
 > fails the build if any user-visible string contains UC-xx, D-xx, BCSE, 24BCE, Seeded, Mock, Simulated
 > or Coursework — the UI must read like a real product; (3) money is `paise` integers rendered through
 > the `Money` component (₹ with Indian digit grouping), dates through `formatCalendarDate`/`formatPeriod`
-> from `@oneresi/contracts`, relative times through `RelativeTime`; (4) every interactive state exists:
+> from `@grihaone/contracts`, relative times through `RelativeTime`; (4) every interactive state exists:
 > loading (`Skeleton`), empty (`EmptyState` that teaches a first action), error (`ErrorState` with
 > retry); (5) motion has weight — use the existing `useMotion()` and transition variants, extend
 > them, never invent a second motion system, and respect `prefers-reduced-motion`; (6) finish with
-> `pnpm --filter @oneresi/web typecheck` (or `@oneresi/app`), `pnpm lint`, `pnpm check:copy` — all
-> green, no new dependencies, no `lucide-react` in apps (use `@oneresi/ui` and the app's own
+> `pnpm --filter @grihaone/web typecheck` (or `@grihaone/app`), `pnpm lint`, `pnpm check:copy` — all
+> green, no new dependencies, no `lucide-react` in apps (use `@grihaone/ui` and the app's own
 > `components/icons.tsx`).
 
 ---

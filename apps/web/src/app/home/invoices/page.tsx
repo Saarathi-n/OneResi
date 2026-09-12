@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Dialog, EmptyState, ErrorState, Skeleton, useToast } from '@oneresi/ui';
+import { Button, Dialog, EmptyState, ErrorState, Skeleton, useToast } from '@grihaone/ui';
 import {
   formatPeriod,
   formatMoney,
   paise,
   idempotencyKey,
   type PaymentMethod,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { call, usePerson } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 
@@ -29,7 +29,7 @@ import { useFetch } from '@/lib/useFetch';
  */
 
 const INVOICES_PATH = '/api/billing/invoices';
-const METHOD_KEY = 'oneresi.payment.method';
+const METHOD_KEY = 'grihaone.payment.method';
 
 interface InvoiceLine {
   id: number;

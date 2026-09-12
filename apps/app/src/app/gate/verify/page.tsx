@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Card } from '@oneresi/ui';
+import { Button, Card } from '@grihaone/ui';
 import { Shell } from '@/components/Shell';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { call } from '@/lib/api';

@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card, Field, Input, Money, Sheet, Skeleton, StatusPill, useToast } from '@oneresi/ui';
-import * as C from '@oneresi/contracts';
+import { Button, Card, Field, Input, Money, Sheet, Skeleton, StatusPill, useToast } from '@grihaone/ui';
+import * as C from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 import { Shell } from '@/components/Shell';
 import { simple } from '@/lib/api';

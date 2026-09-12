@@ -61,7 +61,7 @@ resource "aws_lb_listener" "http" {
     fixed_response {
       content_type = "text/plain"
       status_code  = "403"
-      message_body = "Requests to OneResi go through its HTTPS address."
+      message_body = "Requests to GrihaOne go through its HTTPS address."
     }
   }
 }

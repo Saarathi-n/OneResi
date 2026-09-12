@@ -20,7 +20,7 @@ node_modules
 **/*.tsbuildinfo
 .turbo
 
-# Local database and generated Prisma artefacts. `pnpm --filter @oneresi/db generate` recreates the
+# Local database and generated Prisma artefacts. `pnpm --filter @grihaone/db generate` recreates the
 # schemas and clients inside the image.
 .data
 packages/db/prisma/generated

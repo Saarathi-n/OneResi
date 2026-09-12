@@ -1,7 +1,7 @@
-import { accountStore, getDb, type Db } from '@oneresi/db';
+import { accountStore, getDb, type Db } from '@grihaone/db';
 import { describeError, isPermanent, PayloadError } from './errors.js';
 import { asObject, emailAddress } from './decode.js';
-import type { OutboxChannel, OutboxEventType } from '@oneresi/contracts';
+import type { OutboxChannel, OutboxEventType } from '@grihaone/contracts';
 import { consoleLogger, type Logger } from './types.js';
 import {
   DEFAULT_BATCH_SIZE,
@@ -20,7 +20,7 @@ import {
  * the backoff come from `worker.ts`, so all three channels agree about what five attempts mean.
  *
  * The wording is a callback, not an import. The layering rule keeps packages/mail from importing
- * @oneresi/domain — the in-app notification's words are the domain's business — so the
+ * @grihaone/domain — the in-app notification's words are the domain's business — so the
  * composition root (runtime.ts, or the Lambda) supplies the function. The types below are
  * structural: the domain's `inAppNotification(event)` satisfies `InAppWording` because every
  * field lines up, and no package boundary is crossed to say so.

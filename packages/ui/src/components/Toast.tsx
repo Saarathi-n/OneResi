@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Tone } from '@oneresi/contracts';
+import type { Tone } from '@grihaone/contracts';
 import { cn } from '../internal/cn.js';
 import { toneMarkClass } from '../internal/tone.js';
 import { toastVariants } from '../motion/transitions.js';

@@ -42,7 +42,7 @@ function stackDir(): string {
 }
 
 /** The stack's own name — `project_name`-`environment`, the prefix every resource carries. */
-const STACK_NAME = 'oneresi-dev';
+const STACK_NAME = 'grihaone-dev';
 const STACK_DIR = stackDir();
 const ACCOUNT_ID = '215671569291';
 const REGION = 'ap-south-1';

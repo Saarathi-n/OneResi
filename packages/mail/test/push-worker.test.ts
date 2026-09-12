@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Db } from '@oneresi/db';
+import type { Db } from '@grihaone/db';
 import { collectingLogger } from '../src/testing.js';
 import { backoffMs, MAX_ATTEMPTS } from '../src/worker.js';
 import {
@@ -27,8 +27,8 @@ import { testDatabase } from '../../../test/helpers/database.js';
  * drain's own job, not the dispatcher's.
  */
 
-const EMAIL = 'priya@oneresi.local';
-const OTHER_EMAIL = 'arjun@oneresi.local';
+const EMAIL = 'priya@grihaone.local';
+const OTHER_EMAIL = 'arjun@grihaone.local';
 
 let db: Db;
 let nowMs: number;

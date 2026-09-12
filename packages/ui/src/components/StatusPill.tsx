@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Descriptor } from '@oneresi/contracts';
+import type { Descriptor } from '@grihaone/contracts';
 import { cn } from '../internal/cn.js';
 import { toneMarkClass, toneSoftClass, toneSolidClass } from '../internal/tone.js';
 
@@ -8,7 +8,7 @@ import { toneMarkClass, toneSoftClass, toneSolidClass } from '../internal/tone.j
  *
  * It takes the descriptor rather than the value, so there is no path by which a raw enumeration
  * member reaches the screen and no component has to guess a colour: the label and the tone both
- * come from the enumeration's own map in `@oneresi/contracts`.
+ * come from the enumeration's own map in `@grihaone/contracts`.
  *
  *   <StatusPill descriptor={INVOICE_STATUS[invoice.status]} />
  */

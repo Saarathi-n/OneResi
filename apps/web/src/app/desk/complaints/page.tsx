@@ -14,7 +14,7 @@ import {
   Textarea,
   useToast,
   cn,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import {
   COMPLAINT_CATEGORY,
   COMPLAINT_STATUS,
@@ -22,7 +22,7 @@ import {
   type ComplaintCategory,
   type ComplaintPriority,
   type ComplaintStatus,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 

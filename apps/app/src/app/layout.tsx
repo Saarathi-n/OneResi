@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { ToastProvider } from '@oneresi/ui';
+import { ToastProvider } from '@grihaone/ui';
 import './globals.css';
 import { SessionProvider } from '@/lib/session';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
@@ -7,16 +7,16 @@ import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 /**
  * The installable app's root. Every PWA property the previous build lacked lives here (D-62):
  * the manifest, the icon set, the theme colour, the standalone display, and the Apple web-app
- * metas — so "Add to Home Screen" produces OneResi, not a browser bookmark.
+ * metas — so "Add to Home Screen" produces GrihaOne, not a browser bookmark.
  */
 export const metadata: Metadata = {
-  title: 'OneResi',
-  applicationName: 'OneResi',
+  title: 'GrihaOne',
+  applicationName: 'GrihaOne',
   description: 'Maintenance dues, visitor passes, complaints and gate approvals for your community.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'OneResi',
+    title: 'GrihaOne',
     statusBarStyle: 'default',
   },
   icons: {

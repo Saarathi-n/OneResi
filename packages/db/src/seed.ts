@@ -28,7 +28,7 @@
  * created, role 'A', status ACTIVE. Registration grants the first-ever account immediate
  * membership and queues everyone after it (packages/domain/src/accounts.ts), so as long as the
  * committee exists and is ACTIVE, the post-seed registration queue behaves exactly as the
- * runbook documents. `vikram@oneresi.in` and `kabir.chowdhury@gmail.com` sit in that queue, the
+ * runbook documents. `vikram@grihaone.in` and `kabir.chowdhury@gmail.com` sit in that queue, the
  * first with a live registration claim for a flat that is not on the register yet.
  *
  * The password is generated or set through SEED_PASSWORD, hashed once with bcrypt, and written on
@@ -40,7 +40,7 @@
  * file adds the newer months' rows and leaves the older ones alone.
  */
 import { hash } from 'bcryptjs';
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import { getDb, liveTarget } from './client.js';
 import type { Db } from './client.js';
 import { hoursTouched } from './stores/shared.js';
@@ -193,7 +193,7 @@ const PEOPLE: readonly PersonSpec[] = [
 
   // The registration queue. The committee's approve/decline flow has a live claim (a flat that is
   // not on the register yet) and a plain application on an existing unit to work on.
-  { email: 'vikram@oneresi.in', name: 'Vikram Verma', phone: '+919845832290', role: 'R', status: 'PENDING', unitLabel: null, joinedDay: -3 },
+  { email: 'vikram@grihaone.in', name: 'Vikram Verma', phone: '+919845832290', role: 'R', status: 'PENDING', unitLabel: null, joinedDay: -3 },
   { email: 'kabir.chowdhury@gmail.com', name: 'Kabir Chowdhury', phone: '+919978145206', role: 'R', status: 'PENDING', unitLabel: 'A-404', joinedDay: -1 },
   // A declined application stays in the register forever, with its claim stamped by the committee.
   { email: 'nikhil.bansal@gmail.com', name: 'Nikhil Bansal', phone: '+919971428536', role: 'R', status: 'REJECTED', unitLabel: null, joinedDay: -9 },
@@ -1045,7 +1045,7 @@ async function seedPeople(db: Db, units: ReadonlyMap<string, UnitRow>): Promise<
 
   // The registration queue's paperwork. One live claim per applicant (userId is unique); a claim
   // is never deleted, and a declined one keeps its stamps.
-  const vikramId = personIdOf(people, 'vikram@oneresi.in');
+  const vikramId = personIdOf(people, 'vikram@grihaone.in');
   await db.registrationClaim.upsert({
     where: { userId: vikramId },
     update: {},

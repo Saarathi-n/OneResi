@@ -1,6 +1,6 @@
 # 01 — Defect Register
 
-Every architectural mistake found in `C:\Developer\Code\OneResi`, with evidence. Paths are
+Every architectural mistake found in `C:\Developer\Code\GrihaOne`, with evidence. Paths are
 relative to that directory. 80 entries in four severities.
 
 - **S1** — the deployment does not work, or security/money is broken outright. 18 entries.
@@ -22,7 +22,7 @@ The three that explain most of the rest, if you only read a few:
 ### D-01 · Anyone becomes Admin from the public home page
 `src/app/page.tsx:33,149`, `src/app/(auth)/login/page.tsx:67`, `src/app/(auth)/register/page.tsx:103`
 
-Three separate copies of a client-side call that posts `admin@oneresi.local` with the literal
+Three separate copies of a client-side call that posts `admin@grihaone.local` with the literal
 password `Password@123`. On the home page it is a card labelled "Admin Control Desk". On the
 login page it appears as "Switch to Admin Desk to Review & Approve Now" when a pending user
 fails to sign in. On the registration success screen it is the primary button.
@@ -148,7 +148,7 @@ policy, image built and pushed before the service is updated.
 ### D-10 · Database master password in plaintext, in three places
 `infra/variables.tf:25-30`, `infra/compute.tf:83-85`, `infra/outputs.tf:6-10`
 
-`db_password` carries a committed default of `OneResiSecurePass2026!`. The value is
+`db_password` carries a committed default of `GrihaOneSecurePass2026!`. The value is
 interpolated into a plain `environment` entry on the container definition, so it is readable in
 the ECS console, in `describe-task-definition`, and in every retained task revision. Because
 it is a Terraform variable it is also written into `terraform.tfstate`, which is local and
@@ -687,7 +687,7 @@ Some of these drifts are improvements — `start_time`/`end_time` is better than
 and `priority` is a reasonable addition. The problem is that none of them are recorded, so the
 report's ER figure and the running schema disagree with no errata list.
 
-**Fix** — decide each one, regenerate `oneresi_ddl.sql` from the decision, and extend the delta
+**Fix** — decide each one, regenerate `grihaone_ddl.sql` from the decision, and extend the delta
 tables in `data-model.md` so the difference is documented rather than discovered.
 
 ### D-47 · Deleting an administrator deletes the financial and audit history
@@ -740,8 +740,8 @@ Headings, buttons, tab labels and modal titles carry them: "Resident Registratio
 (UC-19)", "GATE APPROVAL REQUIRED (UC-05)", "Cancel Slot (UC-12)", "Receipt (UC-10)", "Simulated
 Online Payment (ADR 0002)", "Rapid Pass Verification (UC-14)", "Log Walk-in Visitor (UC-16)".
 
-They are in email subject lines too: `OneResi - Password Reset Request (UC-03)`, `[OneResi Notice]
-… (UC-24)`, `OneResi - Maintenance Invoice for 2026-09 (UC-21)`.
+They are in email subject lines too: `GrihaOne - Password Reset Request (UC-03)`, `[GrihaOne Notice]
+… (UC-24)`, `GrihaOne - Maintenance Invoice for 2026-09 (UC-21)`.
 
 A security guard at a gate sees requirement identifiers on the buttons. This single pattern is
 the strongest signal that the application is a coursework artifact rather than a product, and it
@@ -1108,9 +1108,9 @@ Verified with the 1.15.8 binary: `infra/bootstrap` formats, initialises with `-b
 **validates clean**.
 
 ### D-80 · This repository has only `docs/`
-`C:\Developer\Code\OneResi - Copy`
+`C:\Developer\Code\GrihaOne - Copy`
 
-No `app/`, no `infra/`. The code and the Terraform are in `C:\Developer\Code\OneResi`. Open
+No `app/`, no `infra/`. The code and the Terraform are in `C:\Developer\Code\GrihaOne`. Open
 question 1 in the README.
 
 
@@ -1171,6 +1171,6 @@ link. Navigation works today because a click on the inner button bubbles to the 
 shape is a Button that can render as a link (an `as`/`asChild` prop on the UI library's Button) or
 links carrying the button's classes directly.
 
-**Fixed** — the second shape: `buttonClass()` in @oneresi/ui exports the Button's look as pure
+**Fixed** — the second shape: `buttonClass()` in @grihaone/ui exports the Button's look as pure
 classes, in a module without `use client` so server components (the marketing landing) can call
 it; all nineteen nesting sites are real anchors carrying those classes now.

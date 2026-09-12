@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import type { OutboxEventInput } from '@oneresi/domain';
+import type { OutboxEventInput } from '@grihaone/domain';
 import type { Db } from '../client.js';
 import { visitorStore } from './visitors.js';
 

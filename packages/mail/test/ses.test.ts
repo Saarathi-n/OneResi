@@ -45,8 +45,8 @@ vi.mock('@aws-sdk/client-sesv2', async (importOriginal) => {
 
 function aRequest(overrides: Partial<SendRequest> = {}): SendRequest {
   return {
-    to: 'priya@oneresi.local',
-    from: 'OneResi <no-reply@oneresi.test>',
+    to: 'priya@grihaone.local',
+    from: 'GrihaOne <no-reply@grihaone.test>',
     subject: 'Maintenance for September 2026',
     text: 'Your maintenance bill for September 2026 is ready.',
     html: '<p>Your maintenance bill for September 2026 is ready.</p>',
@@ -62,7 +62,7 @@ beforeEach(() => {
 
 describe('the client it builds', () => {
   it('constructs its client in the configured region, once, lazily', async () => {
-    const provider = createSesProvider({ region: 'ap-south-1', configurationSetName: 'oneresi-mail' });
+    const provider = createSesProvider({ region: 'ap-south-1', configurationSetName: 'grihaone-mail' });
 
     expect(constructed).toHaveLength(0); // nothing happens until the first send
     const first = await provider.send(aRequest());
@@ -78,7 +78,7 @@ describe('the client it builds', () => {
   it('falls back to the environment region when none is given', async () => {
     vi.stubEnv('AWS_REGION', 'eu-west-1');
     try {
-      const provider = createSesProvider({ configurationSetName: 'oneresi-mail' });
+      const provider = createSesProvider({ configurationSetName: 'grihaone-mail' });
       await provider.send(aRequest());
       expect(constructed[0].config).toEqual({ region: 'eu-west-1' });
     } finally {
@@ -92,7 +92,7 @@ describe('the command it sends', () => {
     const recording = recordingSesClient();
     const provider = createSesProvider({
       client: recording.client,
-      configurationSetName: 'oneresi-mail',
+      configurationSetName: 'grihaone-mail',
     });
 
     const result = await provider.send(aRequest());
@@ -102,11 +102,11 @@ describe('the command it sends', () => {
     const input = recording.sent[0];
 
     // The source identity, from configuration, not a guess.
-    expect(input.FromEmailAddress).toBe('OneResi <no-reply@oneresi.test>');
+    expect(input.FromEmailAddress).toBe('GrihaOne <no-reply@grihaone.test>');
     // Exactly one recipient. `toEqual` means there is no Cc or Bcc anywhere (D-29).
-    expect(input.Destination).toEqual({ ToAddresses: ['priya@oneresi.local'] });
+    expect(input.Destination).toEqual({ ToAddresses: ['priya@grihaone.local'] });
     // The configuration set whose event destination is the whole point of tier 3.
-    expect(input.ConfigurationSetName).toBe('oneresi-mail');
+    expect(input.ConfigurationSetName).toBe('grihaone-mail');
 
     expect(input.Content).toEqual({
       Simple: {
@@ -132,7 +132,7 @@ describe('the command it sends', () => {
     const recording = recordingSesClient({ messageIdPrefix: 'out' });
     const provider = createSesProvider({
       client: recording.client,
-      configurationSetName: 'oneresi-mail',
+      configurationSetName: 'grihaone-mail',
     });
 
     const result = await provider.send(aRequest());
@@ -146,7 +146,7 @@ describe('what SES says back', () => {
     rejected.name = 'MessageRejected';
     const provider = createSesProvider({
       client: recordingSesClient({ failWith: rejected }).client,
-      configurationSetName: 'oneresi-mail',
+      configurationSetName: 'grihaone-mail',
     });
 
     await expect(provider.send(aRequest())).rejects.toMatchObject({
@@ -160,7 +160,7 @@ describe('what SES says back', () => {
     const throttled = new Error('Too Many Requests');
     const provider = createSesProvider({
       client: recordingSesClient({ failWith: throttled }).client,
-      configurationSetName: 'oneresi-mail',
+      configurationSetName: 'grihaone-mail',
     });
 
     await expect(provider.send(aRequest())).rejects.toMatchObject({
@@ -173,7 +173,7 @@ describe('what SES says back', () => {
   it('refuses a response that carries no message id', async () => {
     const provider = createSesProvider({
       client: { send: () => Promise.resolve({}) },
-      configurationSetName: 'oneresi-mail',
+      configurationSetName: 'grihaone-mail',
     });
 
     await expect(provider.send(aRequest())).rejects.toMatchObject({
@@ -192,14 +192,14 @@ describe('the environment it reads', () => {
   });
 
   it('requires the configuration set, because its event destination is what tier 3 reads', () => {
-    expect(sesConfigurationSet({ SES_CONFIGURATION_SET: 'oneresi-mail' })).toBe('oneresi-mail');
+    expect(sesConfigurationSet({ SES_CONFIGURATION_SET: 'grihaone-mail' })).toBe('grihaone-mail');
     expect(() => sesConfigurationSet({})).toThrow(/SES_CONFIGURATION_SET is not set/);
   });
 
   it('requires a sending identity whenever mail really leaves the machine', () => {
     expect(() => mailFrom({ EMAIL_DRIVER: 'ses' })).toThrow(/MAIL_FROM is not set/);
-    expect(mailFrom({ MAIL_FROM: 'no-reply@oneresi.in' })).toBe('no-reply@oneresi.in');
+    expect(mailFrom({ MAIL_FROM: 'no-reply@grihaone.in' })).toBe('no-reply@grihaone.in');
     // Console mode keeps a reserved local address, which cannot reach a real mailbox.
-    expect(mailFrom({})).toBe('OneResi <no-reply@oneresi.local>');
+    expect(mailFrom({})).toBe('GrihaOne <no-reply@grihaone.local>');
   });
 });

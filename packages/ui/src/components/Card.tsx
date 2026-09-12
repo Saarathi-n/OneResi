@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
-import type { Tone } from '@oneresi/contracts';
+import type { Tone } from '@grihaone/contracts';
 import { cn } from '../internal/cn.js';
 import { toneMarkClass } from '../internal/tone.js';
 import { controlVariants } from '../motion/transitions.js';

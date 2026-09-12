@@ -1,6 +1,6 @@
 {
-  "name": "OneResi",
-  "short_name": "OneResi",
+  "name": "GrihaOne",
+  "short_name": "GrihaOne",
   "description": "Maintenance dues, visitor passes, complaints and gate approvals for your residential community.",
   "start_url": "/a/",
   "scope": "/a/",

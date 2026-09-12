@@ -1,4 +1,4 @@
-import type * as C from '@oneresi/contracts';
+import type * as C from '@grihaone/contracts';
 import type {
   Block,
   Complaint,
@@ -28,7 +28,7 @@ import type {
   StoredPushSubscription,
   StoredVisitorLog,
   StoredVisitorPass,
-} from '@oneresi/domain';
+} from '@grihaone/domain';
 
 /**
  * The Prisma implementations of the domain's store ports (`packages/domain/src/store.ts`).
@@ -36,7 +36,7 @@ import type {
  * Everything here answers one question per method: does this query do what its port claims, on
  * SQLite AND on PostgreSQL? The factories return objects annotated with the port interface, so a
  * field mismatch is a compile error — that is the whole reason `packages/db` depends on
- * `@oneresi/domain` instead of the other way round.
+ * `@grihaone/domain` instead of the other way round.
  *
  * Conventions the whole module keeps:
  *

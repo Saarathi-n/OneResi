@@ -1,4 +1,4 @@
-import type { Db } from '@oneresi/db';
+import type { Db } from '@grihaone/db';
 import { describeError, isPermanent } from '../errors.js';
 import { mailDriver, mailFrom } from '../env.js';
 import { createConsoleProvider } from './console.js';
@@ -36,7 +36,7 @@ import type {
  * The SES module is loaded on demand — the same shape `packages/db` uses for its two Prisma clients —
  * so a local run in console mode never pulls the AWS SDK into the process at all, and the AWS build
  * loads exactly one provider. Callers that want a specific provider synchronously can construct it
- * themselves: `createConsoleProvider()`, or `createSesProvider()` from `@oneresi/mail/providers/ses`.
+ * themselves: `createConsoleProvider()`, or `createSesProvider()` from `@grihaone/mail/providers/ses`.
  */
 const cache: Partial<Record<MailDriver, Promise<MailProvider>>> = {};
 

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Skeleton, ErrorState } from '@oneresi/ui';
+import { Skeleton, ErrorState } from '@grihaone/ui';
 import type { AsyncState } from '../hooks/useAsync';
 
 /**

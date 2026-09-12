@@ -55,7 +55,7 @@ browser ──HTTPS──> CloudFront ──HTTP──> ALB ──> Fargate task
 ```
 
 If you do buy a domain, the same distribution takes an ACM certificate validated automatically by
-a Route 53 record, and you get `oneresi.in` instead of a CloudFront hostname. Same Terraform, one
+a Route 53 record, and you get `grihaone.in` instead of a CloudFront hostname. Same Terraform, one
 variable.
 
 ## The stack
@@ -135,7 +135,7 @@ The seed is convergent (D-45), so this is safe on every apply, not just the firs
   cost.
 - **A task role** with least privilege: `s3:GetObject`/`PutObject` on one bucket prefix,
   `sns:Publish` on one topic, `ses:SendEmail` scoped to the verified identity, `ssm:GetParameters`
-  on `/oneresi/*`, `secretsmanager:GetSecretValue` on the RDS secret. Without this nothing can
+  on `/grihaone/*`, `secretsmanager:GetSecretValue` on the RDS secret. Without this nothing can
   reach any AWS service (D-11).
 - `deployment_circuit_breaker` with rollback, and a container health check, so a crash-looping
   task fails the deploy instead of succeeding forever.

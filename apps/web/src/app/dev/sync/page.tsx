@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button, Card, CardBody, CardHeader, Skeleton } from '@oneresi/ui';
+import { Badge, Button, Card, CardBody, CardHeader, Skeleton } from '@grihaone/ui';
 import { call } from '@/lib/session';
 
 /**

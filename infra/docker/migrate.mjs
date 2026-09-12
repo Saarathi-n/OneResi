@@ -17,8 +17,8 @@
 import { spawnSync } from 'node:child_process';
 
 const steps = [
-  { label: 'prisma migrate deploy', args: ['--filter', '@oneresi/db', 'migrate'] },
-  { label: 'seed', args: ['--filter', '@oneresi/db', 'seed'] },
+  { label: 'prisma migrate deploy', args: ['--filter', '@grihaone/db', 'migrate'] },
+  { label: 'seed', args: ['--filter', '@grihaone/db', 'seed'] },
 ];
 
 if (process.env.DB_TARGET !== 'cloud') {

@@ -40,13 +40,13 @@ SQLite is the live target). `pnpm bootstrap` runs it for you.
 For authoring a new migration there is a package-level script the root does not re-export:
 
 ```bash
-pnpm --filter @oneresi/db migrate:dev
+pnpm --filter @grihaone/db migrate:dev
 ```
 
 ### Local and cloud sync
 
 Three scripts in `scripts/`, all of which take the cloud side from `DATABASE_URL` and the local side
-from `LOCAL_DB_FILE` (default `.data/oneresi.db`). They move the property registry — blocks, units
+from `LOCAL_DB_FILE` (default `.data/grihaone.db`). They move the property registry — blocks, units
 and facilities — and nothing else. Accounts, sessions, tokens, notifications, receipts and outbox
 rows have no second home and are never read or written by a sync.
 
@@ -101,7 +101,7 @@ pnpm cloud:env     # print the export line for DATABASE_URL (from stack outputs 
 will use it:
 
 ```bash
-export DATABASE_URL='postgresql://...@...ap-south-1.rds.amazonaws.com/oneresi?sslmode=require'
+export DATABASE_URL='postgresql://...@...ap-south-1.rds.amazonaws.com/grihaone?sslmode=require'
 export DB_TARGET=cloud
 ```
 
@@ -230,7 +230,7 @@ are what you set when you step outside that.
 |---|---|---|
 | `DB_TARGET` | `local` (default) \| `cloud` | Which database is live. One target, chosen at boot, never failover. |
 | `DATABASE_URL` | PostgreSQL URL | The cloud side. Required when `DB_TARGET=cloud` and by all three sync scripts; must be a PostgreSQL URL carrying `sslmode=require`. |
-| `LOCAL_DB_FILE` | path | The SQLite file. Default `.data/oneresi.db`. The sync scripts accept it to point at a different local file. |
+| `LOCAL_DB_FILE` | path | The SQLite file. Default `.data/grihaone.db`. The sync scripts accept it to point at a different local file. |
 | `TEST_DATABASE_URL` | PostgreSQL URL | The throwaway database for the PostgreSQL half of the parity run. |
 
 ### Applications
@@ -347,15 +347,15 @@ pnpm db:seed        # the seed is an explicit second command; reset does not run
 `db:reset` is destructive on purpose and prints the target before dropping anything. Against the
 cloud target it wipes RDS just as thoroughly as it wipes the local file — the same one-target rule
 as every other script in the package. The nuclear option for local data is simply deleting
-`.data/oneresi.db` and running `pnpm bootstrap` again.
+`.data/grihaone.db` and running `pnpm bootstrap` again.
 
 ## Troubleshooting
 
 **There is no root `pnpm dev` script — the front ends start individually.**
 
 ```bash
-pnpm --filter @oneresi/web dev
-pnpm --filter @oneresi/app dev
+pnpm --filter @grihaone/web dev
+pnpm --filter @grihaone/app dev
 ```
 
 **Port 3000 or 3001 already in use.** Both dev servers take fixed ports, and `apps/app` assumes the

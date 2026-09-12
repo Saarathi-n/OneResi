@@ -1,4 +1,4 @@
-import { formatMoney, moneyInWords, type Paise } from '@oneresi/contracts';
+import { formatMoney, moneyInWords, type Paise } from '@grihaone/contracts';
 import { RenderError } from './errors.js';
 
 /**

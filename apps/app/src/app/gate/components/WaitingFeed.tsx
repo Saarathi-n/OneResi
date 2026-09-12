@@ -2,8 +2,8 @@
 
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
-import { APPROVAL_STATUS } from '@oneresi/contracts';
-import { Badge, Button, Card, RelativeTime, StatusPill } from '@oneresi/ui';
+import { APPROVAL_STATUS } from '@grihaone/contracts';
+import { Badge, Button, Card, RelativeTime, StatusPill } from '@grihaone/ui';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { useAsync } from '@/hooks/useAsync';
 import { usePolling } from '@/hooks/usePolling';

@@ -55,7 +55,7 @@ export function digestOf(schema) {
 
 /** Constructs the base schema forbids, because they are not portable across both providers. */
 const FORBIDDEN = [
-  [/^\s*enum\s+\w+\s*\{/m, 'enum blocks — SQLite has none; use a string union from @oneresi/contracts'],
+  [/^\s*enum\s+\w+\s*\{/m, 'enum blocks — SQLite has none; use a string union from @grihaone/contracts'],
   [/@db\.\w+/, '@db.* native type attributes — provider specific by definition'],
   [/\bDecimal\b/, 'Decimal — behaves differently on SQLite; use Int paise'],
   [/\bJson\b/, 'Json — unsupported on SQLite; store JSON as String'],

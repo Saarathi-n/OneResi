@@ -1,4 +1,4 @@
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import type { Clock } from './clock.js';
 import { ok, type ReportsService } from './ports.js';
 import { errors } from './errors.js';

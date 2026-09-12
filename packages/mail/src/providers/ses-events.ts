@@ -3,7 +3,7 @@ import {
   ReceiveMessageCommand,
   SQSClient,
 } from '@aws-sdk/client-sqs';
-import type { Db } from '@oneresi/db';
+import type { Db } from '@grihaone/db';
 import { sesEventQueueUrl } from '../env.js';
 
 /**

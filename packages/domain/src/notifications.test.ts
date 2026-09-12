@@ -145,7 +145,7 @@ function anActor(overrides: Partial<{ userId: number; email: string }> = {}) {
     name: 'Priya Menon',
     role: 'R',
     unitId: null,
-    email: 'priya@oneresi.local',
+    email: 'priya@grihaone.local',
     ...overrides,
   } as const;
 }
@@ -158,7 +158,7 @@ function aPushEvent(
     channel: 'PUSH',
     payload: {
       name: 'Priya Menon',
-      email: 'priya@oneresi.local',
+      email: 'priya@grihaone.local',
       visitorName: 'Ravi',
       purpose: 'Delivery',
     },
@@ -202,7 +202,7 @@ describe('pushNotification', () => {
         type: 'pass.created',
         payload: {
           name: 'Priya Menon',
-          email: 'priya@oneresi.local',
+          email: 'priya@grihaone.local',
           visitorName: 'Meera',
           validOn: '2026-09-10T00:00:00.000Z',
           purpose: 'Guest',
@@ -220,7 +220,7 @@ describe('pushNotification', () => {
         type: 'complaint.raised',
         payload: {
           name: 'Priya Menon',
-          email: 'priya@oneresi.local',
+          email: 'priya@grihaone.local',
           category: 'PLUMBING',
           subject: 'Kitchen tap',
         },
@@ -376,7 +376,7 @@ describe('dispatchPush', () => {
 describe('subscribe', () => {
   it("stores the caller's subscription, and re-claims the row when the same endpoint returns", async () => {
     const { service, store } = aService();
-    const other = anActor({ userId: 2, email: 'arjun@oneresi.local' });
+    const other = anActor({ userId: 2, email: 'arjun@grihaone.local' });
 
     await service.subscribe(anActor(), {
       endpoint: aSubscription().endpoint,

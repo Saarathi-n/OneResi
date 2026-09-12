@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Card } from '@oneresi/ui';
+import { Card } from '@grihaone/ui';
 import { Icon, type IconName } from '@/components/icons';
 import { Shell } from '@/components/Shell';
 import { useReducedMotion } from '@/hooks/useReducedMotion';

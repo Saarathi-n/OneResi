@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Db } from '@oneresi/db';
+import type { Db } from '@grihaone/db';
 import { encodeMailJob } from '../src/payload.js';
 import { createSesProvider } from '../src/providers/ses.js';
 import {
@@ -34,9 +34,9 @@ import { testDatabase } from '../../../test/helpers/database.js';
  */
 
 const ORIGIN = 'https://app.example.test';
-const FROM = 'OneResi <no-reply@oneresi.test>';
-const TO = 'priya@oneresi.local';
-const CONFIGURATION_SET = 'oneresi-mail';
+const FROM = 'GrihaOne <no-reply@grihaone.test>';
+const TO = 'priya@grihaone.local';
+const CONFIGURATION_SET = 'grihaone-mail';
 
 let db: Db;
 let nowMs: number;
@@ -408,7 +408,7 @@ describe('requeueFailed', () => {
 
   it('requeues only the named ids', async () => {
     const kept = await aFailedRow();
-    const alsoFailed = await aFailedRow({ payload: anInvoiceJob('someone-else@oneresi.local') });
+    const alsoFailed = await aFailedRow({ payload: anInvoiceJob('someone-else@grihaone.local') });
 
     const count = await requeueFailed({ db, ids: [kept], now: clock });
     expect(count).toBe(1);

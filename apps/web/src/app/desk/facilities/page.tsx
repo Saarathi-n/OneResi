@@ -17,8 +17,8 @@ import {
   Skeleton,
   Textarea,
   useToast,
-} from '@oneresi/ui';
-import { paise, rupees } from '@oneresi/contracts';
+} from '@grihaone/ui';
+import { paise, rupees } from '@grihaone/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 

@@ -105,7 +105,7 @@ function checkDependencies() {
       missing.push(name);
     }
   }
-  for (const workspace of ['@oneresi/contracts', '@oneresi/db']) {
+  for (const workspace of ['@grihaone/contracts', '@grihaone/db']) {
     if (!existsSync(join(repoRoot, 'node_modules', ...workspace.split('/'))))
       missing.push(workspace);
   }
@@ -166,7 +166,7 @@ function seed() {
 const LOCAL_URL = 'http://localhost:3000';
 
 function summary(accounts) {
-  const databaseFile = join(repoRoot, '.data', 'oneresi.db');
+  const databaseFile = join(repoRoot, '.data', 'grihaone.db');
   const webApp = existsSync(join(repoRoot, 'apps', 'web'));
 
   out();
@@ -190,16 +190,16 @@ function summary(accounts) {
 
   out(
     webApp
-      ? `  web       pnpm --filter @oneresi/web dev  →  ${LOCAL_URL}`
+      ? `  web       pnpm --filter @grihaone/web dev  →  ${LOCAL_URL}`
       : `  web       ${LOCAL_URL} once apps/web is scaffolded; until then: pnpm verify`,
   );
-  out('  app       pnpm --filter @oneresi/app dev  →  http://localhost:3001/a');
+  out('  app       pnpm --filter @grihaone/app dev  →  http://localhost:3001/a');
   out();
 }
 
 function main() {
   out();
-  out('  OneResi — local bootstrap');
+  out('  GrihaOne — local bootstrap');
   out();
   checkNode();
   checkDependencies();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import { accountsService } from './accounts.js';
 import { joseAccessToken } from './access-token.js';
 import type { AccessTokenSigner } from './access-token.js';

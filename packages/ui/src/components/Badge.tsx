@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Tone } from '@oneresi/contracts';
+import type { Tone } from '@grihaone/contracts';
 import { cn } from '../internal/cn.js';
 import { toneSoftClass, toneSolidClass } from '../internal/tone.js';
 

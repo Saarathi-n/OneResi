@@ -18,7 +18,7 @@ streams: neither invents a path.
   `userAgent` from the request header, `correlationId` from `x-request-id` or generated. Meta rides
   every service call that takes one — it is what the outbox correlates by.
 - **Tokens.** Access token: `Authorization: Bearer <jwt>`, held in client memory only (15-minute
-  TTL). Refresh token: httpOnly `oneresi_rt` cookie, `SameSite=Lax`, `Path=/api/auth`, 14 days.
+  TTL). Refresh token: httpOnly `grihaone_rt` cookie, `SameSite=Lax`, `Path=/api/auth`, 14 days.
   Cross-origin in dev means the app's fetches set `credentials: 'include'`.
 - **Error mapping** — one `toResponse` helper, shared shape `{ code, message, field? }`:
   `UNAUTHENTICATED` → 401, `FORBIDDEN` → 403, `NOT_FOUND` → 404, `INVALID_INPUT` → 400,
@@ -45,7 +45,7 @@ streams: neither invents a path.
 | POST | `/api/auth/password/reset-complete` | `C.CompletePasswordResetInput` | `accounts.completePasswordReset` | public |
 | GET | `/api/registration/options` | — | `property.registrationOptions()` | public |
 
-Sign-in and refresh set the `oneresi_rt` cookie; sign-out clears it. Register is the one public
+Sign-in and refresh set the `grihaone_rt` cookie; sign-out clears it. Register is the one public
 write — everyone after the first account queues as PENDING (D-01).
 
 ## Registration queue (committee)
@@ -133,7 +133,7 @@ rides the upload so a fourth photo is refused before the form is submitted.
 | DELETE | `/api/notices/[id]` | — | `notices.withdraw(actor, id)` | role A |
 | GET | `/api/notifications` | — | `notifications.unread(actor)` | signed in |
 | POST | `/api/notifications/read` | body `{ ids: number[] }` | `notifications.markRead(actor, ids)` | signed in |
-| GET | `/api/push/key` | — | `pushPublicKey()` from `@oneresi/mail` | public |
+| GET | `/api/push/key` | — | `pushPublicKey()` from `@grihaone/mail` | public |
 | POST | `/api/push/subscribe` | `C.PushSubscribeInput` | `notifications.subscribe(actor, input)` | signed in |
 | POST | `/api/push/unsubscribe` | `C.PushUnsubscribeInput` | `notifications.unsubscribe(actor, input)` | signed in |
 

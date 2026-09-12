@@ -33,7 +33,7 @@ export function appOrigin(env: Env = process.env): string {
     env,
     'APP_ORIGIN',
     'Every link in an email is built from it. Set it to the origin the app is served from, ' +
-      'for example https://app.oneresi.in — there is no fallback.',
+      'for example https://app.grihaone.in — there is no fallback.',
   );
 
   let parsed: URL;
@@ -80,7 +80,7 @@ export function mailDriver(env: Env = process.env): MailDriver {
 }
 
 /** Reserved by RFC 6762, so a stray local send cannot reach a real mailbox. */
-const LOCAL_FROM = 'OneResi <no-reply@oneresi.local>';
+const LOCAL_FROM = 'GrihaOne <no-reply@grihaone.local>';
 
 /**
  * The sending identity. Required whenever mail really leaves the machine, because SES rejects an
@@ -210,7 +210,7 @@ export function vapidSettings(env: Env = process.env): VapidSettings {
   const subject = required(
     env,
     'VAPID_SUBJECT',
-    'A mailto: address for the push service to reach you on, e.g. mailto:admin@oneresi.in. ' +
+    'A mailto: address for the push service to reach you on, e.g. mailto:admin@grihaone.in. ' +
       'Generate the keypair with: pnpm push:keys',
   );
   if (!subject.startsWith('mailto:')) {

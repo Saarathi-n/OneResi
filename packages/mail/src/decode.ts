@@ -1,4 +1,4 @@
-import { paise, type Paise } from '@oneresi/contracts';
+import { paise, type Paise } from '@grihaone/contracts';
 import { PayloadError } from './errors.js';
 
 /**
@@ -86,7 +86,7 @@ export function bool(source: Record<string, unknown>, key: string, fallback: boo
   return value;
 }
 
-/** An enumeration from `@oneresi/contracts`, so a template cannot be handed a value outside it. */
+/** An enumeration from `@grihaone/contracts`, so a template cannot be handed a value outside it. */
 export function oneOf<const T extends readonly string[]>(
   source: Record<string, unknown>,
   key: string,
@@ -99,7 +99,7 @@ export function oneOf<const T extends readonly string[]>(
   return value as T[number];
 }
 
-/** A billing period, `YYYY-MM`, matching `Period` in `@oneresi/contracts`. */
+/** A billing period, `YYYY-MM`, matching `Period` in `@grihaone/contracts`. */
 export function period(source: Record<string, unknown>, key: string): string {
   const value = str(source, key, 7);
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) fail(key, 'a period such as 2026-09', value);

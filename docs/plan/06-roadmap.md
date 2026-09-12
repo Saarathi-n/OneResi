@@ -93,7 +93,7 @@ misidentified.
 
 ## Phase 7 — Report artifacts
 
-Regenerate `oneresi_ddl.sql` from the delivered schema. Complete the errata tables in
+Regenerate `grihaone_ddl.sql` from the delivered schema. Complete the errata tables in
 `data-model.md`, including everything in D-46. Accept or amend ADR 0003 and record the five decisions
 from 02. A new ADR for the local-plus-cloud dual target, and one for the enumeration extension.
 Screenshots from the finished product. A traceability table mapping all 28 use cases to their tests.

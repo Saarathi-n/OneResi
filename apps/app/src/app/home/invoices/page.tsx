@@ -11,8 +11,8 @@ import {
   Sheet,
   StatusPill,
   useToast,
-} from '@oneresi/ui';
-import * as C from '@oneresi/contracts';
+} from '@grihaone/ui';
+import * as C from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
@@ -38,7 +38,7 @@ const RESIDENT_METHODS = (['UPI', 'CARD', 'NETBANKING'] as const).map((method) =
   label: C.PAYMENT_METHOD[method].label,
 }));
 
-const METHOD_KEY = 'oneresi.payment.method';
+const METHOD_KEY = 'grihaone.payment.method';
 
 function loadLastMethod(): C.PaymentMethod {
   if (typeof window === 'undefined') return 'UPI';

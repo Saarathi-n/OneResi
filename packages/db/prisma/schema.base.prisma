@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-//  OneResi — base schema. ONE source, TWO providers.
+//  GrihaOne — base schema. ONE source, TWO providers.
 //
 //  scripts/generate-schemas.mjs emits prisma/sqlite/schema.prisma and
 //  prisma/postgresql/schema.prisma from this file. The ONLY difference between
@@ -7,12 +7,12 @@
 //  absolute:
 //
 //    - no `enum` blocks         Prisma cannot express one on SQLite.
-//                               Enumerations live in @oneresi/contracts and are
+//                               Enumerations live in @grihaone/contracts and are
 //                               stored as String, validated by Zod at the edges.
 //    - no `Decimal`, `Json`,
 //      `Bytes`, or `String[]`   These differ, or do not exist, across the two.
 //    - no `@db.*` attributes    Native types are per-provider by definition.
-//    - money is `Int` paise     See @oneresi/contracts/money.
+//    - money is `Int` paise     See @grihaone/contracts/money.
 //
 //  A test asserts the two generated files differ only in the datasource block.
 //  See docs/plan/02-architecture.md and 05-testing.md.
@@ -51,7 +51,7 @@ model Unit {
   blockId Int
   /// "A-101", "PLOT-104". Unique within its block.
   label   String
-  /// UnitType from @oneresi/contracts.
+  /// UnitType from @grihaone/contracts.
   type    String
   /// Snapshotted onto every invoice, never joined at read time.
   monthlyChargePaise Int
@@ -81,9 +81,9 @@ model ResidentUser {
   phone  String
   /// bcrypt, cost 12. Never selected outside the auth service.
   passwordHash String
-  /// Role from @oneresi/contracts: R, A, S.
+  /// Role from @grihaone/contracts: R, A, S.
   role   String  @default("R")
-  /// UserStatus from @oneresi/contracts.
+  /// UserStatus from @grihaone/contracts.
   status String  @default("PENDING")
 
   /// Set on every password change. A token issued before this is refused, which is how
@@ -129,7 +129,7 @@ model RegistrationClaim {
   userId    Int     @unique
   blockName String
   unitLabel String
-  /// UnitType from @oneresi/contracts.
+  /// UnitType from @grihaone/contracts.
   unitType  String
   note      String?
   /// The unit the claim became on approval. Null until then, and on decline.
@@ -167,7 +167,7 @@ model VisitorPass {
   code        String @unique
   /// The day the pass is good for. Date only; stored at UTC midnight.
   validOn     DateTime
-  /// PassStatus from @oneresi/contracts.
+  /// PassStatus from @grihaone/contracts.
   status      String @default("ACTIVE")
   /// Set on the transition into CANCELLED. The status says a pass died; this says when, which is
   /// what the port asks for and what "why is my old pass still listed" needs.

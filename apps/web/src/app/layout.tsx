@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { ToastProvider } from '@oneresi/ui';
+import { ToastProvider } from '@grihaone/ui';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'OneResi',
+  title: 'GrihaOne',
   description: 'Community management that residents actually use.',
 };
 

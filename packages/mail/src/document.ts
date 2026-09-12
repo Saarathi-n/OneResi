@@ -62,7 +62,7 @@ function wrap(text: string, width = WRAP_AT): string {
   return lines.join('\n');
 }
 
-const SIGN_OFF = 'OneResi';
+const SIGN_OFF = 'GrihaOne';
 const FOOTER =
   'You are getting this because you have an account for your residents’ association.';
 
@@ -214,7 +214,7 @@ export function renderHtml(blocks: readonly Block[], context: RenderContext): st
   return (
     `<div style="${S.page}">` +
     `<div style="${S.card}">` +
-    `<div style="${S.brand}">ONERESI</div>` +
+    `<div style="${S.brand}">GRIHAONE</div>` +
     body +
     `</div>` +
     `<div style="${S.footer}">` +

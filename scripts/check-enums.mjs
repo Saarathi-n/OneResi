@@ -7,7 +7,7 @@
  * hardcoded lists — so `BHK1`, a unit *type*, was treated as a warning status, and `IN_PROGRESS`
  * fell through to the default blue (D-55).
  *
- * Every enumeration in @oneresi/contracts carries a label map beside it, and rule 2 of
+ * Every enumeration in @grihaone/contracts carries a label map beside it, and rule 2 of
  * docs/plan/WIRING.md says the interface renders that label and never the value. This gate reads
  * the tuples from the contracts source itself, so a new enumeration is covered the moment it is
  * added and there is no second list to maintain.

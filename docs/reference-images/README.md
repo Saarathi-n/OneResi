@@ -1,6 +1,6 @@
-# OneResi UI Reference Images
+# GrihaOne UI Reference Images
 
-This directory contains production-grade visual reference designs for the OneResi UI revamp, designed specifically to accompany [docs/UI-PAGE-PROMPTS.md](../UI-PAGE-PROMPTS.md) and [packages/ui/src/tokens.css](../../packages/ui/src/tokens.css).
+This directory contains production-grade visual reference designs for the GrihaOne UI revamp, designed specifically to accompany [docs/UI-PAGE-PROMPTS.md](../UI-PAGE-PROMPTS.md) and [packages/ui/src/tokens.css](../../packages/ui/src/tokens.css).
 
 Any IAI agent or developer restyling pages should inspect these images as the gold standard for layout density, color harmony, typography hierarchy, and material feel.
 
@@ -8,7 +8,7 @@ Any IAI agent or developer restyling pages should inspect these images as the go
 
 ## Design System Rules & Tokens
 
-All screens strictly follow the OneResi design tokens from `packages/ui/src/tokens.css`:
+All screens strictly follow the GrihaOne design tokens from `packages/ui/src/tokens.css`:
 
 - **Material & Surfaces**:
   - Base canvas: Warm paper (`--surface`: `#f5f2ea`)

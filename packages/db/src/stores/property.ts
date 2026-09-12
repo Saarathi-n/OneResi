@@ -1,5 +1,5 @@
 import type { Db } from '../client.js';
-import type { PropertyStore } from '@oneresi/domain';
+import type { PropertyStore } from '@grihaone/domain';
 import {
   isRecordMissing,
   isUniqueViolation,

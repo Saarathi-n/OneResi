@@ -15,12 +15,12 @@
  * (the same assembly the app container's entrypoint does in shell) and never rides an environment
  * variable.
  */
-import { cloudDatabaseUrlFromParts } from '@oneresi/db';
-import { getDb, closeDb, accountStore, notificationsStore, visitorStore } from '@oneresi/db';
-import { drainOutbox } from '@oneresi/mail/worker';
-import { drainPushOutbox } from '@oneresi/mail/push-worker';
-import { drainInAppOutbox } from '@oneresi/mail/in-app-worker';
-import { applySesEvents, decodeSesEvent, type RawMessage } from '@oneresi/mail/providers/ses-events';
+import { cloudDatabaseUrlFromParts } from '@grihaone/db';
+import { getDb, closeDb, accountStore, notificationsStore, visitorStore } from '@grihaone/db';
+import { drainOutbox } from '@grihaone/mail/worker';
+import { drainPushOutbox } from '@grihaone/mail/push-worker';
+import { drainInAppOutbox } from '@grihaone/mail/in-app-worker';
+import { applySesEvents, decodeSesEvent, type RawMessage } from '@grihaone/mail/providers/ses-events';
 import {
   billingService,
   complaintsService,
@@ -32,9 +32,9 @@ import {
   propertyService,
   visitorsService,
   type PushTransport,
-} from '@oneresi/domain';
-import { createWebPushTransport } from '@oneresi/mail/providers/webpush';
-import { pushDriver } from '@oneresi/mail';
+} from '@grihaone/domain';
+import { createWebPushTransport } from '@grihaone/mail/providers/webpush';
+import { pushDriver } from '@grihaone/mail';
 
 // A throw inside a domain call is a value the drains already contain; a throw out of the handler
 // is the batch failing. Only unexpected breakage reaches that far, which is exactly what the

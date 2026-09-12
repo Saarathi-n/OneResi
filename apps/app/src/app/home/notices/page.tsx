@@ -2,8 +2,8 @@
 
 import { useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { Badge, Card, RelativeTime } from '@oneresi/ui';
-import * as C from '@oneresi/contracts';
+import { Badge, Card, RelativeTime } from '@grihaone/ui';
+import * as C from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';

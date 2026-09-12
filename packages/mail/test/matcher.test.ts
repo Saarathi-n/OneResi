@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Db } from '@oneresi/db';
+import type { Db } from '@grihaone/db';
 import { MailAssertionError } from '../src/errors.js';
 import { expectMail, resetMailTesting, setMailTestDatabase } from '../src/testing.js';
 import { testDatabase } from '../../../test/helpers/database.js';
@@ -17,8 +17,8 @@ import { testDatabase } from '../../../test/helpers/database.js';
  * tables so a "nothing was sent" assertion means exactly that.
  */
 
-const TO = 'priya@oneresi.local';
-const FROM = 'OneResi <no-reply@oneresi.test>';
+const TO = 'priya@grihaone.local';
+const FROM = 'GrihaOne <no-reply@grihaone.test>';
 const SUBJECT = 'Maintenance for September 2026';
 const VARIABLES = JSON.stringify({
   name: 'Priya Menon',
@@ -106,7 +106,7 @@ describe('a passing expectation', () => {
     const id = await aMailRow();
 
     const row = await expectMail()
-      .to('  Priya@Oneresi.Local  ')
+      .to('  Priya@Grihaone.Local  ')
       .withTemplate('invoice.raised')
       .withSubject(/Maintenance for September/)
       .withSubject('Maintenance')
@@ -147,7 +147,7 @@ describe('a passing expectation', () => {
     await aMailRow();
 
     await expectMail().to(TO).toHaveBeenSentTimes(2);
-    await expectMail().to('someone.else@oneresi.local').toHaveNeverBeenSent();
+    await expectMail().to('someone.else@grihaone.local').toHaveNeverBeenSent();
   });
 
   it('reads the database it was handed, without a configured one', async () => {
@@ -166,7 +166,7 @@ describe('a failed expectation', () => {
     await expect(
       expectMail().to(TO).withSubject(/Maintenance for September/).toHaveBeenSentOnce(),
     ).rejects.toThrow(
-      /What is in the table:\s+#\d+ to priya@oneresi\.local · invoice\.raised · "Maintenance for October 2026" · SENT — subject was "Maintenance for October 2026"/,
+      /What is in the table:\s+#\d+ to priya@grihaone\.local · invoice\.raised · "Maintenance for October 2026" · SENT — subject was "Maintenance for October 2026"/,
     );
   });
 
@@ -194,8 +194,8 @@ describe('a failed expectation', () => {
     await aMailRow();
 
     await expect(
-      expectMail().to('someone.else@oneresi.local').toHaveBeenSentOnce(),
-    ).rejects.toThrow(/found 0\.\s+What is in the table:\s+#\d+ to priya@oneresi\.local/);
+      expectMail().to('someone.else@grihaone.local').toHaveBeenSentOnce(),
+    ).rejects.toThrow(/found 0\.\s+What is in the table:\s+#\d+ to priya@grihaone\.local/);
   });
 
   it('counts two when exactly one was wanted', async () => {
@@ -203,7 +203,7 @@ describe('a failed expectation', () => {
     await aMailRow();
 
     await expect(expectMail().to(TO).toHaveBeenSentOnce()).rejects.toThrow(
-      /Expected exactly one message with to priya@oneresi\.local, found 2/,
+      /Expected exactly one message with to priya@grihaone\.local, found 2/,
     );
   });
 
@@ -211,7 +211,7 @@ describe('a failed expectation', () => {
     await aMailRow({ status: 'FAILED', error: 'SES refused the message: throttled' });
 
     await expect(expectMail().to(TO).toHaveBeenSentOnce()).rejects.toThrow(
-      /The message exists but has not gone out: #\d+ to priya@oneresi\.local · invoice\.raised · "Maintenance for September 2026" · FAILED · SES refused the message: throttled/,
+      /The message exists but has not gone out: #\d+ to priya@grihaone\.local · invoice\.raised · "Maintenance for September 2026" · FAILED · SES refused the message: throttled/,
     );
   });
 
@@ -252,7 +252,7 @@ describe('toHaveNoUnsent', () => {
         [
           'Mail is still waiting or has failed:',
           `  outbox #${stuck} invoice\\.raised · PENDING · 2 attempt\\(s\\) · MailDeliveryError: The provider is unavailable`,
-          '#\\d+ to priya@oneresi\\.local · invoice\\.raised · "Maintenance for September 2026" · FAILED · throttled',
+          '#\\d+ to priya@grihaone\\.local · invoice\\.raised · "Maintenance for September 2026" · FAILED · throttled',
         ].join('\\s+'),
       ),
     );
@@ -267,7 +267,7 @@ describe('the escape hatch', () => {
   it('rows() returns everything matching, before any sent-ness judgement', async () => {
     await aMailRow();
     await aMailRow({ status: 'FAILED' });
-    await aMailRow({ toAddress: 'someone.else@oneresi.local' });
+    await aMailRow({ toAddress: 'someone.else@grihaone.local' });
 
     const rows = await expectMail().to(TO).withTemplate('invoice.raised').rows();
     expect(rows).toHaveLength(2);
@@ -279,7 +279,7 @@ describe('the error type', () => {
   it('is a MailAssertionError, so a runner can tell a matcher failure from a bug', async () => {
     await aMailRow();
     try {
-      await expectMail().to('someone.else@oneresi.local').toHaveBeenSentOnce();
+      await expectMail().to('someone.else@grihaone.local').toHaveBeenSentOnce();
       expect.unreachable('the expectation should have thrown');
     } catch (error) {
       expect(error).toBeInstanceOf(MailAssertionError);

@@ -1,5 +1,5 @@
 {
-  "name": "@oneresi/domain",
+  "name": "@grihaone/domain",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
-    "@oneresi/contracts": "workspace:*",
+    "@grihaone/contracts": "workspace:*",
     "bcryptjs": "3.0.2",
     "jose": "6.0.10"
   },

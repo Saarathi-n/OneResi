@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { ReportQuery } from '@oneresi/contracts';
+import { ReportQuery } from '@grihaone/contracts';
 import { services } from '@/server/runtime';
 import { actor, toResponse } from '@/server/http';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import { billingService } from './billing.js';
 import type { Clock } from './clock.js';
 import type {
@@ -350,7 +350,7 @@ const ADMIN: Actor = {
   name: 'Committee Chair',
   role: 'A',
   unitId: null,
-  email: 'chair@oneresi.in',
+  email: 'chair@grihaone.in',
 };
 
 const SYSTEM: SystemActor = { role: 'SYSTEM', reason: 'scheduled overdue run' };

@@ -31,7 +31,7 @@ export interface NetworkFailure {
 export type CallOutcome<T> = ApiResult<T> | { ok: false; error: ApiError; network: true };
 
 /**
- * Where the API lives. Dev: the sibling @oneresi/web app on port 3000, cross-origin. Prod: the
+ * Where the API lives. Dev: the sibling @grihaone/web app on port 3000, cross-origin. Prod: the
  * same container, same origin, served beside this app under /a/ — so an empty base. Set
  * NEXT_PUBLIC_API_BASE to override either.
  */
@@ -48,7 +48,7 @@ export function webOrigin(): string {
 
 // ---------------------------------------------------------------- token plumbing
 
-const APP_SESSION_KEY = 'oneresi.app.session';
+const APP_SESSION_KEY = 'grihaone.app.session';
 
 function hydrateFromStorage(): void {
   if (typeof window === 'undefined') return;

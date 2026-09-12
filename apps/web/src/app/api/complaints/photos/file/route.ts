@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { PHOTO_KEY_SHAPE } from '@oneresi/contracts';
+import { PHOTO_KEY_SHAPE } from '@grihaone/contracts';
 import { actor, toResponse } from '@/server/http';
 
 /**

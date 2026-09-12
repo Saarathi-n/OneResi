@@ -5,7 +5,7 @@ import type { TargetAndTransition } from 'framer-motion';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
-import type { Tone } from '@oneresi/contracts';
+import type { Tone } from '@grihaone/contracts';
 import { cn } from '../internal/cn.js';
 import { toneMarkClass } from '../internal/tone.js';
 import { duration, seconds, toneVar } from '../tokens.js';

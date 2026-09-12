@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Db } from '@oneresi/db';
+import type { Db } from '@grihaone/db';
 import {
   applySesEvents,
   decodeSesEvent,
@@ -22,9 +22,9 @@ import { testDatabase } from '../../../test/helpers/database.js';
  * `complaint` section carrying the reason.
  */
 
-const FROM = 'no-reply@oneresi.test';
+const FROM = 'no-reply@grihaone.test';
 const PROBE = 'probe@example.com';
-const SUBJECT = 'OneResi delivery probe ABC123';
+const SUBJECT = 'GrihaOne delivery probe ABC123';
 const MESSAGE_ID = '0100018c8f3d2a1b-2c3d4e5f-000000';
 
 function sesEventBody(
