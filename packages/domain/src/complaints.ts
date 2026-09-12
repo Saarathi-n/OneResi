@@ -56,6 +56,7 @@ function complaintView(complaint: StoredComplaint): ComplaintView {
     category: complaint.category,
     priority: complaint.priority,
     description: complaint.description,
+    photoKeys: [...complaint.photoKeys],
     status: complaint.status,
     raisedAt: complaint.raisedAt,
     resolvedAt: complaint.resolvedAt,

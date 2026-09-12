@@ -32,7 +32,8 @@ export type IconName =
   | 'calendar'
   | 'car'
   | 'mail'
-  | 'key';
+  | 'key'
+  | 'camera';
 
 const PATHS: Readonly<Record<IconName, ReactNode>> = {
   home: (
@@ -170,6 +171,12 @@ const PATHS: Readonly<Record<IconName, ReactNode>> = {
     <>
       <circle cx="8.5" cy="8.5" r="3.5" />
       <path d="m11 11 8 8M16 16l2-2M18.5 18.5l1.5-1.5" />
+    </>
+  ),
+  camera: (
+    <>
+      <path d="M14.5 4h-5l-1.5 2.5H5A1.5 1.5 0 0 0 3.5 8v9A1.5 1.5 0 0 0 5 18.5h14A1.5 1.5 0 0 0 20.5 17V8A1.5 1.5 0 0 0 19 6.5h-3L14.5 4Z" />
+      <circle cx="12" cy="12.5" r="3.5" />
     </>
   ),
 };

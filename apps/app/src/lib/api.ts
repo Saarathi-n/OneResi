@@ -190,3 +190,45 @@ export async function simple<T>(path: string, init: CallInit = {}): Promise<ApiR
   const outcome = await call<T>(path, init);
   return outcome.ok ? outcome : { ok: false, error: outcome.error };
 }
+
+// ---------------------------------------------------------------- photo upload
+
+/**
+ * One complaint photo, as multipart — the only request the app makes that is not JSON. Validation
+ * lives on the server (type and size per UC-06); the client only reports what it refused. The
+ * `already` count lets the server refuse a fourth photo before the form is submitted.
+ */
+export async function uploadPhoto(
+  file: File,
+  alreadyAttached: number,
+): Promise<{ ok: true; key: string } | { ok: false; message: string }> {
+  const headers: Record<string, string> = {};
+  if (accessToken !== null) headers.authorization = `Bearer ${accessToken}`;
+  const body = new FormData();
+  body.set('photo', file);
+  body.set('already', String(alreadyAttached));
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/api/complaints/photos/upload`, {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body,
+    });
+  } catch {
+    return { ok: false, message: 'You appear to be offline. Check your connection.' };
+  }
+
+  if (response.ok) {
+    const data = (await response.json()) as { key: string };
+    return { ok: true, key: data.key };
+  }
+  const error = (await response.json().catch(() => null)) as { message?: string } | null;
+  return { ok: false, message: error?.message ?? 'That photo could not be attached.' };
+}
+
+/** The URL a stored photo key renders at. */
+export function photoUrl(key: string): string {
+  return `${API_BASE}/api/complaints/photos/file?key=${encodeURIComponent(key)}`;
+}

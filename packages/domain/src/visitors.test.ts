@@ -371,7 +371,7 @@ class MemoryVisitorStore implements VisitorStore {
 
   findLogsForSociety(
     limit: number,
-  ): Promise<readonly (import('./store.js').StoredVisitorEntry & { home: import('./store.js').StoredHome })[]> {
+  ): Promise<readonly (StoredVisitorEntry & { home: StoredHome })[]> {
     // The society feed, the same mapping with every unit's home joined.
     const ordered = [...this.logs]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id - a.id)

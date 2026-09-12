@@ -36,6 +36,8 @@ interface SocietyComplaint {
   readonly category: ComplaintCategory;
   readonly priority: ComplaintPriority;
   readonly description: string;
+  /** S3-style object keys, at most three (UC-06). */
+  readonly photoKeys: readonly string[];
   readonly status: ComplaintStatus;
   readonly raisedAt: string;
   readonly resolvedAt: string | null;
@@ -201,6 +203,25 @@ export default function SocietyComplaintsPage() {
                 </div>
                 <div className="px-4 py-3">
                   <p className="type-body text-content">{complaint.description}</p>
+                  {complaint.photoKeys.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {complaint.photoKeys.map((key) => (
+                        <a
+                          key={key}
+                          href={`/api/complaints/photos/file?key=${encodeURIComponent(key)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block h-16 w-16 overflow-hidden rounded-lg border border-border"
+                        >
+                                                    <img
+                            src={`/api/complaints/photos/file?key=${encodeURIComponent(key)}`}
+                            alt="Attached to this complaint"
+                            className="h-full w-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
                   {isOpen ? (
                     <div className="mt-3 space-y-2 border-t border-border pt-3">
                       {complaint.updates.length === 0 ? (

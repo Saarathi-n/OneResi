@@ -156,6 +156,8 @@ export interface ComplaintView {
   readonly category: C.ComplaintCategory;
   readonly priority: C.ComplaintPriority;
   readonly description: string;
+  /** The attached photo keys, at most three (UC-06). Opaque strings the screens resolve to URLs. */
+  readonly photoKeys: readonly string[];
   readonly status: C.ComplaintStatus;
   readonly raisedAt: Date;
   readonly resolvedAt: Date | null;

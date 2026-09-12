@@ -247,6 +247,10 @@ async function main() {
   check('the committee queue shows the application (and the seeded pending one)', queue.status === 200 && mine !== undefined && seededPending !== undefined, `queue length ${(queue.body ?? []).length}`);
   check('the claim travelled with it', mine?.claim?.blockName === 'E2E Wing' && mine?.claim?.unitLabel === 'E2E-01', JSON.stringify(mine?.claim));
 
+  if (mine === undefined) {
+    check('the application reached the queue', false, 'the queue did not include the e2e account');
+    process.exit(1);
+  }
   const approved = await api(committee, 'POST', '/api/applications/decision', { json: { userId: mine.userId, decision: 'APPROVE' } });
   check('the committee approves the claim', approved.status === 200, JSON.stringify(approved.body));
   const firstSignIn = await signIn(E2E_EMAIL, E2E_PASSWORD);
@@ -343,8 +347,41 @@ async function main() {
 
   // ---------------------------------------------------------------- complaints
   begin('complaints — raise, work, resolve, reopen');
-  const complaint = await api(resident, 'POST', '/api/complaints', { json: { category: 'PLUMBING', priority: 'HIGH', description: 'The kitchen tap has been dripping steadily since yesterday evening.' } });
-  check('a resident raises a complaint', complaint.status === 200 && complaint.body?.id > 0, JSON.stringify(complaint.body)?.slice(0, 160));
+  // One honest JPEG: SOI, an APP0 segment, padding, EOI. The route validates type and size,
+  // not pixels — this is the smallest real fixture a phone could have sent.
+  const jpegBytes = new Uint8Array(256);
+  jpegBytes.set([0xff, 0xd8, 0xff, 0xe0], 0);
+  jpegBytes.set([0xff, 0xd9], 254);
+  const photoForm = new FormData();
+  photoForm.set('photo', new File([jpegBytes], 'tap.jpg', { type: 'image/jpeg' }));
+  photoForm.set('already', '0');
+  const photoHeaders = { authorization: `Bearer ${resident.token}` };
+  const photoUpload = await fetch(`${BASE_URL}/api/complaints/photos/upload`, { method: 'POST', headers: photoHeaders, body: photoForm, credentials: 'include' });
+  const photoKey = photoUpload.status === 200 ? ((await photoUpload.json())?.key ?? null) : null;
+  check('a photo uploads and answers with the key convention', photoKey !== null && /^uploads\/complaints\/[0-9a-f-]{36}\.jpg$/.test(photoKey), String(photoUpload.status));
+
+  const badTypeForm = new FormData();
+  badTypeForm.set('photo', new File(['plain text'], 'notes.txt', { type: 'text/plain' }));
+  badTypeForm.set('already', '0');
+  const badType = await fetch(`${BASE_URL}/api/complaints/photos/upload`, { method: 'POST', headers: photoHeaders, body: badTypeForm, credentials: 'include' });
+  check('a non-image is refused before anything is stored', badType.status === 400, String(badType.status));
+
+  const fourthForm = new FormData();
+  fourthForm.set('photo', new File([jpegBytes], 'tap2.jpg', { type: 'image/jpeg' }));
+  fourthForm.set('already', '3');
+  const fourth = await fetch(`${BASE_URL}/api/complaints/photos/upload`, { method: 'POST', headers: photoHeaders, body: fourthForm, credentials: 'include' });
+  check('a fourth photo is refused before the form is submitted', fourth.status === 409, String(fourth.status));
+
+  const complaint = await api(resident, 'POST', '/api/complaints', { json: { category: 'PLUMBING', priority: 'HIGH', description: 'The kitchen tap has been dripping steadily since yesterday evening.', ...(photoKey === null ? {} : { photoKeys: [photoKey] }) } });
+  check('a resident raises a complaint (with the photo attached)', complaint.status === 200 && complaint.body?.id > 0, JSON.stringify(complaint.body)?.slice(0, 160));
+  if (photoKey !== null) {
+    const fetched = await fetch(`${BASE_URL}/api/complaints/photos/file?key=${encodeURIComponent(photoKey)}`, { headers: { authorization: `Bearer ${resident.token}` } });
+    const back = new Uint8Array(await fetched.arrayBuffer());
+    check('the photo reads back byte for byte', fetched.status === 200 && back.length === 256 && back[0] === 0xff && back[1] === 0xd8, `status ${fetched.status}, ${back.length} bytes`);
+  }
+  const societyPhoto = await api(committee, 'GET', '/api/complaints/society');
+  const withPhotos = (societyPhoto.body ?? []).find((c) => c.id === complaint.body?.id);
+  check('the committee sees the complaint with its photo keys', withPhotos?.photoKeys?.length >= (photoKey === null ? 0 : 1), JSON.stringify(withPhotos?.photoKeys));
   const societyComplaints = await api(committee, 'GET', '/api/complaints/society', { query: { status: 'OPEN' } });
   check('the committee sees it in the open queue', societyComplaints.status === 200 && (societyComplaints.body ?? []).some((c) => c.id === complaint.body.id), `open queue ${(societyComplaints.body ?? []).length}`);
   const inProgress = await api(committee, 'POST', `/api/complaints/${complaint.body.id}/updates`, { json: { complaintId: complaint.body.id, status: 'IN_PROGRESS', note: 'Plumber visits tomorrow morning.' } });
@@ -501,6 +538,37 @@ async function main() {
     const r = await api(who, method, path, ...(json === undefined ? [] : [{ json }]));
     check(name, r.status === 403, `expected 403, got ${r.status} ${JSON.stringify(r.body)?.slice(0, 80)}`);
   }
+
+  // ---------------------------------------------------------------- reports, dashboard, amenities
+  begin('the desk — figures, exports, the amenities register');
+  const dashboard = await api(committee, 'GET', '/api/dashboard');
+  check('the dashboard answers with the period and its figures', dashboard.status === 200 && dashboard.body?.period === NEXT_PERIOD.slice(0, 7) || dashboard.status === 200 && typeof dashboard.body?.collectionsPaise === 'number', JSON.stringify(dashboard.body)?.slice(0, 160));
+  const residentDashboard = await api(resident, 'GET', '/api/dashboard');
+  check('the dashboard is committee-only', residentDashboard.status === 403, `status ${residentDashboard.status}`);
+
+  const duesReport = await api(committee, 'GET', '/api/reports', { query: { kind: 'dues', from: TODAY, to: TODAY } });
+  check('a dues CSV streams with the header and a filename', duesReport.status === 200 && typeof duesReport.body === 'string' && duesReport.body.includes('invoiceId'), String(duesReport.status));
+  const invertedReport = await api(committee, 'GET', '/api/reports', { query: { kind: 'dues', from: TOMORROW, to: TODAY } });
+  check('an inverted range is refused with a readable message', invertedReport.status === 400, `status ${invertedReport.status}`);
+  const complaintsReport = await api(committee, 'GET', '/api/reports', { query: { kind: 'complaints' } });
+  check('a complaints CSV names the raised complaint', complaintsReport.status === 200 && String(complaintsReport.body).includes('The kitchen tap'), String(complaintsReport.status));
+  const visitorReport = await api(committee, 'GET', '/api/reports', { query: { kind: 'visitors' } });
+  check('a visitors CSV names Meera Nair from the walk', visitorReport.status === 200 && String(visitorReport.body).includes('Meera Nair'), String(visitorReport.status));
+  const emptyReport = await api(committee, 'GET', '/api/reports', { query: { kind: 'dues', from: '2020-01-01', to: '2020-01-31' } });
+  check('an empty range is a header-only file, flagged empty', emptyReport.status === 200 && String(emptyReport.body).trim().split(String.fromCharCode(13, 10)).length === 1, String(emptyReport.status));
+
+  const newFacility = await api(committee, 'POST', '/api/facilities/manage', { json: { name: 'E2E Amphitheatre', description: 'The open stage beside the second block, with steps for seating.', opensAt: '16:00', closesAt: '22:00', hourlyRatePaise: 200000 } });
+  check('the committee creates an amenity', newFacility.status === 200 && newFacility.body?.active === true, JSON.stringify(newFacility.body)?.slice(0, 120));
+  const duplicateFacility = await api(committee, 'POST', '/api/facilities/manage', { json: { name: 'E2E Amphitheatre', description: 'The same name twice.', opensAt: '16:00', closesAt: '22:00', hourlyRatePaise: 200000 } });
+  check('a taken name is a conflict', duplicateFacility.status === 409, `status ${duplicateFacility.status}`);
+  const residentCreate = await api(resident, 'POST', '/api/facilities/manage', { json: { name: 'Not theirs to add', description: 'A resident cannot create amenities.', opensAt: '10:00', closesAt: '20:00', hourlyRatePaise: 100000 } });
+  check('only the committee manages amenities', residentCreate.status === 403, `status ${residentCreate.status}`);
+  const retiredFacility = await api(committee, 'PATCH', `/api/facilities/manage/${newFacility.body?.id}`, { json: { facilityId: newFacility.body?.id, active: false } });
+  check('the committee retires it', retiredFacility.status === 200 && retiredFacility.body?.active === false, JSON.stringify(retiredFacility.body)?.slice(0, 120));
+  const residentList = await api(resident, 'GET', '/api/facilities');
+  check('a retired amenity is gone from the resident list', !(residentList.body ?? []).some((f) => f.id === newFacility.body?.id), '');
+  const manageList = await api(committee, 'GET', '/api/facilities/manage');
+  check('the register keeps it, marked retired', (manageList.body ?? []).some((f) => f.id === newFacility.body?.id && f.active === false), '');
 
   // ---------------------------------------------------------------- the outbox, honestly
   begin('the outbox — every row this walk caused has been drained');

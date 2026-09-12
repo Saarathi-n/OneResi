@@ -2,23 +2,12 @@
 
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
-import {
-  Button,
-  Card,
-  Field,
-  PriorityPill,
-  RelativeTime,
-  Select,
-  Sheet,
-  StatusPill,
-  Textarea,
-  useToast,
-} from '@oneresi/ui';
+import { Button, Card, Field, PriorityPill, RelativeTime, Select, Sheet, StatusPill, Textarea, useToast } from '@oneresi/ui';
 import * as C from '@oneresi/contracts';
 import { Icon } from '@/components/icons';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
-import { simple } from '@/lib/api';
+import { simple, uploadPhoto, photoUrl } from '@/lib/api';
 import { RESIDENT_TABS } from '@/lib/tabs';
 import { useAsync } from '@/hooks/useAsync';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -216,6 +205,9 @@ function RaiseSheet({
   const [category, setCategory] = useState<string>('');
   const [priority, setPriority] = useState<string>('MEDIUM');
   const [description, setDescription] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<{ category?: string; description?: string }>({});
 
@@ -237,6 +229,7 @@ function RaiseSheet({
         category,
         priority,
         description: description.trim(),
+        photoKeys: photos,
       },
     });
     setPending(false);
@@ -298,6 +291,51 @@ function RaiseSheet({
               setDescription(event.target.value);
             }}
           />
+        </Field>
+
+        <Field
+          label="Photos"
+          hint="Up to three. The first one is what the committee sees first."
+          error={photoError === null ? undefined : photoError}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {photos.map((key) => (
+              <div key={key} className="relative h-16 w-16 overflow-hidden rounded-lg border border-border">
+                                <img src={photoUrl(key)} alt="Attached" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-overlay text-xs text-white"
+                  aria-label="Remove this photo"
+                  onClick={() => setPhotos((current) => current.filter((k) => k !== key))}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {photos.length < 3 ? (
+              <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-border-strong text-content-subtle">
+                {uploading ? <span className="type-micro">…</span> : <Icon name="camera" size={18} />}
+                <span className="type-micro">Add</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+                    if (file === undefined) return;
+                    setPhotoError(null);
+                    setUploading(true);
+                    void uploadPhoto(file, photos.length).then((outcome) => {
+                      setUploading(false);
+                      if (outcome.ok) setPhotos((current) => [...current, outcome.key]);
+                      else setPhotoError(outcome.message);
+                    });
+                  }}
+                />
+              </label>
+            ) : null}
+          </div>
         </Field>
       </div>
     </Sheet>

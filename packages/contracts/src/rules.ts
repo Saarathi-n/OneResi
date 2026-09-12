@@ -30,6 +30,42 @@ export const COMPLAINT_REOPEN_WINDOW_DAYS = 7;
 /** The submitted model stores photo keys in one column, so three is the ceiling. */
 export const MAX_COMPLAINT_PHOTOS = 3;
 
+/** UC-06 step 4: each photo is validated by type and size. Five megabytes an image. */
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+/**
+ * The photo rule, stated once so the upload route, the form and the tests cannot disagree: which
+ * image types are attachable (what every phone camera produces and every browser opens), the size
+ * ceiling, and the ceiling per complaint. Returns the refusal a person reads, or null when the
+ * file passes — never throws, because a refused photo is a form event, not an exception.
+ */
+export function photoVerdict(input: {
+  readonly type: string;
+  readonly sizeBytes: number;
+  readonly alreadyAttached: number;
+}): { readonly message: string } | null {
+  if (ACCEPTED_PHOTO_TYPES[input.type] === undefined) {
+    return { message: 'Photos have to be JPEG, PNG or WebP.' };
+  }
+  if (input.sizeBytes > MAX_PHOTO_BYTES) {
+    return { message: 'Each photo can be at most 5 MB.' };
+  }
+  if (input.alreadyAttached >= MAX_COMPLAINT_PHOTOS) {
+    return { message: `A complaint can carry at most ${MAX_COMPLAINT_PHOTOS} photos.` };
+  }
+  return null;
+}
+
+/** The image types a complaint photo may arrive as, with the extension each key ends in. */
+export const ACCEPTED_PHOTO_TYPES: Readonly<Record<string, string>> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
+
+/** The shape of a stored photo key — the S3 object-key convention both deployments share. */
+export const PHOTO_KEY_SHAPE = /^uploads\/complaints\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+
 /** A pass may be raised for today or up to this many days ahead. */
 export const MAX_PASS_LEAD_DAYS = 30;
 

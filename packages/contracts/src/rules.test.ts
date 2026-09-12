@@ -6,13 +6,7 @@ import {
   PASS_STATUSES,
   USER_STATUSES,
 } from './enums.js';
-import {
-  BOOKING_TRANSITIONS,
-  COMPLAINT_TRANSITIONS,
-  INVOICE_TRANSITIONS,
-  PASS_TRANSITIONS,
-  USER_TRANSITIONS,
-} from './rules.js';
+import { BOOKING_TRANSITIONS, COMPLAINT_TRANSITIONS, INVOICE_TRANSITIONS, PASS_TRANSITIONS, USER_TRANSITIONS, MAX_PHOTO_BYTES, photoVerdict, PHOTO_KEY_SHAPE } from './rules.js';
 
 /**
  * A status change is a permitted transition, not an assigned string.
@@ -154,5 +148,38 @@ describe('the whole set', () => {
     ).map((m) => m.name);
 
     expect(loopsBackToInitial.sort()).toEqual(['complaint', 'user']);
+  });
+});
+
+// ---------------------------------------------------------------- the photo rule (UC-06)
+
+describe('photoVerdict', () => {
+  it('accepts what every phone camera produces', () => {
+    for (const type of ['image/jpeg', 'image/png', 'image/webp']) {
+      expect(photoVerdict({ type, sizeBytes: 1024, alreadyAttached: 0 })).toBeNull();
+    }
+  });
+
+  it('refuses a non-image type', () => {
+    const verdict = photoVerdict({ type: 'text/plain', sizeBytes: 10, alreadyAttached: 0 });
+    expect(verdict?.message).toContain('JPEG');
+  });
+
+  it('refuses past the five-megabyte ceiling', () => {
+    const verdict = photoVerdict({ type: 'image/jpeg', sizeBytes: MAX_PHOTO_BYTES + 1, alreadyAttached: 0 });
+    expect(verdict?.message).toContain('5 MB');
+  });
+
+  it('refuses a fourth photo', () => {
+    const verdict = photoVerdict({ type: 'image/jpeg', sizeBytes: 1024, alreadyAttached: 3 });
+    expect(verdict?.message).toContain('at most 3');
+  });
+
+  it('the key shape accepts only the uploads convention, refusing traversal', () => {
+    expect(PHOTO_KEY_SHAPE.test('uploads/complaints/0d2f5f1e-4c8b-4a6f-9a1e-2b3c4d5e6f70.jpg')).toBe(true);
+    expect(PHOTO_KEY_SHAPE.test('uploads/complaints/0d2f5f1e-4c8b-4a6f-9a1e-2b3c4d5e6f70.png')).toBe(true);
+    expect(PHOTO_KEY_SHAPE.test('../../etc/passwd')).toBe(false);
+    expect(PHOTO_KEY_SHAPE.test('uploads/complaints/not-a-uuid.jpg')).toBe(false);
+    expect(PHOTO_KEY_SHAPE.test('uploads/complaints/0d2f5f1e-4c8b-4a6f-9a1e-2b3c4d5e6f70.gif')).toBe(false);
   });
 });
