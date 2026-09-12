@@ -148,7 +148,7 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 pb-24 sm:px-6 md:pb-10">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-24 sm:px-6 md:pb-10">
         {children}
       </main>
     </div>
@@ -164,7 +164,7 @@ function ShellSkeleton() {
           <Skeleton variant="circle" width={32} height={32} />
         </div>
       </header>
-      <main className="mx-auto w-full max-w-3xl space-y-4 px-4 py-6 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl space-y-4 px-4 py-6 sm:px-6">
         <Skeleton variant="text" width="60%" height={28} />
         <Skeleton variant="block" height={120} />
         <Skeleton variant="block" height={200} />

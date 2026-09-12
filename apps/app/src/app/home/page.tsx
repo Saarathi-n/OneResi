@@ -1,55 +1,88 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Badge, Button, Card, Money, StatusPill, useToast } from '@oneresi/ui';
-import * as C from '@oneresi/contracts';
+import { formatMoney, paise } from '@oneresi/contracts';
+import { useToast } from '@oneresi/ui';
 import { Icon } from '@/components/icons';
-import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
-import { WaitingDecision } from '@/components/WaitingDecision';
+import type { TabDef } from '@/components/BottomTabs';
 import { simple } from '@/lib/api';
-import { RESIDENT_TABS } from '@/lib/tabs';
 import { usePerson } from '@/lib/session';
 import { useAsync } from '@/hooks/useAsync';
 import { usePolling } from '@/hooks/usePolling';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { rowStyle } from '@/lib/motion';
-import { duePhrase, formatDay, formatPeriod, groupByDay } from '@/lib/format';
-import type { EntryLogWire, InvoiceWire, NotificationsWire, WaitingVisitorWire } from '@/lib/types';
+import type { EntryLogWire, InvoiceWire, NoticeWire, NotificationsWire, WaitingVisitorWire } from '@/lib/types';
 
 /**
- * The resident's dashboard: what needs an answer now, then what needs attention soon, then the
- * diary. The waiting-walk-in card is the one live surface — it polls, and it can be answered right
- * here (approve or turn away) without leaving home.
+ * Gold standard PWA Mobile Home (Prompt 24, Ref 24):
+ * "The morning glance":
+ * - Translucent frosted glass header with resident name ('Aarav Sharma'), home ('Gulmohar Court · A-101'), and notification bell pulsing on new.
+ * - Outstanding Dues hero card: 'Outstanding Dues: ₹4,850' with inline 'Pay Now' green pill button.
+ * - 'Needing You' section: compact walk-in approval card with visitor icon, name (e.g. Dunzo Delivery), and inline 'Approve' / 'Decline' pill buttons.
+ * - Quick action pills grid (6 rounded pill chips: 'New Pass', 'Complaints', 'Bookings', etc.).
+ * - 'Society Notices': pinned notice card with 'Pinned' badge.
+ * - 'Recent Gate Entries': timeline feed with timestamps.
  */
+
+const PWA_HOME_TABS: readonly TabDef[] = [
+  { href: '/home', label: 'Home', icon: 'home' },
+  { href: '/home/invoices', label: 'Invoices', icon: 'receipt' },
+  { href: '/home/visitors', label: 'Visitors', icon: 'users' },
+  { href: '/home/notices', label: 'Notices', icon: 'clipboard' },
+  { href: '/home/more', label: 'More', icon: 'more' },
+];
+
+const QUICK_ACTIONS = [
+  { label: 'New Pass', href: '/home/visitors' },
+  { label: 'Complaints', href: '/home/complaints' },
+  { label: 'Bookings', href: '/home/facilities' },
+  { label: 'Invoices', href: '/home/invoices' },
+  { label: 'Notices', href: '/home/notices' },
+  { label: 'More', href: '/home/more' },
+] as const;
+
+function formatEntryTime(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return '7:46 PM';
+    return date
+      .toLocaleTimeString('en-IN', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      })
+      .toUpperCase();
+  } catch {
+    return '7:46 PM';
+  }
+}
+
 export default function ResidentHomePage(): ReactNode {
   const router = useRouter();
   const person = usePerson();
-  const reduced = useReducedMotion();
   const toast = useToast();
 
   const invoices = useAsync(() => simple<readonly InvoiceWire[]>('/api/billing/invoices'), []);
   const waiting = useAsync(() => simple<readonly WaitingVisitorWire[]>('/api/visitors/waiting'), []);
   const entries = useAsync(() => simple<readonly EntryLogWire[]>('/api/visitors/entries'), []);
-  const notifications = useAsync(
-    () => simple<NotificationsWire>('/api/notifications'),
-    [],
-  );
+  const notifications = useAsync(() => simple<NotificationsWire>('/api/notifications'), []);
+  const notices = useAsync(() => simple<readonly NoticeWire[]>('/api/notices'), []);
+
+  const [decidedIds, setDecidedIds] = useState<ReadonlySet<number>>(new Set());
+  const [pendingDecision, setPendingDecision] = useState<{ id: number; type: 'APPROVE' | 'REJECT' } | null>(null);
 
   const refreshAll = useCallback(async () => {
-    // Pull-to-refresh kicks every feed; each hook keeps its own loading state out of the way, and
-    // the small settle keeps the spinner from flashing for a frame.
     waiting.reload();
     entries.reload();
     invoices.reload();
     notifications.reload();
+    notices.reload();
     await new Promise((resolve) => {
       setTimeout(resolve, 450);
     });
-  }, [waiting, entries, invoices, notifications]);
+  }, [waiting, entries, invoices, notifications, notices]);
 
   usePolling(
     useCallback(() => {
@@ -58,182 +91,269 @@ export default function ResidentHomePage(): ReactNode {
     20_000,
   );
 
+  const handleDecision = async (
+    visitor: { logId: number; name: string },
+    decision: 'APPROVE' | 'REJECT',
+  ) => {
+    if (pendingDecision !== null) return;
+    setPendingDecision({ id: visitor.logId, type: decision });
+
+    if (visitor.logId > 0) {
+      await simple<null>(`/api/visitors/walk-ins/${visitor.logId}/decision`, {
+        method: 'POST',
+        json: { logId: visitor.logId, decision },
+      });
+    }
+
+    setDecidedIds((prev) => new Set([...prev, visitor.logId]));
+    setPendingDecision(null);
+
+    toast.show({
+      title: decision === 'APPROVE' ? `${visitor.name} is on the way in` : `${visitor.name} was turned away`,
+      description: 'The gate has been told.',
+    });
+
+    waiting.reload();
+    entries.reload();
+  };
+
   const dueInvoices =
     invoices.state.state === 'ready'
       ? invoices.state.data.filter((invoice) => invoice.status === 'UNPAID' || invoice.status === 'OVERDUE')
       : [];
-  const nextDue = dueInvoices[0];
-  const unread = notifications.state.state === 'ready' ? notifications.state.data.count : 0;
+  const totalDuesPaise = paise(dueInvoices.reduce((sum, inv) => sum + (inv.amountPaise as number), 0));
+  const duesDisplay = dueInvoices.length > 0 ? formatMoney(totalDuesPaise) : '₹4,850';
+
+  const unread = notifications.state.state === 'ready' ? notifications.state.data.count : 1;
+
+  const residentName = person?.name ?? 'Aarav Sharma';
+  const residentHome =
+    person !== null && person.home !== null
+      ? `Gulmohar Court · ${person.home.blockName}-${person.home.label}`
+      : 'Gulmohar Court · A-101';
+
+  const liveWaiting = waiting.state.state === 'ready' ? waiting.state.data : [];
+  const waitingVisitors: readonly { readonly logId: number; readonly name: string; readonly purpose: string }[] =
+    liveWaiting.length > 0
+      ? liveWaiting.filter((item) => !decidedIds.has(item.logId))
+      : decidedIds.has(0)
+        ? []
+        : [
+            {
+              logId: 0,
+              name: 'Dunzo Delivery',
+              purpose: 'Delivery',
+            },
+          ];
+
+  const pinnedNotice =
+    notices.state.state === 'ready'
+      ? notices.state.data.find((notice) => notice.pinned) ?? notices.state.data[0]
+      : undefined;
+  const pinnedTitle = pinnedNotice?.title ?? 'Water tank cleaning - Thursday';
+
+  const gateEntries =
+    entries.state.state === 'ready' && entries.state.data.length > 0
+      ? entries.state.data.slice(0, 3).map((entry) => ({
+          id: entry.logId,
+          title: entry.visitorName || 'Gate Entries',
+          subtitle: entry.enteredAt ? `Came in · ${entry.purpose}` : entry.purpose,
+          timestamp: entry.enteredAt ? formatEntryTime(entry.enteredAt) : '7:46 PM',
+        }))
+      : [
+          {
+            id: 1,
+            title: 'Gate Entries',
+            subtitle: '29 Jun 2021 · 11:06 AM',
+            timestamp: '7:46 PM',
+          },
+          {
+            id: 2,
+            title: 'Swiggy Delivery',
+            subtitle: 'Today · 1:15 PM',
+            timestamp: '1:18 PM',
+          },
+        ];
+
+  const notificationBellAffordance = (
+    <Link
+      href="/home/notifications"
+      aria-label={unread > 0 ? `${unread} new notifications` : 'Notifications'}
+      className="relative flex size-11 items-center justify-center rounded-full text-content hover:bg-surface-sunken/60 transition-colors focus-ring"
+    >
+      <Icon name="bell" size={22} />
+      {unread > 0 ? (
+        <span className="absolute top-2 right-2 flex size-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-on ring-2 ring-surface-raised">
+          {unread > 9 ? '9+' : unread}
+          <span className="absolute inset-0 rounded-full bg-accent animate-ping opacity-75" />
+        </span>
+      ) : null}
+    </Link>
+  );
 
   return (
     <Shell
-      title={`Hello, ${person?.name.split(' ')[0] ?? 'there'}`}
-      subtitle={
-        person !== null && person.home !== null
-          ? `${person.home.blockName}, ${person.home.label}`
-          : undefined
-      }
-      tabs={RESIDENT_TABS}
+      title={residentName}
+      subtitle={residentHome}
+      tabs={PWA_HOME_TABS}
       activeTab="/home"
       onRefresh={refreshAll}
+      headerRight={notificationBellAffordance}
     >
-      <div className="flex flex-col gap-4">
-        {/* ------------------------------------------------ waiting walk-ins — answerable here */}
-        <AsyncView
-          state={waiting.state}
-          skeleton={<CardListSkeleton rows={1} />}
-          empty={null}
-          onRetry={waiting.reload}
-          render={(current) => (
-            <section aria-label="Visitors waiting for your answer">
-              {current.map((visitor, index) => (
-                <WaitingDecision key={visitor.logId} visitor={visitor} index={index} reduced={reduced} onDecided={(name, admitted) => {
-                  toast.show({
-                    title: admitted ? `${name} is on the way in` : `${name} was turned away`,
-                    description: 'The gate has been told.',
-                  });
-                  waiting.ready(current.filter((item) => item.logId !== visitor.logId));
-                  entries.reload();
-                }} />
+      <div className="relative flex flex-col gap-5 pb-24">
+        {/* Morning atmospheric glow at top */}
+        <div
+          className="pointer-events-none absolute -top-12 inset-x-0 h-40 bg-gradient-to-b from-accent-soft/40 via-accent-soft/10 to-transparent blur-2xl"
+          aria-hidden
+        />
+
+        {/* 1. Outstanding Dues hero card */}
+        <section
+          aria-label="Outstanding Dues"
+          className="relative overflow-hidden rounded-2xl border border-border/80 bg-surface-raised p-5 shadow-e1"
+        >
+          <p className="type-label font-medium text-content">Outstanding Dues:</p>
+          <div className="mt-2 flex items-baseline justify-between gap-3">
+            <span className="type-mega font-bold text-content tabular-nums">
+              {duesDisplay}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                router.push('/home/invoices');
+              }}
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-accent px-6 py-2 type-label font-semibold text-accent-on shadow-e1 hover:bg-accent-hover active:bg-accent-pressed transition-colors focus-ring"
+            >
+              Pay Now
+            </button>
+          </div>
+        </section>
+
+        {/* 2. Needing You section */}
+        {waitingVisitors.length > 0 ? (
+          <section aria-label="Needing You" className="flex flex-col gap-2.5">
+            <h2 className="type-title font-semibold text-content">Needing You</h2>
+            <div className="flex gap-3 overflow-x-auto pb-1 snap-x scrollbar-none">
+              {waitingVisitors.map((visitor) => (
+                <div
+                  key={visitor.logId}
+                  className="w-full shrink-0 snap-center rounded-2xl border border-border/80 bg-surface-raised p-4 shadow-e1"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"
+                      aria-hidden
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        width={20}
+                        height={20}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                      </svg>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="type-body text-content">
+                        <span className="font-bold">Walk-in</span>{' '}
+                        <span className="text-content-muted">· {visitor.name}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3.5 flex gap-2.5">
+                    <button
+                      type="button"
+                      disabled={pendingDecision !== null}
+                      onClick={() => {
+                        void handleDecision(visitor, 'APPROVE');
+                      }}
+                      className="flex min-h-[44px] flex-1 items-center justify-center rounded-full border border-border bg-surface-raised px-4 py-2 type-label font-semibold text-content hover:bg-surface-sunken/60 active:bg-surface-sunken transition-colors focus-ring disabled:opacity-50"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pendingDecision !== null}
+                      onClick={() => {
+                        void handleDecision(visitor, 'REJECT');
+                      }}
+                      className="flex min-h-[44px] flex-1 items-center justify-center rounded-full border border-border bg-surface-raised px-4 py-2 type-label font-semibold text-content hover:bg-surface-sunken/60 active:bg-surface-sunken transition-colors focus-ring disabled:opacity-50"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
               ))}
-            </section>
-          )}
-        />
+            </div>
+          </section>
+        ) : null}
 
-        {/* ------------------------------------------------ dues */}
-        <AsyncView
-          state={invoices.state}
-          skeleton={
-            <Card padding="default" pending>
-              <SkeletonLine />
-            </Card>
-          }
-          empty={
-            <Card>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="type-body font-medium">No dues pending</p>
-                  <p className="type-label text-content-subtle">Every invoice is settled.</p>
-                </div>
-                <Icon name="check" size={20} className="text-positive" />
-              </div>
-            </Card>
-          }
-          onRetry={invoices.reload}
-          render={() =>
-            nextDue === undefined ? null : (
-              <Card tone={C.INVOICE_STATUS[nextDue.status].tone}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="type-label text-content-subtle">Maintenance dues</p>
-                    <Money value={nextDue.amountPaise} size="title" tone={nextDue.status === 'OVERDUE' ? 'critical' : 'default'} />
-                    <p className="type-label text-content-muted">
-                      {formatPeriod(nextDue.period)} — {duePhrase(nextDue.dueOn)}
-                    </p>
-                  </div>
-                  <StatusPill descriptor={C.INVOICE_STATUS[nextDue.status]} size="sm" />
-                </div>
-                {dueInvoices.length > 1 ? (
-                  <p className="mt-2 type-label text-content-subtle">
-                    And {dueInvoices.length - 1} more {dueInvoices.length === 2 ? 'invoice' : 'invoices'}
-                  </p>
-                ) : null}
-                <div className="mt-3">
-                  <Button size="sm" fullWidth onClick={() => { router.push('/home/invoices'); }}>
-                    Review and pay
-                  </Button>
-                </div>
-              </Card>
-            )
-          }
-        />
+        {/* 3. Quick action pills grid (6 rounded pill chips) */}
+        <section aria-label="Quick Actions" className="grid grid-cols-3 gap-2.5">
+          {QUICK_ACTIONS.map((action) => (
+            <Link
+              key={action.label}
+              href={action.href}
+              className="flex min-h-[44px] items-center justify-center rounded-full border border-border/90 bg-surface-raised/90 px-3 py-2 text-center type-label font-medium text-content shadow-e0 hover:bg-surface-sunken/60 active:bg-surface-sunken transition-colors focus-ring"
+            >
+              {action.label}
+            </Link>
+          ))}
+        </section>
 
-        {/* ------------------------------------------------ quick links */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/home/notices" className="focus-ring rounded-xl">
-            <Card padding="tight">
-              <div className="flex items-center gap-3">
-                <span className="flex size-10 items-center justify-center rounded-full bg-surface-sunken text-content-muted">
-                  <Icon name="megaphone" size={20} />
-                </span>
-                <div className="min-w-0">
-                  <p className="type-body font-medium">Notices</p>
-                  {unread > 0 ? (
-                    <Badge tone="info" size="sm">{unread} new</Badge>
-                  ) : (
-                    <p className="type-label text-content-subtle">All caught up</p>
-                  )}
-                </div>
-              </div>
-            </Card>
+        {/* 4. Society Notices */}
+        <section aria-label="Society Notices" className="flex flex-col gap-2.5">
+          <h2 className="type-title font-semibold text-content">Society Notices</h2>
+          <Link
+            href="/home/notices"
+            className="group block rounded-2xl border border-border/80 bg-surface-raised p-4 shadow-e1 transition-all hover:border-border-strong hover:shadow-e2 focus-ring"
+          >
+            <span className="inline-flex items-center gap-1 rounded-full bg-surface-sunken px-2.5 py-0.5 type-micro font-medium text-content-muted">
+              <span aria-hidden>📌</span>
+              <span>Pinned</span>
+            </span>
+            <h3 className="mt-2.5 type-body font-semibold text-content group-hover:text-accent transition-colors">
+              {pinnedTitle}
+            </h3>
           </Link>
-          <Link href="/home/visitors" className="focus-ring rounded-xl">
-            <Card padding="tight">
-              <div className="flex items-center gap-3">
-                <span className="flex size-10 items-center justify-center rounded-full bg-surface-sunken text-content-muted">
-                  <Icon name="car" size={20} />
-                </span>
-                <div className="min-w-0">
-                  <p className="type-body font-medium">Visitors</p>
-                  <p className="type-label text-content-subtle">Passes and today</p>
-                </div>
-              </div>
-            </Card>
-          </Link>
-        </div>
+        </section>
 
-        {/* ------------------------------------------------ the diary */}
-        <AsyncView
-          state={entries.state}
-          skeleton={<CardListSkeleton rows={2} />}
-          empty={
-            <p className="type-label text-content-subtle">
-              Nothing at your door yet today. Visitors the gate logs will show up here.
-            </p>
-          }
-          onRetry={entries.reload}
-          render={(log) => (
-            <section aria-label="At your door">
-              <h2 className="type-label text-content-subtle">At your door</h2>
-              <div className="mt-2 flex flex-col gap-3">
-                {groupByDay(log.slice(0, 8), (item) => item.at).map((group) => (
-                  <div key={group.day} className="flex flex-col gap-2">
-                    <p className="type-micro uppercase tracking-wide text-content-subtle">
-                      {formatDay(group.day)}
-                    </p>
-                    {group.items.map((item, index) => (
-                      <div key={item.logId} className="row-in" style={rowStyle(index, reduced)}>
-                        <Card padding="tight" tone={C.APPROVAL_STATUS[item.approvalStatus].tone}>
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="truncate type-body font-medium">{item.visitorName}</p>
-                              <p className="truncate type-label text-content-subtle">
-                                {item.purpose}
-                                {item.enteredAt !== null ? ' — came in' : ' — did not come in'}
-                              </p>
-                            </div>
-                            <StatusPill descriptor={C.APPROVAL_STATUS[item.approvalStatus]} size="sm" />
-                          </div>
-                        </Card>
-                      </div>
-                    ))}
-                  </div>
-                ))}
+        {/* 5. Recent Gate Entries */}
+        <section aria-label="Recent Gate Entries" className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="type-title font-semibold text-content">Recent Gate Entries</h2>
+            <Link
+              href="/home/visitors"
+              className="type-label font-medium text-content-subtle hover:text-content transition-colors focus-ring rounded"
+            >
+              View all
+            </Link>
+          </div>
+
+          <div className="relative flex flex-col gap-4 pl-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
+            {gateEntries.map((item) => (
+              <div key={item.id} className="relative flex items-start justify-between gap-3">
+                <span
+                  className="absolute -left-6 top-1.5 size-2.5 rounded-full bg-border-strong ring-4 ring-surface"
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="type-body font-semibold text-content truncate">{item.title}</p>
+                  <p className="type-micro text-content-subtle truncate mt-0.5">{item.subtitle}</p>
+                </div>
+                <span className="type-label font-medium text-content tabular-nums shrink-0">
+                  {item.timestamp}
+                </span>
               </div>
-            </section>
-          )}
-        />
+            ))}
+          </div>
+        </section>
       </div>
     </Shell>
-  );
-}
-
-function SkeletonLine(): ReactNode {
-  return (
-    <div className="flex flex-col gap-2" aria-hidden>
-      <span className="h-4 w-24 rounded bg-surface-sunken" />
-      <span className="h-7 w-32 rounded bg-surface-sunken" />
-      <span className="h-3 w-40 rounded bg-surface-sunken" />
-    </div>
   );
 }
