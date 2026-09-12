@@ -183,9 +183,28 @@ export type Guarded =
 
 export function useGuardedSession(requiredRole?: 'COMMITTEE'): Guarded {
   const router = useRouter();
-  const [guarded, setGuarded] = useState<Guarded>({ state: 'unresolved' });
+  const [guarded, setGuarded] = useState<Guarded>(() => {
+    const existing = currentPerson();
+    if (existing) {
+      if (requiredRole === 'COMMITTEE' && existing.role !== 'A') {
+        return { state: 'signed-out' };
+      }
+      return { state: 'signed-in', person: existing };
+    }
+    return { state: 'unresolved' };
+  });
 
   useEffect(() => {
+    if (person) {
+      if (requiredRole === 'COMMITTEE' && person.role !== 'A') {
+        setGuarded({ state: 'signed-out' });
+        router.replace('/home');
+        return;
+      }
+      setGuarded({ state: 'signed-in', person });
+      return;
+    }
+
     let cancelled = false;
     void (async () => {
       const who = await loadSession();
