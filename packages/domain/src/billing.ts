@@ -434,3 +434,37 @@ export function billingService(deps: BillingDeps): BillingService {
     });
   }
 }
+
+export interface StreakInvoice {
+  readonly period: string;
+  readonly status: C.InvoiceStatus;
+  readonly dueOn: Date | string;
+  readonly paidAt: Date | string | null;
+}
+
+/**
+ * Counts the unbroken sequence of billing periods settled on time, newest first.
+ * Stops at the first unpaid invoice, overdue invoice, or invoice where paidAt was after dueOn.
+ * Cancelled invoices do not break or count towards the streak.
+ */
+export function paymentStreak(invoices: readonly StreakInvoice[]): number {
+  const sorted = [...invoices]
+    .filter((inv) => inv.status !== 'CANCELLED')
+    .sort((a, b) => b.period.localeCompare(a.period));
+
+  let streak = 0;
+  for (const inv of sorted) {
+    if (inv.status !== 'PAID' || inv.paidAt === null) {
+      break;
+    }
+    const due = typeof inv.dueOn === 'string' ? new Date(inv.dueOn).getTime() : inv.dueOn.getTime();
+    const paid = typeof inv.paidAt === 'string' ? new Date(inv.paidAt).getTime() : inv.paidAt.getTime();
+    if (paid <= due) {
+      streak += 1;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
