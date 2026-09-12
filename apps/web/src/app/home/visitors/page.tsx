@@ -697,32 +697,34 @@ export default function VisitorsPage() {
   );
 }
 
-/** The waiting list, kept current by the live stream with fetch on first paint. */
+/** The waiting list, kept current by authenticated polling on an interval. */
 function useWaitingList(onChanged: () => void): FetchState<readonly WaitingVisitor[]> {
   const [state, setState] = useState<FetchState<readonly WaitingVisitor[]>>({ state: 'loading' });
   const changed = useRef(onChanged);
   changed.current = onChanged;
 
   useEffect(() => {
-    void (async () => {
-      const result = await call<readonly WaitingVisitor[]>(WAITING_PATH);
-      setState(result.ok ? { state: 'ready', data: result.data } : { state: 'failed', error: result.error });
-    })();
+    let cancelled = false;
 
-    const source = new EventSource('/api/gate/live', { withCredentials: true });
-    source.addEventListener('waiting', (event) => {
-      try {
-        const frame: unknown = JSON.parse((event as MessageEvent<string>).data);
-        if (!Array.isArray(frame)) return;
-        setState({ state: 'ready', data: frame as readonly WaitingVisitor[] });
+    async function poll(): Promise<void> {
+      const result = await call<readonly WaitingVisitor[]>(WAITING_PATH);
+      if (cancelled) return;
+      if (result.ok) {
+        setState({ state: 'ready', data: result.data });
         changed.current();
-      } catch {
-        // Keep existing
+      } else {
+        setState({ state: 'failed', error: result.error });
       }
-    });
+    }
+
+    void poll();
+    const interval = setInterval(() => {
+      void poll();
+    }, 15_000);
 
     return () => {
-      source.close();
+      cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 

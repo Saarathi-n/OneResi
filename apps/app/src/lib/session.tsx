@@ -42,7 +42,22 @@ export function roleHome(role: C.Role): string {
 
 export function SessionProvider({ children }: { readonly children: ReactNode }): ReactNode {
   const router = useRouter();
-  const [status, setStatus] = useState<SessionStatus>({ state: 'loading' });
+  const [status, setStatus] = useState<SessionStatus>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.sessionStorage.getItem('oneresi.app.session');
+        if (raw) {
+          const parsed = JSON.parse(raw) as SessionWire;
+          if (parsed.accessExpiresAt && new Date(parsed.accessExpiresAt).getTime() > Date.now()) {
+            return { state: 'signed-in', person: parsed.person };
+          }
+        }
+      } catch {
+        // Fall back to loading
+      }
+    }
+    return { state: 'loading' };
+  });
   const booted = useRef(false);
 
   const loadMe = useCallback(async () => {

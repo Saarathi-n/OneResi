@@ -95,7 +95,6 @@ export default function ResidentHomePage() {
   const guarded = useGuardedSession();
   const toast = useToast();
   const [waiting, setWaiting] = useState<FetchState<readonly WaitingVisitor[]>>({ state: 'loading' });
-  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [busyActionId, setBusyActionId] = useState<number | null>(null);
 
   const invoices = useFetch<readonly InvoiceLine[]>(INVOICES_PATH);
@@ -107,11 +106,6 @@ export default function ResidentHomePage() {
     void (async () => {
       const result = await call<readonly WaitingVisitor[]>(WAITING_PATH);
       setWaiting(result.ok ? { state: 'ready', data: result.data } : { state: 'failed', error: result.error });
-    })();
-
-    void (async () => {
-      const result = await call<{ count: number }>('/api/notifications');
-      if (result.ok) setUnreadCount(result.data.count);
     })();
 
     // The waiting queue, re-asked on an interval: an EventSource cannot carry the Bearer token,
@@ -195,11 +189,11 @@ export default function ResidentHomePage() {
   const waitingVisitors = waiting.state === 'ready' ? waiting.data : [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 overflow-x-hidden">
       {/* Masthead: The Fridge Door Header */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-baseline sm:justify-between border-b border-border pb-6 pt-2">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-3">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between border-b border-border pb-6 pt-2">
+        <div className="space-y-1.5 min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="font-serif text-3xl font-bold tracking-tight text-content sm:text-4xl lg:text-5xl">
               {homeLabel ?? 'Your home'}
             </h1>
@@ -212,24 +206,6 @@ export default function ResidentHomePage() {
           <p className="type-body text-content-muted">
             The household summary and gate log for today.
           </p>
-        </div>
-
-        <div className="flex items-center gap-3 sm:gap-4 self-start sm:self-auto">
-          {person !== null ? (
-            <span className="type-title font-medium text-content">{person.name}</span>
-          ) : null}
-          <Link
-            href="/home/notifications"
-            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-raised text-content hover:bg-surface-sunken hover:border-border-strong transition-colors"
-            aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
-          >
-            <Icon name="bell" size={20} />
-            {unreadCount > 0 ? (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-critical text-[10px] font-bold text-critical-on">
-                {unreadCount}
-              </span>
-            ) : null}
-          </Link>
         </div>
       </header>
 

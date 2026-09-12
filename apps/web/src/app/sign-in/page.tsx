@@ -93,31 +93,11 @@ export default function SignInPage() {
     return () => clearInterval(interval);
   }, []);
 
-  async function handleQuickSignIn(targetEmail: string): Promise<void> {
+  function handleAutofill(targetEmail: string): void {
     const pwd = 'starling-marble-97-QUAY';
     setEmail(targetEmail);
     setPassword(pwd);
     setFieldErrors({});
-    setPending(true);
-    const result = await signIn(targetEmail, pwd);
-
-    if (result.ok) {
-      try {
-        window.localStorage.setItem(EMAIL_KEY, targetEmail);
-      } catch {
-        // Remembering is a convenience, never a requirement.
-      }
-      setPending(false);
-      setSuccess(true);
-
-      setTimeout(() => {
-        router.push(roleHome(result.data.role));
-      }, 100);
-      return;
-    }
-
-    setPending(false);
-    setFieldErrors({ password: result.error.message });
   }
 
   async function handleSubmit(): Promise<void> {
@@ -350,44 +330,51 @@ export default function SignInPage() {
                 </div>
               </form>
 
-              {/* 1-click Quick Demo Role Switcher strip */}
+              {/* Sample Society Credentials Autofill Strip */}
               <div className="mt-6 pt-5 border-t border-border">
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="type-micro text-content-subtle uppercase tracking-wider font-semibold">
-                    Quick demo role switcher
+                    Sample society accounts
                   </span>
-                  <span className="type-micro text-accent font-medium">
-                    1-click sign in
+                  <span className="type-micro text-content-muted font-medium">
+                    Click to fill form
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {DEMO_ROLES.map((item) => (
-                    <button
-                      key={item.email}
-                      type="button"
-                      disabled={pending || success}
-                      onClick={() => void handleQuickSignIn(item.email)}
-                      className="group flex flex-col justify-between rounded-xl border border-border bg-surface p-3 text-left shadow-xs transition-all hover:border-border-strong hover:bg-surface-sunken active:scale-[0.98] disabled:opacity-50 cursor-pointer focus-ring"
-                    >
-                      <div className="flex items-center justify-between gap-1 w-full mb-1.5">
-                        <span className="text-base leading-none" aria-hidden>{item.emoji}</span>
-                        <span className="type-micro text-accent font-medium group-hover:underline">
-                          Sign in &rarr;
-                        </span>
-                      </div>
-                      <div>
-                        <p className="type-body text-sm font-semibold text-content leading-snug">
-                          {item.role}
-                        </p>
-                        <p className="type-micro text-content-muted font-medium mt-0.5">
-                          {item.detail}
-                        </p>
-                        <p className="type-micro text-content-subtle truncate mt-0.5 text-[11px]" title={item.email}>
-                          {item.email}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
+                  {DEMO_ROLES.map((item) => {
+                    const isCurrent = email === item.email;
+                    return (
+                      <button
+                        key={item.email}
+                        type="button"
+                        disabled={pending || success}
+                        onClick={() => handleAutofill(item.email)}
+                        className={`group flex flex-col justify-between rounded-xl border p-3 text-left shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer ${
+                          isCurrent
+                            ? 'border-accent bg-accent-soft/40 ring-1 ring-accent'
+                            : 'border-border bg-surface hover:border-border-strong hover:bg-surface-sunken'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 w-full mb-1.5">
+                          <span className="text-base leading-none" aria-hidden>{item.emoji}</span>
+                          <span className="type-micro font-medium text-accent">
+                            {isCurrent ? 'Selected' : 'Fill in'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="type-body text-sm font-semibold text-content leading-snug">
+                            {item.role}
+                          </p>
+                          <p className="type-micro text-content-muted font-medium mt-0.5">
+                            {item.detail}
+                          </p>
+                          <p className="type-micro text-content-subtle truncate mt-0.5 text-[11px]" title={item.email}>
+                            {item.email}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
