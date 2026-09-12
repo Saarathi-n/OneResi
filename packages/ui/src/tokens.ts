@@ -16,6 +16,7 @@ import type { Tone } from '@oneresi/contracts';
  * repeated here only so a layout calculation can read them.
  */
 export const typeScale = {
+  mega: { mobile: 40, desktop: 52, className: 'type-mega' },
   display: { mobile: 28, desktop: 34, className: 'type-display' },
   title: { mobile: 20, desktop: 22, className: 'type-title' },
   body: { mobile: 15, desktop: 16, className: 'type-body' },

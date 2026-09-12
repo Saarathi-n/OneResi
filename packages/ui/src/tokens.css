@@ -23,16 +23,18 @@
 :root {
   color-scheme: light;
 
-  /* surfaces */
-  --surface: #f5f6f8;
-  --surface-raised: #ffffff;
-  --surface-sunken: #e9ecf1;
+  /* surfaces. Warm paper, not a laboratory: an ivory page, a raised sheet, and a pressed bed.
+     The society's product is paper — receipts, ledgers, passes — and the interface sits on the
+     same material instead of grey glass. */
+  --surface: #f5f2ea;
+  --surface-raised: #fffdf7;
+  --surface-sunken: #eae5d8;
 
-  /* content */
-  --content: #101623;
-  --content-muted: #414c5e;
-  --content-subtle: #667085;
-  --content-inverse: #ffffff;
+  /* content. Warm ink on warm paper. */
+  --content: #211d15;
+  --content-muted: #5a5343;
+  --content-subtle: #8d8571;
+  --content-inverse: #fffdf7;
 
   /* the one brand action colour */
   --accent: #1d6853;
@@ -83,12 +85,26 @@
      no dark value: a receipt prints white in every theme. */
   --paper: #ffffff;
 
+  /* The grain itself: fractal noise, generated once, laid over everything at --grain-opacity.
+     A data URI because the texture ships with the system — no asset, no request, no dep. */
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+
   /* edges */
-  --border: #dde1e8;
-  --border-strong: #c2c9d4;
+  --border: #e0dacb;
+  --border-strong: #c9c1ac;
 
   /* scrim behind a sheet or a dialog */
-  --overlay: rgb(16 22 35 / 0.42);
+  --overlay: rgb(33 29 21 / 0.42);
+
+  /* the light a sheet of paper catches along its top edge. Stronger in daylight, a whisper
+     under lamplight. */
+  --edge-light: rgb(255 255 255 / 0.6);
+
+  /* how loudly the grain of the paper shows. */
+  --grain-opacity: 0.05;
+
+  /* the wash a hero panel is printed with: the brand colour breathed onto the raised sheet. */
+  --wash-hero: linear-gradient(165deg, #e3f0e9 0%, #fffdf7 62%);
 
   /* the focus ring. Deliberately not the accent, so it stays visible on accent fills. */
   --focus: #1256a8;
@@ -107,14 +123,15 @@
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --surface: #0c1017;
-  --surface-raised: #141a24;
-  --surface-sunken: #080b11;
+  /* Lamplight on warm charcoal — dark, but the same temperature as the paper it darkens. */
+  --surface: #131109;
+  --surface-raised: #1c1914;
+  --surface-sunken: #0d0b07;
 
-  --content: #eef1f6;
-  --content-muted: #aab4c3;
-  --content-subtle: #7f8b9c;
-  --content-inverse: #0c1017;
+  --content: #f1ede2;
+  --content-muted: #b3ab99;
+  --content-subtle: #807866;
+  --content-inverse: #131109;
 
   --accent: #3fa383;
   --accent-hover: #4fb693;
@@ -150,13 +167,17 @@
 
   --glow: rgb(227 183 99 / 0.3);
 
-  --surface-glass: rgb(20 26 36 / 0.64);
+  --surface-glass: rgb(28 25 20 / 0.64);
 
-  --border: #212936;
-  --border-strong: #35404f;
+  --border: #2b2720;
+  --border-strong: #443d30;
 
-  --overlay: rgb(2 4 8 / 0.62);
+  --overlay: rgb(6 5 2 / 0.62);
   --focus: #7cb6f0;
+
+  --edge-light: rgb(255 255 255 / 0.07);
+  --grain-opacity: 0.07;
+  --wash-hero: linear-gradient(165deg, #12211b 0%, #1c1914 62%);
 
   --elevation-0: 0 0 0 0 rgb(0 0 0 / 0), 0 0 0 0 rgb(0 0 0 / 0);
   --elevation-1: 0 1px 2px -1px rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3);
@@ -281,6 +302,17 @@
   font-weight: 650;
 }
 
+/* The one bold number a screen is about. Once per screen, if that — a hero figure stops being
+   one the moment every figure is one. */
+.type-mega {
+  font-family: var(--font-oneresi-sans);
+  font-size: 40px;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
 .type-title {
   font-family: var(--font-oneresi-sans);
   font-size: 20px;
@@ -356,6 +388,10 @@
 @media (min-width: 48rem) {
   .type-display {
     font-size: 34px;
+  }
+
+  .type-mega {
+    font-size: 52px;
   }
 
   .type-title {
@@ -453,6 +489,103 @@
    definition, so reduced motion has nothing to undo here. */
 .money-glow {
   text-shadow: 0 0 24px var(--glow);
+}
+
+/* ------------------------------------------------------------ material
+
+   The product is paper: receipts, ledgers, passes. These utilities are the physical facts of
+   paper — grain, edge light, perforation, the rubber stamp — spelled once and used everywhere,
+   so a screen feels printed rather than rendered. */
+
+/* The grain. Apps lay it over the viewport once (`body::after` in each root stylesheet);
+   multiply presses it into light paper, soft-light lifts it out of the dark. */
+.paper-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  background-image: var(--paper-grain);
+  opacity: var(--grain-opacity);
+  mix-blend-mode: multiply;
+}
+
+.dark .paper-grain,
+[data-theme='dark'] .paper-grain {
+  mix-blend-mode: soft-light;
+}
+
+/* The line of light along the top inside edge of a raised sheet — the difference between a
+   panel that is painted on and one that is lying on the page. */
+.edge-light {
+  box-shadow: inset 0 1px 0 var(--edge-light);
+}
+
+/* A hero panel printed with the brand wash. */
+.hero-wash {
+  background-image: var(--wash-hero);
+}
+
+/* One corner cut off a coupon. Borders clip away with the corner, so a clipped panel leans on
+   its wash and shadow instead of an outline. */
+.clip-ticket {
+  clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%);
+}
+
+/* The perforation. A dashed rule with punch-holes bitten out of both ends — where a receipt
+   tears away, above the totals. The host panel must not clip its overflow, and the holes line
+   up with the host's own padding through --tear-inset (set it to the host's horizontal padding). */
+.tear-line {
+  position: relative;
+  border-top: 2px dashed var(--border-strong);
+  margin: 0 calc(-1 * var(--tear-inset, 24px));
+}
+
+.tear-line::before,
+.tear-line::after {
+  content: '';
+  position: absolute;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.tear-line::before {
+  left: calc(-1 * var(--tear-inset, 24px) - 8px);
+}
+
+.tear-line::after {
+  right: calc(-1 * var(--tear-inset, 24px) - 8px);
+}
+
+/* The rubber stamp. Double-ringed, uppercase, tracked — the word lands, it is not styled. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1.5px solid currentColor;
+  outline: 1px solid currentColor;
+  outline-offset: 2.5px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 650;
+}
+
+/* Pressed into the page: totals that sit below the sheet, not above it. */
+.sunken-deep {
+  box-shadow:
+    inset 0 2px 6px rgb(23 20 12 / 0.1),
+    inset 0 1px 2px rgb(23 20 12 / 0.08);
+}
+
+.dark .sunken-deep,
+[data-theme='dark'] .sunken-deep {
+  box-shadow:
+    inset 0 2px 6px rgb(0 0 0 / 0.42),
+    inset 0 1px 2px rgb(0 0 0 / 0.3);
 }
 
 /* Scroll containers inside a sheet or a dialog keep momentum without dragging the page. */

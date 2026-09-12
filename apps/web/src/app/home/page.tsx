@@ -19,6 +19,7 @@ import {
 import {
   APPROVAL_STATUS,
   COMPLAINT_STATUS,
+  formatPeriod,
   paise,
   type INVOICE_STATUS,
   type Paise,
@@ -170,7 +171,7 @@ export default function ResidentHomePage() {
             <div>
               <Money value={paise(firstOpen.amountPaise)} size="title" label={`${firstOpen.period} maintenance`} />
               <p className="type-label mt-1 text-content-muted">
-                Period {firstOpen.period}
+                {formatPeriod(firstOpen.period)}
               </p>
             </div>
             <Link href="/home/invoices" className={buttonClass()}>
