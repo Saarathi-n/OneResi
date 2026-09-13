@@ -57,6 +57,18 @@ const nextConfig: NextConfig = {
   // user would have to enable Developer Mode to grant, so local builds take the default output —
   // same app, one less system setting.
   ...(process.platform === 'win32' ? {} : { output: 'standalone' as const }),
+  // The PWA beside this app: the container runs both (start.mjs), the load balancer only ever
+  // talks to this port, so /a is proxied to the sibling server as an in-container hop — never a
+  // second target group, which would be the second Fargate meter. Rewrites are evaluated at BUILD
+  // time, so the port is resolved here with the same default start.mjs keeps — an env read at
+  // build time would bake nothing when the build machine sets no APP_PORT.
+  async rewrites() {
+    const appPort = process.env.APP_PORT ?? '3001';
+    return [
+      { source: '/a', destination: `http://127.0.0.1:${appPort}/a` },
+      { source: '/a/:path*', destination: `http://127.0.0.1:${appPort}/a/:path*` },
+    ];
+  },
 };
 
 export default nextConfig;

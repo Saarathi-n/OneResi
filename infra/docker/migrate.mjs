@@ -16,9 +16,18 @@
  */
 import { spawnSync } from 'node:child_process';
 
+// The migrate step calls the Prisma wrapper DIRECTLY rather than `pnpm --filter @grihaone/db
+// migrate`: the package script regenerates the schema variants first, which was right at build
+// time and is wrong at run time — the container runs unprivileged, the generated schemas are
+// already in the image, and writing them again is what EACCES'd the first deploy (the seed is
+// convergent TypeScript, so it goes through pnpm as before).
 const steps = [
-  { label: 'prisma migrate deploy', args: ['--filter', '@grihaone/db', 'migrate'] },
-  { label: 'seed', args: ['--filter', '@grihaone/db', 'seed'] },
+  {
+    label: 'prisma migrate deploy',
+    run: ['node', 'scripts/prisma.mjs', 'migrate', 'deploy'],
+    cwd: '/build/packages/db',
+  },
+  { label: 'seed', run: ['pnpm', '--filter', '@grihaone/db', 'seed'], cwd: '/build' },
 ];
 
 if (process.env.DB_TARGET !== 'cloud') {
@@ -29,8 +38,8 @@ if (process.env.DB_TARGET !== 'cloud') {
 for (const step of steps) {
   process.stdout.write(`\n== ${step.label} ==\n`);
 
-  const result = spawnSync('pnpm', step.args, {
-    cwd: '/build',
+  const result = spawnSync(step.run[0], step.run.slice(1), {
+    cwd: step.cwd,
     stdio: 'inherit',
     shell: false,
     env: process.env,

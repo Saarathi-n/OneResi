@@ -38,13 +38,16 @@ function hydrateFromStorage(): void {
   }
 }
 
-// Hydrate immediately upon script execution
-hydrateFromStorage();
-
+// Module state first, the hydration call after: hydrateFromStorage() writes these at module
+// load, and a `let` read before its declaration is the temporal dead zone — the error that
+// took the sign-in page down in the production bundle (dev mode only warned).
 let accessToken: string | null = null;
 let person: PersonView | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
 const listeners = new Set<Listener>();
+
+// Hydrate immediately upon script execution
+hydrateFromStorage();
 
 function notify(): void {
   for (const listener of listeners) listener(person);

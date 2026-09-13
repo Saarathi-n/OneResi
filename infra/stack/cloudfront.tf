@@ -25,7 +25,7 @@ data "aws_cloudfront_response_headers_policy" "security_headers" {
 }
 
 resource "aws_acm_certificate" "app" {
-  count    = local.use_custom_domain ? 1 : 0
+  count    = var.enable_cloudfront && local.use_custom_domain ? 1 : 0
   provider = aws.us_east_1
 
   domain_name       = var.app_domain
@@ -39,8 +39,8 @@ resource "aws_acm_certificate" "app" {
 }
 
 resource "aws_route53_record" "app_cert_validation" {
-  # Splat and flatten rather than a conditional index: with no custom domain the certificate has no
-  # instances and this collapses to an empty map on its own.
+  # Splat and flatten rather than a conditional index: with no custom domain (or no CloudFront at
+  # all) the certificate has no instances and this collapses to an empty map on its own.
   for_each = {
     for option in flatten(aws_acm_certificate.app[*].domain_validation_options) : option.domain_name => option
   }
@@ -54,14 +54,15 @@ resource "aws_route53_record" "app_cert_validation" {
 }
 
 resource "aws_acm_certificate_validation" "app" {
-  count    = local.use_custom_domain ? 1 : 0
+  count    = var.enable_cloudfront && local.use_custom_domain ? 1 : 0
   provider = aws.us_east_1
 
-  certificate_arn         = aws_acm_certificate.app[0].arn
+  certificate_arn         = one(aws_acm_certificate.app[*].arn)
   validation_record_fqdns = [for record in aws_route53_record.app_cert_validation : record.fqdn]
 }
 
 resource "aws_cloudfront_distribution" "app" {
+  count = var.enable_cloudfront ? 1 : 0
   enabled         = true
   is_ipv6_enabled = true
   comment         = "${local.name_prefix} — TLS termination in front of the load balancer"
@@ -164,8 +165,8 @@ resource "aws_route53_record" "app_alias" {
   type    = each.value
 
   alias {
-    name                   = aws_cloudfront_distribution.app.domain_name
-    zone_id                = aws_cloudfront_distribution.app.hosted_zone_id
+    name                   = aws_cloudfront_distribution.app[0].domain_name
+    zone_id                = aws_cloudfront_distribution.app[0].hosted_zone_id
     evaluate_target_health = false
   }
 }
