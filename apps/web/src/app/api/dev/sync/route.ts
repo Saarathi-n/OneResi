@@ -35,8 +35,18 @@ const SCRIPTS = {
 type Action = keyof typeof SCRIPTS;
 
 function repoRoot(): string {
-  // The dev server's cwd is apps/web; the scripts live at the repository root.
-  return join(process.cwd(), '..');
+  // The scripts live at the repository root, but the dev server's cwd is not promised to be
+  // apps/web — `next dev` from the repo root, from apps/web, or under pnpm each land somewhere
+  // else. Walk up until the scripts directory is actually there; a computed root whose scripts
+  // do not exist is a MODULE_NOT_FOUND pretending to be a broken feature.
+  let current = process.cwd();
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (existsSync(join(current, 'scripts', 'db-diff.mjs'))) return current;
+    const parent = join(current, '..');
+    if (parent === current) break;
+    current = parent;
+  }
+  return join(process.cwd(), '..', '..');
 }
 
 /** Runs one sync script and resolves its captured output and exit code. */
