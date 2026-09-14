@@ -17,6 +17,22 @@ import { call, useGuardedSession } from '@/lib/session';
  * reversible ones — the cost controls.
  */
 
+interface JobStep {
+  label: string;
+  status: 'running' | 'ok' | 'fail';
+  exit: number | null;
+  output: string;
+}
+
+interface JobView {
+  id: number;
+  action: 'deploy' | 'destroy';
+  startedAt: string;
+  steps: JobStep[];
+  done: boolean;
+  ok: boolean | null;
+}
+
 interface CloudStatus {
   terraform: { path: string; version: string } | null;
   stackDir: boolean;
@@ -28,6 +44,7 @@ interface CloudStatus {
   services: { ecs: string; rds: string; budget: string };
   stackName: string;
   lastPlan: { changes: boolean; at: string } | null;
+  job: JobView | null;
   note?: string;
 }
 
@@ -44,10 +61,8 @@ export default function CloudConsolePage() {
   const guarded = useGuardedSession('COMMITTEE');
   const [status, setStatus] = useState<CloudStatus | null>(null);
   const [plan, setPlan] = useState<RunOutcome | undefined>();
-  const [deployRun, setDeployRun] = useState<RunOutcome | undefined>();
   const [applyRun, setApplyRun] = useState<RunOutcome | undefined>();
   const [scaleRun, setScaleRun] = useState<RunOutcome | undefined>();
-  const [destroyRun, setDestroyRun] = useState<RunOutcome | undefined>();
   const [pending, setPending] = useState<string | null>(null);
 
   const [deployWord, setDeployWord] = useState('');
@@ -63,6 +78,16 @@ export default function CloudConsolePage() {
     void refresh();
   }, [refresh]);
 
+  // While a job (deploy/destroy) runs, poll for its live steps — every three seconds is where
+  // the step output visibly advances without hammering a dev server.
+  const job = status?.job ?? null;
+  const jobRunning = job !== null && !job.done;
+  useEffect(() => {
+    if (!jobRunning) return;
+    const timer = setInterval(() => void refresh(), 3_000);
+    return () => clearInterval(timer);
+  }, [jobRunning, refresh]);
+
   async function run(
     target: 'deploy' | 'plan' | 'apply' | 'stop' | 'start' | 'destroy',
     confirm?: string,
@@ -77,7 +102,6 @@ export default function CloudConsolePage() {
       ? result.data
       : { ran: target, ok: false, output: result.error.message };
     if (target === 'deploy') {
-      setDeployRun(outcome);
       if (result.ok) setDeployWord('');
     }
     if (target === 'plan') setPlan(outcome);
@@ -86,7 +110,9 @@ export default function CloudConsolePage() {
       if (result.ok) setApplyWord('');
     }
     if (target === 'stop' || target === 'start') setScaleRun(outcome);
-    if (target === 'destroy') setDestroyRun(outcome);
+    if (target === 'destroy') {
+      if (result.ok) setDestroyWord('');
+    }
     void refresh();
   }
 
@@ -117,6 +143,8 @@ export default function CloudConsolePage() {
           Refresh
         </Button>
       </div>
+
+      {job !== null ? <JobProgress job={job} /> : null}
 
       <Card elevation={1}>
         <CardHeader title="Terraform" subtitle="The binary this server runs, and what its state holds." />
@@ -193,15 +221,14 @@ export default function CloudConsolePage() {
               aria-label="Type the word deploy to confirm"
             />
             <Button
-              disabled={deployWord !== 'deploy'}
-              pending={pending === 'deploy'}
-              pendingLabel="Deploying (15-30 min)"
+              disabled={deployWord !== 'deploy' || jobRunning}
+              pending={pending === 'deploy' || jobRunning}
+              pendingLabel="Deploying — watch the progress above"
               onClick={() => void run('deploy', 'deploy')}
             >
               Deploy the stack
             </Button>
           </div>
-          {deployRun !== undefined ? <Output outcome={deployRun} /> : null}
         </CardBody>
       </Card>
 
@@ -295,15 +322,14 @@ export default function CloudConsolePage() {
             />
             <Button
               variant="danger"
-              disabled={destroyWord !== status.stackName}
-              pending={pending === 'destroy'}
-              pendingLabel="Destroying"
+              disabled={destroyWord !== status.stackName || jobRunning}
+              pending={pending === 'destroy' || (jobRunning && job.action === 'destroy')}
+              pendingLabel="Destroying — watch the progress above"
               onClick={() => void run('destroy', status.stackName)}
             >
               Destroy the stack
             </Button>
           </div>
-          {destroyRun !== undefined ? <Output outcome={destroyRun} /> : null}
         </CardBody>
       </Card>
 
@@ -339,5 +365,62 @@ function Output({ outcome }: { outcome: RunOutcome }) {
         {outcome.output.trim()}
       </pre>
     </div>
+  );
+}
+
+/**
+ * The live progress of a deploy or destroy: every step with its verdict, the running one with
+ * its tail streaming underneath, and the job's verdict when it lands. This is what tells the
+ * person pressing the button where the twenty minutes went.
+ */
+function JobProgress({ job }: { job: JobView }) {
+  const running = job.steps.find((step) => step.status === 'running');
+  return (
+    <Card elevation={1} className={job.done ? (job.ok ? '' : 'border-critical') : ''}>
+      <CardHeader
+        title={job.done ? `${job.action} ${job.ok ? 'complete' : 'failed'}` : `${job.action} in progress`}
+        subtitle={`Started ${new Date(job.startedAt).toLocaleTimeString()}. ${job.done
+          ? job.ok
+            ? 'Every step finished cleanly.'
+            : 'A step failed — its output is below; later steps did not run.'
+          : 'This page refreshes itself every few seconds. Deploy is 15-30 minutes; destroy about 20, and the tail is the slow part by design.'}`}
+      />
+      <CardBody className="space-y-2">
+        <ol className="space-y-1">
+          {job.steps.map((step) => (
+            <li key={`${step.label}-${job.id}`} className="flex flex-wrap items-center justify-between gap-2">
+              <span className="type-label text-content">{step.label}</span>
+              <Badge
+                tone={step.status === 'ok' ? 'positive' : step.status === 'fail' ? 'critical' : 'caution'}
+                size="sm"
+              >
+                {step.status === 'ok' ? 'ok' : step.status === 'fail' ? `failed (exit ${step.exit})` : 'running…'}
+              </Badge>
+            </li>
+          ))}
+        </ol>
+        {running !== undefined ? (
+          <div>
+            <p className="type-label text-content">Now: {running.label}</p>
+            <pre className="type-micro mt-1 max-h-48 overflow-auto rounded-lg bg-surface-sunken p-3 text-content-muted">
+              {running.output.trim() || 'starting…'}
+            </pre>
+          </div>
+        ) : null}
+        {job.done ? (
+          <details>
+            <summary className="type-label cursor-pointer text-content-muted">Full step output</summary>
+            {job.steps.map((step) => (
+              <div key={`out-${step.label}-${job.id}`} className="mt-2">
+                <p className="type-label text-content">{step.label}</p>
+                <pre className="type-micro mt-1 max-h-48 overflow-auto rounded-lg bg-surface-sunken p-3 text-content-muted">
+                  {step.output.trim()}
+                </pre>
+              </div>
+            ))}
+          </details>
+        ) : null}
+      </CardBody>
+    </Card>
   );
 }

@@ -122,16 +122,82 @@ function tail(output: string, limit = 30_000): string {
   return output.length <= limit ? output : `… (truncated to the last ${limit} characters)\n${output.slice(-limit)}`;
 }
 
-/** One deploy step's output, trimmed to what the page can show. */
-function renderSteps(steps: readonly { label: string; result: { code: number; output: string } }[]): string {
-  return steps
-    .map((step) => `== ${step.label} — exit ${step.result.code} ==\n${tail(step.result.output, 4_000)}`)
-    .join('\n\n');
+/**
+ * The long operations, live. A deploy is fifteen to thirty minutes and a destroy twenty; a
+ * synchronous response would be a spinner the whole time with no way to see which step is
+ * running. Instead the POST starts the job in this server process and returns at once, and the
+ * GET hands the page every step's live tail — the same output the terminal would show, capped
+ * per step. One job at a time: terraform holds a state lock anyway, and the page disables the
+ * other buttons while one runs. (Dev-server hot reload clears the holder; the child processes
+ * are the server's own, so they end with it too. This is a dev console, not a control plane.)
+ */
+interface JobStep {
+  label: string;
+  status: 'running' | 'ok' | 'fail';
+  exit: number | null;
+  output: string;
 }
 
-/** A failed deploy: everything that ran, so the failing step is visible on the page. */
-function deployFailed(steps: readonly { label: string; result: { code: number; output: string } }[]): NextResponse {
-  return NextResponse.json({ ran: 'deploy', ok: false, output: renderSteps(steps) });
+interface Job {
+  id: number;
+  action: 'deploy' | 'destroy';
+  startedAt: string;
+  steps: JobStep[];
+  done: boolean;
+  ok: boolean | null;
+}
+
+const jobHolder: { nextId: number; current: Job | null } = { nextId: 1, current: null };
+
+function jobView(job: Job | null): Job | null {
+  if (job === null) return null;
+  // A fresh copy per GET: the job object is mutated by the running steps, and handing the page
+  // the live object means serializing while it changes.
+  return { ...job, steps: job.steps.map((step) => ({ ...step, output: tail(step.output, 4_000) })) };
+}
+
+/** Runs one step of a job, streaming its output into the step as it arrives. */
+function jobStep(job: Job, label: string, command: string, args: readonly string[], cwd: string = STACK_DIR): Promise<boolean> {
+  const step: JobStep = { label, status: 'running', exit: null, output: '' };
+  job.steps.push(step);
+  return new Promise((resolve) => {
+    const child = spawn(command, [...args], { cwd, env: { ...process.env }, windowsHide: true });
+    const append = (chunk: Buffer): void => {
+      if (step.output.length > 16_000) step.output = tail(step.output, 8_000);
+      step.output += chunk.toString('utf8');
+    };
+    child.stdout.on('data', append);
+    child.stderr.on('data', append);
+    child.on('error', (error) => {
+      append(Buffer.from(`\nThe command could not start: ${error.message}`));
+      finish(1);
+    });
+    child.on('close', (code) => finish(code ?? 1));
+
+    function finish(code: number): void {
+      step.exit = code;
+      step.status = code === 0 ? 'ok' : 'fail';
+      step.output = tail(step.output, 4_000);
+      resolve(code === 0);
+    }
+  });
+}
+
+/** Starts a job: refuses if one is already running, otherwise runs it in the background. */
+function startJob(action: 'deploy' | 'destroy', body: () => Promise<void>): { started: boolean; reason?: string } {
+  if (jobHolder.current !== null && !jobHolder.current.done) {
+    return {
+      started: false,
+      reason: `A ${jobHolder.current.action} is already running — its progress is on the page. One operation at a time; terraform locks the state anyway.`,
+    };
+  }
+  const job: Job = { id: jobHolder.nextId++, action, startedAt: new Date().toISOString(), steps: [], done: false, ok: null };
+  jobHolder.current = job;
+  void body().finally(() => {
+    job.done = true;
+    job.ok = job.steps.every((step) => step.status === 'ok');
+  });
+  return { started: true };
 }
 
 /** The AWS probes, each independent: one that cannot answer says so, none fails the panel. */
@@ -266,6 +332,7 @@ export async function GET(request: NextRequest) {
     services: probes,
     stackName: STACK_NAME,
     lastPlan: lastPlanHolder.current,
+    job: jobView(jobHolder.current),
   });
 }
 
@@ -356,13 +423,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const steps: { label: string; result: { code: number; output: string } }[] = [];
-    const step = async (label: string, command: string, args: readonly string[], cwd: string) => {
-      const result = await run(command, args, cwd);
-      steps.push({ label, result });
-      return result.code === 0;
-    };
-
     const engine = await run(docker, ['version', '--format', '{{.Server.Version}}']);
     if (engine.code !== 0) {
       return NextResponse.json({
@@ -372,61 +432,51 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 1. The Lambda bundles the apply consumes.
-    if (!await step('build lambda bundles', process.execPath, ['scripts/build-lambdas.mjs'], REPO_ROOT)) {
-      return deployFailed(steps);
-    }
+    const started = startJob('deploy', async () => {
+      const job = jobHolder.current;
+      if (job === null) return;
 
-    // 2. The state bucket, only when a teardown removed it (head-bucket answers 404/403).
-    const bucket = await run('aws', ['s3api', 'head-bucket', '--bucket', STATE_BUCKET, '--region', REGION]);
-    if (bucket.code !== 0) {
-      if (!await step('bootstrap state bucket (init)', tf, ['init', '-input=false'], BOOTSTRAP_DIR)) {
-        return deployFailed(steps);
+      // 1. The Lambda bundles the apply consumes.
+      if (!await jobStep(job, 'build lambda bundles', process.execPath, ['scripts/build-lambdas.mjs'], REPO_ROOT)) return;
+
+      // 2. The state bucket, only when a teardown removed it (head-bucket answers 404/403).
+      const bucket = await run('aws', ['s3api', 'head-bucket', '--bucket', STATE_BUCKET, '--region', REGION]);
+      if (bucket.code !== 0) {
+        if (!await jobStep(job, 'bootstrap state bucket (init)', tf, ['init', '-input=false'], BOOTSTRAP_DIR)) return;
+        if (!await jobStep(job, 'bootstrap state bucket (apply)', tf, ['apply', '-auto-approve', '-input=false'], BOOTSTRAP_DIR)) return;
       }
-      if (!await step('bootstrap state bucket (apply)', tf, ['apply', '-auto-approve', '-input=false'], BOOTSTRAP_DIR)) {
-        return deployFailed(steps);
+
+      // 3. ECR alone, then the images into it.
+      if (!await jobStep(job, 'terraform init', tf, ['init', '-input=false'], STACK_DIR)) return;
+      if (!await jobStep(job, 'create the image repository', tf, ['apply', '-target=aws_ecr_repository.app', '-auto-approve', '-input=false'], STACK_DIR)) return;
+      const repoUrl = await run(tf, ['output', '-raw', 'ecr_repository_url'], STACK_DIR);
+      const repository = repoUrl.output.trim();
+      if (repoUrl.code !== 0 || repository === '') {
+        job.steps.push({ label: 'read the repository URL', status: 'fail', exit: repoUrl.code, output: tail(repoUrl.output, 4_000) });
+        return;
       }
-    }
-
-    // 3. ECR alone, then the images into it.
-    if (!await step('terraform init', tf, ['init', '-input=false'], STACK_DIR)) {
-      return deployFailed(steps);
-    }
-    if (!await step('create the image repository', tf, ['apply', '-target=aws_ecr_repository.app', '-auto-approve', '-input=false'], STACK_DIR)) {
-      return deployFailed(steps);
-    }
-    const repoUrl = await run(tf, ['output', '-raw', 'ecr_repository_url'], STACK_DIR);
-    const repository = repoUrl.output.trim();
-    if (repoUrl.code !== 0 || repository === '') {
-      steps.push({ label: 'read the repository URL', result: repoUrl });
-      return deployFailed(steps);
-    }
-    const registry = `${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com`;
-    const login = await run('aws', ['ecr', 'get-login-password', '--region', REGION]);
-    if (login.code !== 0) {
-      steps.push({ label: 'ecr login password', result: login });
-      return deployFailed(steps);
-    }
-    const dockerLogin = await run(docker, ['login', '--username', 'AWS', '--password', login.output.trim(), registry]);
-    steps.push({ label: 'ecr login', result: dockerLogin });
-    if (dockerLogin.code !== 0) return deployFailed(steps);
-
-    for (const [target, tag] of [['runtime', 'latest'], ['migrate', 'migrate']] as const) {
-      if (!await step(`build the ${target} image`, docker, ['build', '--file', 'infra/docker/Dockerfile', '--target', target, '--tag', `${repository}:${tag}`, '.'], REPO_ROOT)) {
-        return deployFailed(steps);
+      const registry = `${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com`;
+      const login = await run('aws', ['ecr', 'get-login-password', '--region', REGION]);
+      if (login.code !== 0) {
+        job.steps.push({ label: 'ecr login password', status: 'fail', exit: login.code, output: tail(login.output, 4_000) });
+        return;
       }
-      if (!await step(`push the ${target} image`, docker, ['push', `${repository}:${tag}`], REPO_ROOT)) {
-        return deployFailed(steps);
+      if (!await jobStep(job, 'ecr login', docker, ['login', '--username', 'AWS', '--password', login.output.trim(), registry])) return;
+
+      for (const [target, tag] of [['runtime', 'latest'], ['migrate', 'migrate']] as const) {
+        if (!await jobStep(job, `build the ${target} image`, docker, ['build', '--file', 'infra/docker/Dockerfile', '--target', target, '--tag', `${repository}:${tag}`, '.'], REPO_ROOT)) return;
+        if (!await jobStep(job, `push the ${target} image`, docker, ['push', `${repository}:${tag}`], REPO_ROOT)) return;
       }
-    }
 
-    // 4. The full apply: RDS, the migrate task, the service behind the load balancer.
-    if (!await step('apply the stack', tf, ['apply', '-auto-approve', '-input=false'], STACK_DIR)) {
-      return deployFailed(steps);
-    }
+      // 4. The full apply: RDS, the migrate task, the service behind the load balancer.
+      if (!await jobStep(job, 'apply the stack', tf, ['apply', '-auto-approve', '-input=false'], STACK_DIR)) return;
+      spendLastPlan();
+    });
 
-    spendLastPlan();
-    return NextResponse.json({ ran: 'deploy', ok: true, output: renderSteps(steps) });
+    if (!started.started) {
+      return NextResponse.json({ code: 'STATE_NOT_ALLOWED', message: started.reason }, { status: 409 });
+    }
+    return NextResponse.json({ ran: 'deploy', ok: true, started: true });
   }
 
   if (action === 'stop' || action === 'start') {
@@ -479,12 +529,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const result = await run(tf, ['destroy', '-auto-approve', '-input=false']);
-    return NextResponse.json({
-      ran: 'destroy',
-      ok: result.code === 0,
-      output: `== pre-destroy sync (cloud registry pulled to local) ==\n${tail(pull.output, 4_000)}\n\n${tail(result.output)}`,
+    const started = startJob('destroy', async () => {
+      const job = jobHolder.current;
+      if (job === null) return;
+      job.steps.push({ label: 'pre-destroy sync (cloud registry pulled to local)', status: 'ok', exit: 0, output: tail(pull.output, 4_000) });
+      // The ~20-minute teardown; the Lambda ENI security groups are the slow tail and are normal.
+      await jobStep(job, 'terraform destroy', tf, ['destroy', '-auto-approve', '-input=false']);
     });
+
+    if (!started.started) {
+      return NextResponse.json({ code: 'STATE_NOT_ALLOWED', message: started.reason }, { status: 409 });
+    }
+    return NextResponse.json({ ran: 'destroy', ok: true, started: true });
   }
 
   return NextResponse.json(
