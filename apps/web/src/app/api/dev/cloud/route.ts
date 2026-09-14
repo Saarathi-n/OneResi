@@ -470,6 +470,21 @@ export async function POST(request: NextRequest) {
 
       // 4. The full apply: RDS, the migrate task, the service behind the load balancer.
       if (!await jobStep(job, 'apply the stack', tf, ['apply', '-auto-approve', '-input=false'], STACK_DIR)) return;
+
+      // 5. The images are pushed under the SAME tags (latest / migrate), and an unchanged task
+      // definition means ECS sees nothing new — the running task keeps serving the old digest
+      // forever. A forced deployment rolls the service once so it pulls what was just pushed; on
+      // a first deploy the service was seconds old and the roll is one quick replacement.
+      const service = await run('aws', [
+        'ecs', 'describe-services', '--cluster', STACK_NAME, '--services', `${STACK_NAME}-app`,
+        '--region', REGION, '--output', 'json',
+      ]);
+      if (service.code === 0) {
+        if (!await jobStep(job, 'roll the service onto the new images', 'aws', [
+          'ecs', 'update-service', '--cluster', STACK_NAME, '--service', `${STACK_NAME}-app`,
+          '--force-new-deployment', '--region', REGION,
+        ])) return;
+      }
       spendLastPlan();
     });
 
