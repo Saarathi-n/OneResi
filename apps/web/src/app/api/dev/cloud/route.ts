@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { actor, toResponse } from '@/server/http';
+import { resolveCloudDatabaseUrl } from '@/server/cloud-db';
 
 /**
  * The deployment console, behind a dev-only route: what Terraform has (state, outputs), what AWS
@@ -98,9 +99,16 @@ function run(
   command: string,
   args: readonly string[],
   cwd: string = STACK_DIR,
+  extraEnv: Record<string, string> = {},
 ): Promise<{ code: number; output: string }> {
   return new Promise((resolve) => {
-    const child = spawn(command, [...args], { cwd, env: { ...process.env }, windowsHide: true });
+    const child = spawn(command, [...args], {
+      cwd,
+      // Extra values override the server's own environment, so a stale DATABASE_URL the shell
+      // exported at startup cannot leak into a child that needs the live one.
+      env: { ...process.env, ...extraEnv },
+      windowsHide: true,
+    });
     let output = '';
     child.stdout.on('data', (chunk: Buffer) => {
       output += chunk.toString('utf8');
@@ -515,14 +523,20 @@ export async function POST(request: NextRequest) {
     // registry because nobody ran the sync first is the one mistake this console exists to make
     // impossible. The pull writes blocks, units and facilities into the local database — accounts,
     // receipts and mail have no second home by design (ADR 0004), and the page says so.
-    // A destroy may therefore only run from a server that can see the cloud database.
-    if (process.env['DATABASE_URL'] === undefined || process.env['DATABASE_URL'] === '') {
+    //
+    // The URL is resolved live from AWS (endpoint + Secrets Manager) rather than taken from the
+    // server's environment: RDS generates a new master password on every stack creation, so an
+    // exported DATABASE_URL is stale after every deploy→destroy→deploy cycle and the pull fails
+    // with "credentials are not valid" exactly when it matters.
+    const cloudUrl = await resolveCloudDatabaseUrl();
+    if (cloudUrl === null) {
       return NextResponse.json({
         code: 'INVALID_INPUT',
         message:
-          'This server cannot see the cloud database, so the pre-destroy sync cannot run. Start ' +
-          'the dev server with the `pnpm cloud:env` export line in its shell and try again — a ' +
-          'destroy that cannot save the registry first is refused on purpose.',
+          'This server could not resolve the cloud database (nothing deployed, or AWS credentials ' +
+          'unavailable) — a destroy that cannot save the registry first is refused on purpose. If ' +
+          'the database is already gone (a previous destroy half-finished), run terraform destroy ' +
+          'in infra/stack directly.',
         fields: ['cloud'],
       }, { status: 400 });
     }
@@ -530,6 +544,8 @@ export async function POST(request: NextRequest) {
       process.execPath,
       ['scripts/db-pull.mjs', '--yes'],
       join(STACK_DIR, '..', '..'),
+      // The live URL goes to the script through its environment, never a shell argument.
+      { DATABASE_URL: cloudUrl, DB_TARGET: 'cloud' },
     );
     if (pull.code !== 0) {
       return NextResponse.json({

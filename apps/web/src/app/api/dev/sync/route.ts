@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { actor, toResponse } from '@/server/http';
+import { resolveCloudDatabaseUrl } from '@/server/cloud-db';
 
 /**
  * The local↔cloud bridge, behind a dev-only route: it runs the repository's own sync commands
@@ -50,11 +51,15 @@ function repoRoot(): string {
 }
 
 /** Runs one sync script and resolves its captured output and exit code. */
-function runScript(file: string, flags: readonly string[]): Promise<{ code: number; output: string }> {
+function runScript(
+  file: string,
+  flags: readonly string[],
+  env: Record<string, string> = {},
+): Promise<{ code: number; output: string }> {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [join(repoRoot(), 'scripts', file), ...flags], {
       cwd: repoRoot(),
-      env: { ...process.env },
+      env: { ...process.env, ...env },
       windowsHide: true,
     });
     let output = '';
@@ -73,9 +78,9 @@ function runScript(file: string, flags: readonly string[]): Promise<{ code: numb
   });
 }
 
-/** The cloud URL the server process can see, redacted to its host — never the credentials. */
-function redactedCloud(): string | null {
-  const url = process.env['DATABASE_URL'];
+/** The cloud URL the server can currently see, redacted to its host — never the credentials. */
+async function redactedCloud(): Promise<string | null> {
+  const url = (await resolveCloudDatabaseUrl()) ?? process.env['DATABASE_URL'];
   if (url === undefined || url.trim() === '') return null;
   try {
     const parsed = new URL(url);
@@ -96,7 +101,7 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({
-    cloud: redactedCloud(),
+    cloud: await redactedCloud(),
     localFile: existsSync(join(repoRoot(), '.data', 'grihaone.db')),
   });
 }
@@ -120,13 +125,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (redactedCloud() === null) {
+  // The cloud URL is resolved live from AWS (RDS endpoint + Secrets Manager) — the master
+  // password rotates on every stack creation, so a DATABASE_URL exported into the server's
+  // shell is stale after every deploy→destroy→deploy cycle. Falls back to the server's own
+  // DATABASE_URL when AWS cannot be reached (a second local database standing in for the cloud
+  // one, the --allow-local arrangement the scripts document).
+  const liveUrl = await resolveCloudDatabaseUrl();
+  const cloudUrl = liveUrl ?? process.env['DATABASE_URL'];
+  if (cloudUrl === undefined || cloudUrl.trim() === '') {
     return NextResponse.json(
       {
         code: 'INVALID_INPUT',
         message:
-          'The cloud database is not configured for this server. Run `pnpm cloud:env`, paste the ' +
-          'export line into the shell that starts the dev server, and restart it.',
+          'No cloud database to sync with — deploy the stack first, or export DATABASE_URL for a ' +
+          'stand-in database the scripts can --allow-local.',
         fields: ['cloud'],
       },
       { status: 400 },
@@ -138,7 +150,7 @@ export async function POST(request: NextRequest) {
   // always dry — it writes nothing by construction.
   const flags = action === 'diff' ? script.appliesFlags : body?.apply === true ? script.appliesFlags : ['--dry-run'];
 
-  const { code, output } = await runScript(script.file, flags);
+  const { code, output } = await runScript(script.file, flags, { DATABASE_URL: cloudUrl, DB_TARGET: 'cloud' });
   return NextResponse.json(
     {
       ran: action,
