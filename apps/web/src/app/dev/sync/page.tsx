@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Card, CardBody, CardHeader, Skeleton } from '@grihaone/ui';
-import { call } from '@/lib/session';
+import { call, useGuardedSession } from '@/lib/session';
 
 /**
  * The local↔cloud bridge, as one screen: compare the two databases, bring the property registry
@@ -27,6 +27,9 @@ interface RunResult {
 }
 
 export default function SyncPage() {
+  // Committee-only like its API; the guard sends an expired session to sign-in instead of
+  // leaving the skeleton spinning on a 401 nobody renders.
+  const guarded = useGuardedSession('COMMITTEE');
   const [status, setStatus] = useState<Status | null>(null);
   const [runs, setRuns] = useState<Record<'diff' | 'pull' | 'push', RunResult | undefined>>({ diff: undefined, pull: undefined, push: undefined });
   const [pending, setPending] = useState<'diff' | 'pull' | 'push' | null>(null);
@@ -54,7 +57,7 @@ export default function SyncPage() {
     if (result.ok && apply) void refresh();
   }
 
-  if (status === null) {
+  if (guarded.state !== 'signed-in' || status === null) {
     return (
       <div className="mx-auto max-w-3xl space-y-4 p-6">
         <Skeleton variant="text" width={200} height={32} />
