@@ -287,6 +287,13 @@ export async function POST(request: NextRequest) {
   const action = body?.action;
 
   if (action === 'plan') {
+    // A plan needs an initialized backend, which a teardown's cleanup (or a fresh checkout)
+    // removes. Init is idempotent and quiet when already done, so run it first rather than
+    // answering with the backend wall of text — from any state, the button simply works.
+    const init = await run(tf, ['init', '-input=false']);
+    if (init.code !== 0) {
+      return NextResponse.json({ ran: 'plan', ok: false, changes: false, output: tail(init.output) });
+    }
     const result = await run(tf, ['plan', '-detailed-exitcode', '-input=false', '-lock=false']);
     // 0: nothing to do. 2: changes present. 1: the plan itself failed.
     const changes = result.code === 2;
