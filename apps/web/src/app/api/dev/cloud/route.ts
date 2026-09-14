@@ -155,7 +155,13 @@ interface Job {
   ok: boolean | null;
 }
 
-const jobHolder: { nextId: number; current: Job | null } = { nextId: 1, current: null };
+// On globalThis, not module scope: a dev-server hot reload replaces this module while a
+// deploy's or destroy's terraform keeps running as a child process, and a module-scoped holder
+// would come back empty — the page would say "nothing running" while terraform held the state
+// lock, and the next operation would fail on that lock with nothing on screen to explain it.
+const jobStore = globalThis as unknown as { __grihaoneCloudJobs?: { nextId: number; current: Job | null } };
+jobStore.__grihaoneCloudJobs ??= { nextId: 1, current: null };
+const jobHolder = jobStore.__grihaoneCloudJobs;
 
 function jobView(job: Job | null): Job | null {
   if (job === null) return null;
