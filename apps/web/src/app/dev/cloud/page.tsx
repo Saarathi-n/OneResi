@@ -272,13 +272,15 @@ export default function CloudConsolePage() {
       <Card elevation={1} className="border-critical">
         <CardHeader
           title="Destroy"
-          subtitle="Takes the whole stack down. The stack's own guards refuse unless tfvars allowed it."
+          subtitle="Syncs the cloud registry to local first, then takes the whole stack down. Refuses if the sync fails."
         />
         <CardBody className="space-y-3">
           <p className="type-body text-critical">
-            This removes every resource the state names — the database, the buckets, the network.
-            The stack refuses while deletion protection is on and while the buckets hold data;
-            allowing it is a tfvars change you make on purpose.
+            Before anything is deleted, the property registry (blocks, units, facilities) is pulled
+            into the local database — a destroy that loses the cloud&apos;s registry because nobody
+            synced first is the mistake this refuses to make. Accounts, receipts and mail have no
+            second home by design. The stack&apos;s own guards also refuse while deletion protection
+            is on; allowing it is a tfvars change you make on purpose.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <input
