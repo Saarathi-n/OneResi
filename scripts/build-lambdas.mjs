@@ -17,7 +17,7 @@
  * would otherwise leave the bare expression for a runtime that may not define it.
  */
 import { build } from 'esbuild';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,6 +43,22 @@ for (const lambda of LAMBDAS) {
     sourcemap: true,
     logLevel: 'info',
     define: { 'import.meta.dirname': '"/var/task"' },
+    // ESM output has neither `require` nor `__dirname`, but two CJS consumers in the bundle need
+    // both at module load: the AWS SDK's internals (`@smithy/node-http-handler`) require
+    // `node:https`/`node:http`, and Prisma's generated runtime reads `__dirname` to find its
+    // engine. The banner supplies the three from `import.meta` — the standard fix for esbuild
+    // ESM + AWS SDK + Prisma. Without it the Lambda answers "Dynamic require of \"node:https\"
+    // is not supported" or "__dirname is not defined" on first invocation and every SQS batch
+    // redelivers forever.
+    banner: {
+      js: [
+        "import { createRequire } from 'node:module';",
+        "import { fileURLToPath } from 'node:url';",
+        "const require = createRequire(import.meta.url);",
+        "const __filename = fileURLToPath(import.meta.url);",
+        "const __dirname = fileURLToPath(new URL('.', import.meta.url));",
+      ].join('\n'),
+    },
     // The handlers live outside the workspace packages, so pnpm's node_modules symlinks are not
     // in their ancestor chain and esbuild cannot resolve the package names on its own. The
     // aliases point each import at the TypeScript source the package's own "exports" names —
@@ -64,6 +80,27 @@ for (const lambda of LAMBDAS) {
 
   // The marker that makes nodejs20.x read the ESM output as modules.
   writeFileSync(join(outdir, 'package.json'), JSON.stringify({ type: 'module' }, null, 2) + '\n');
+
+  // The Prisma query engine for Amazon Linux. The bundle is compiled on Windows, so the client's
+  // "native" engine is a .dll it can never use in Lambda; the schema's binaryTargets makes
+  // `prisma generate` also emit the rhel engine, and shipping it beside the handler plus
+  // PRISMA_QUERY_ENGINE_LIBRARY (set in events.tf) is what lets the Lambda query at all — the
+  // same arrangement the container image uses for linux-musl.
+  const engines = readdirSync(join(repoRoot, 'packages/db/prisma/generated/postgresql')).filter(
+    (name) => name.startsWith('libquery_engine-rhel-openssl-3.0.x'),
+  );
+  if (engines.length === 0) {
+    throw new Error(
+      'No rhel-openssl-3.0.x query engine found in packages/db/prisma/generated/postgresql. ' +
+        'Run `pnpm db:generate` (the schema now lists rhel-openssl-3.0.x in binaryTargets).',
+    );
+  }
+  for (const engine of engines) {
+    copyFileSync(
+      join(repoRoot, 'packages/db/prisma/generated/postgresql', engine),
+      join(outdir, engine),
+    );
+  }
 
   process.stdout.write(`  ${lambda.name} -> infra/lambda/${lambda.name}-bundle/index.js\n`);
 }

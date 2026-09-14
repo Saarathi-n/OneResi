@@ -25,6 +25,19 @@ resource "aws_db_parameter_group" "main" {
     apply_method = "pending-reboot"
   }
 
+  # db.t4g.micro derives a default of ~19 total slots, five of which are reserved for rds_reserved
+  # — about 14 usable. The app task runs two Next servers (web + PWA), each with its own Prisma
+  # pool (connection_limit=5 in the entrypoint), and every warm notifier execution environment
+  # holds another pool (connection_limit=2 where its URL is built). Fourteen is not enough for
+  # that arithmetic, and when it runs out even the health check's SELECT 1 is refused. 80 is far
+  # beyond what this shape of deployment can open; memory per connection on a micro is the real
+  # ceiling, and at these pool sizes it stays well inside.
+  parameter {
+    name         = "max_connections"
+    value        = "80"
+    apply_method = "pending-reboot"
+  }
+
   parameter {
     name         = "log_min_duration_statement"
     value        = "2000"

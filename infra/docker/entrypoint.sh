@@ -24,7 +24,12 @@ if [ "${DB_TARGET:-local}" = "cloud" ] && [ -z "${DATABASE_URL:-}" ]; then
   encoded_user=$(node -e 'process.stdout.write(encodeURIComponent(process.env.DB_USER))')
   encoded_password=$(node -e 'process.stdout.write(encodeURIComponent(process.env.DB_PASSWORD))')
 
-  DATABASE_URL="postgresql://${encoded_user}:${encoded_password}@${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}?sslmode=${DB_SSLMODE:-require}"
+  # connection_limit=5: a db.t4g.micro allows ~19 connections and the notifier Lambdas hold a few
+  # of their own (connection_limit=2 each, set where their URL is built in packages/db events.ts).
+  # Uncapped, Prisma's default pool is physical-cores x2+1, which starves everyone else and the
+  # app's own health check starts failing with "remaining connection slots are reserved".
+  # Five is generous for one task.
+  DATABASE_URL="postgresql://${encoded_user}:${encoded_password}@${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}?sslmode=${DB_SSLMODE:-require}&connection_limit=5"
   export DATABASE_URL
 
   # Nothing downstream reads it again, and the parameter group refuses a connection that is not TLS

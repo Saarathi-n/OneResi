@@ -162,6 +162,40 @@ it ever resurfaces. Symptom → cause.
 16. **Destroy hangs ~25 min on Lambda ENI security groups** — AWS's slowest deletion step.
     Expected; wait, do not re-run.
 
+The second deploy cycle (2026-09-14, the SES live test) shook out four more, all in the
+notifier Lambda — which no earlier check had ever actually exercised, because nothing had sent
+real mail through it:
+
+17. **Notifier Lambda crash-loops: `Dynamic require of "node:https" is not supported`** — the
+    esbuild ESM bundle cannot satisfy the AWS SDK's CJS `require()` of node builtins.
+    Fix: the `createRequire` banner in `scripts/build-lambdas.mjs`.
+18. **Notifier Lambda: `__dirname is not defined`** — Prisma's CJS runtime reads `__dirname`,
+    absent in ESM. Fix: `fileURLToPath` lines in the same banner.
+19. **Notifier Lambda: `could not locate the Query Engine for runtime rhel-openssl-3.0.x`** —
+    the bundle was built on Windows, so the client's native engine is a .dll. Fix:
+    `binaryTargets = ["native", "rhel-openssl-3.0.x"]` in the base schema, the engine copied
+    into the bundle by build-lambdas.mjs, and `PRISMA_QUERY_ENGINE_LIBRARY` set in events.tf —
+    the Lambda twin of trap 2.
+20. **RDS connection exhaustion: `remaining connection slots are reserved`** — a db.t4g.micro
+    derives ~19 total slots (~14 usable after rds_reserved), and the app's two Next servers
+    (uncapped Prisma pools) plus every warm Lambda environment overflow it; even
+    `/api/health` is refused, which surfaces in the browser as "Application error".
+    Fix: `connection_limit=5` in the container entrypoint's URL, `connection_limit=2` in the
+    Lambda URL (packages/db events.ts), and `max_connections=80` in the RDS parameter group.
+
+Two SES facts that are behavior, not bugs:
+
+- **Sandbox refusals are per-recipient**: sending to any unverified address fails with
+  "not authorized to perform ses:SendEmail on resource .../identity/<recipient>" — which is
+  what happens to the seed's fictional residents. Only verified mailboxes can receive until
+  production access is granted. Rows land FAILED and are requeueable afterwards.
+- **The live mail suite races the notifier** for messages on the mail-events queue (the Lambda
+  is subscribed to the same queue to apply bounce events). To run `pnpm test:mail:live`,
+  disable the mapping first:
+  `aws lambda update-event-source-mapping --uuid <mail-events-uuid> --no-enabled`,
+  run the test, then re-enable. (The uuid: `aws lambda list-event-source-mappings
+  --function-name grihaone-dev-notifier`.) The passed run of 2026-09-14 was done exactly this way.
+
 ---
 
 ## 5. Live verification (the 21-point checklist)
