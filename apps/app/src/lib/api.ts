@@ -67,10 +67,13 @@ function hydrateFromStorage(): void {
   }
 }
 
-hydrateFromStorage();
-
+// Module state first, the hydration call after: hydrateFromStorage() writes these at module
+// load, and a `let` read before its declaration is the temporal dead zone — the same error that
+// took the web app's sign-in down in its production bundle (dev mode only warned).
 let accessToken: string | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
+
+hydrateFromStorage();
 
 /** True when a request has already been retried after a refresh, so it never loops. */
 const retried = new WeakSet<object>();
