@@ -48,8 +48,22 @@ const PERMANENT_FAILURES: readonly string[] = ['MessageRejected', 'BadRequestExc
  * message delivers the moment the click lands instead of being silently lost (the deploy-cycle
  * bug this closed: a complaint and an announcement were abandoned on attempt 1 and nothing any
  * person clicked later could bring them back).
+ *
+ * The mirror image is the sandbox recipient trap: SES in sandbox mode only delivers to verified
+ * addresses, and an unverified RECIPIENT answers not with MessageRejected but with
+ * AccessDeniedException naming that recipient's identity — "not authorized to perform
+ * ses:SendEmail on resource ...:identity/george.fernandes@...". Every seeded fictional resident
+ * gets this answer, and no amount of retrying will verify them. Classified transient (the old
+ * behaviour), 36 residents × 5 attempts each flooded the queue with hundreds of poison rows that
+ * starved the 1-send/sec rate budget the real addresses needed — the backlog bug. So an
+ * AccessDenied that names THIS message's recipient is permanent; any other AccessDenied (the IAM
+ * policy missing the sender, the configuration set) is a configuration problem somebody fixes,
+ * and stays retryable.
  */
-function isPermanentRejection(name: string, detail: string): boolean {
+function isPermanentRejection(name: string, detail: string, recipient?: string): boolean {
+  if (name === 'AccessDeniedException') {
+    return recipient !== undefined && detail.includes(`identity/${recipient}`);
+  }
   return PERMANENT_FAILURES.includes(name) && !detail.includes('not verified');
 }
 
@@ -107,7 +121,7 @@ export function createSesProvider(options: SesProviderOptions = {}): MailProvide
         const name = cause instanceof Error ? cause.name : 'UnknownError';
         const detail = cause instanceof Error ? cause.message : String(cause);
         throw new MailDeliveryError(`SES refused the message: ${detail}`, {
-          permanent: isPermanentRejection(name, detail),
+          permanent: isPermanentRejection(name, detail, request.to),
           providerCode: name,
           cause,
         });

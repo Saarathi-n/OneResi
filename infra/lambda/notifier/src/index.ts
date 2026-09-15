@@ -79,8 +79,26 @@ export async function handler(event: SqsEvent): Promise<{ drained: boolean; sesA
     // composition root in a Lambda, over the same stores and services.
     const clock = { now: (): Date => new Date() };
 
-    const mail = await drainOutbox({ origin: process.env['APP_ORIGIN'] });
-
+    // The whole backlog, not one batch: a publish fans out to every resident (39 rows at this
+    // society's size) and the batch is 25, so a single-batch drain fell behind every burst of
+    // testing — rows queued faster than the 5-minute schedule could chew. Each pass claims one
+    // batch (the claim is the concurrency safety), and passes repeat until nothing is due or the
+    // invocation's time budget is spent; SQS redelivers whatever an untimely end leaves behind.
+    const drainBudgetMs = 50_000;
+    const drainStartedAt = Date.now();
+    const mailTotals = { considered: 0, claimed: 0, sent: 0, retried: 0, failed: 0, abandoned: 0, lost: 0 };
+    // Problems accumulate across every pass, not just the last one: a backlog that fails rows in
+    // pass one and clears in pass two used to return an empty problems list, hiding the failures
+    // that a person reading the logs needed to see.
+    const mailProblems: string[] = [];
+    let mailPass;
+    do {
+      mailPass = await drainOutbox({ origin: process.env['APP_ORIGIN'] });
+      for (const key of Object.keys(mailTotals) as (keyof typeof mailTotals)[]) {
+        mailTotals[key] += mailPass[key];
+      }
+      mailProblems.push(...mailPass.problems);
+    } while (mailPass.considered > 0 && Date.now() - drainStartedAt < drainBudgetMs);
     // The same selection apps/web/src/server/runtime.ts makes: webpush in production where the
     // VAPID pair is set and the constructor refuses to boot without it, the console no-op
     // anywhere else — which is also what makes this handler runnable against a local database.
@@ -115,8 +133,12 @@ export async function handler(event: SqsEvent): Promise<{ drained: boolean; sesA
     return {
       drained: true,
       sesApplied: 0,
-      ...(mail.problems.length + pushReport.problems.length + inApp.problems.length > 0
-        ? { problems: [...mail.problems, ...pushReport.problems, ...inApp.problems] }
+      // The drain's own numbers, so an invocation answers exactly what it saw — the difference
+      // between "nothing was due" (considered 0) and "rows were due but every claim lost" is the
+      // whole diagnosis, and it is not visible from the outside any other way.
+      mail: mailTotals,
+      ...(mailProblems.length + pushReport.problems.length + inApp.problems.length > 0
+        ? { problems: [...mailProblems, ...pushReport.problems, ...inApp.problems] }
         : {}),
     };
   } finally {

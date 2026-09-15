@@ -27,6 +27,13 @@ function utcMidnight(day: string): Date {
   return new Date(`${day}T00:00:00.000Z`);
 }
 
+/** The society's calendar. IST has no daylight saving, so one fixed offset is exact. */
+const IST_OFFSET_MINUTES = 330;
+
+function istDayString(at: Date): string {
+  return new Date(at.getTime() + IST_OFFSET_MINUTES * 60_000).toISOString().slice(0, 10);
+}
+
 function noticeView(announcement: StoredAnnouncement): NoticeView {
   return {
     id: announcement.id,
@@ -60,7 +67,11 @@ export function noticesService(deps: NoticesDeps): NoticesService {
 
       if (
         input.expiresOn !== undefined &&
-        input.expiresOn < clock.now().toISOString().slice(0, 10)
+        // The committee picks a date off their own calendar, so "today" is the society's day,
+        // not whatever UTC says it is — the same comparison billing and facilities make. Against
+        // the UTC string this used to compare with, an expiry picked at 1 a.m. IST was being
+        // measured against a yesterday that had already ended for the society.
+        input.expiresOn < istDayString(clock.now())
       ) {
         return errors.invalid('The expiry date cannot be in the past.', 'expiresOn');
       }

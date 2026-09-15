@@ -137,7 +137,10 @@ resource "aws_lambda_function" "notifier" {
   handler       = "index.handler"
   architectures = ["x86_64"]
   memory_size   = 256
-  timeout       = 30
+  # The drain loop's budget is 50s (one invocation clears the whole backlog, not one 25-row
+  # batch), so the function must outlive it: 60s covers the drain plus the pushes and the event
+  # pass. At 30s every doorbell invocation died mid-drain and crash-looped the queue.
+  timeout       = 60
 
   filename         = data.archive_file.notifier.output_path
   source_code_hash = data.archive_file.notifier.output_base64sha256

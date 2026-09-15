@@ -194,7 +194,10 @@ export default function AnnouncementsPage() {
               {pinned ? 'Pinned — will sit at the top' : 'Pin it to the top'}
             </Button>
           </div>
-          {error !== null && field === null ? (
+          {error !== null && field !== 'title' && field !== 'body' ? (
+            // Any error the two inputs cannot carry — a rejected expiry date, a rate limit, a
+            // session that expired mid-write — used to be set but never rendered: the button
+            // stopped spinning and nothing appeared. This is that error's only home.
             <p className="type-body text-critical" role="alert">
               {error}
             </p>
