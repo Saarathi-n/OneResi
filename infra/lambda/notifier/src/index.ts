@@ -64,7 +64,10 @@ export async function handler(event: SqsEvent): Promise<{ drained: boolean; sesA
     const firstArn = event.Records?.[0]?.eventSourceARN ?? '';
     if (firstArn.endsWith(MAIL_EVENTS_SUFFIX) || firstArn.includes('mail-events')) {
       const decoded = (event.Records ?? []).flatMap((record) => {
-        const raw: RawMessage = { Body: record.body ?? '', ReceiptHandle: null };
+        // RawMessage's fields are lower-case (body, receiptHandle); the capitalized shape this
+        // used to pass made every decode read `undefined`, silently drop every SES event, and
+        // leave deliveryState empty forever — the bug that hid whether Gmail took the mail.
+        const raw: RawMessage = { body: record.body ?? '', receiptHandle: null };
         const decoded = decodeSesEvent(raw);
         return decoded === null ? [] : [decoded];
       });
