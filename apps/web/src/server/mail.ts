@@ -4,55 +4,71 @@ import type { Actor, Result } from '@grihaone/domain';
 import { errors } from '@grihaone/domain';
 
 /**
- * The committee's mail log, in the server module where database access belongs (WIRING rule 4):
- * every message the system ever wrote — sent, failed, bounced, abandoned — plus the one operation
- * a person performs on it, requeueing what failed. This is the screen that makes the mail
- * pipeline observable from the app itself: delivery receipts, retry counts, and the resend all
- * live here, so nobody has to query the database by hand to answer "did the mail go out?".
+ * The committee's mail log, in the server module where database access belongs (WIRING rule 4).
+ * The line IS the outbox row — the pipeline's own record of one message to one recipient — with
+ * the provider's verdict joined on: what SES said happened to it, and the rendered subject once
+ * a send has been attempted. Listing from the outbox (not mail_message) is what makes the log
+ * complete: a message published seconds ago, not yet attempted by the notifier, appears as
+ * `queued` rather than being invisible until its first attempt.
  */
 
-/** One line of the log. The row is the truth; nothing here is derived or guessed. */
+/** One line of the log: the outbox row's truth, plus the provider's verdict where one exists. */
 export interface MailLine {
   readonly id: number;
-  readonly toAddress: string;
-  readonly subject: string;
-  readonly template: string;
-  readonly provider: string;
+  readonly toAddress: string | null;
+  readonly subject: string | null;
+  readonly template: string | null;
+  readonly provider: string | null;
+  /** The pipeline status: queued | retrying | sent | failed | abandoned. */
   readonly status: string;
   readonly deliveryState: string | null;
   readonly error: string | null;
-  readonly attempts: number | null;
-  readonly outboxStatus: string | null;
+  readonly attempts: number;
   readonly createdAt: string;
   readonly sentAt: string | null;
 }
 
-/** Reads the newest mail rows, newest first. The page caps what it shows; the query caps harder. */
+/** The recipient from an un-attempted row's payload, where the event carries one. */
+function payloadEmail(payload: string): string | null {
+  try {
+    const email = (JSON.parse(payload) as { email?: unknown }).email;
+    return typeof email === 'string' && email.includes('@') ? email : null;
+  } catch {
+    return null;
+  }
+}
+
+function pipelineStatus(outboxStatus: string, attempts: number): string {
+  if (outboxStatus === 'PENDING') return attempts === 0 ? 'queued' : 'retrying';
+  return outboxStatus.toLowerCase();
+}
+
+/** Reads the newest email outbox rows, newest first, with the provider's verdict joined on. */
 export async function mailLog(actor: Actor, limit = 100): Promise<Result<readonly MailLine[]>> {
   if (actor.role !== 'A') return errors.forbidden('read the mail log');
 
   const db: Db = await getDb();
   try {
-    const rows = await db.mailMessage.findMany({
+    const rows = await db.outboxEvent.findMany({
+      where: { channel: 'EMAIL' },
       orderBy: { id: 'desc' },
       take: Math.min(Math.max(limit, 1), 200),
-      include: { outboxEvent: { select: { attempts: true, status: true } } },
+      include: { mail: { select: { toAddress: true, subject: true, template: true, provider: true, deliveryState: true, sentAt: true } } },
     });
     return {
       ok: true,
       value: rows.map((row) => ({
         id: row.id,
-        toAddress: row.toAddress,
-        subject: row.subject,
-        template: row.template,
-        provider: row.provider,
-        status: row.status,
-        deliveryState: row.deliveryState,
-        error: row.error,
-        attempts: row.outboxEvent?.attempts ?? null,
-        outboxStatus: row.outboxEvent?.status ?? null,
+        toAddress: row.mail?.toAddress ?? payloadEmail(row.payload),
+        subject: row.mail?.subject ?? null,
+        template: row.mail?.template ?? null,
+        provider: row.mail?.provider ?? null,
+        status: pipelineStatus(row.status, row.attempts),
+        deliveryState: row.mail?.deliveryState ?? null,
+        error: row.lastError,
+        attempts: row.attempts,
         createdAt: row.createdAt.toISOString(),
-        sentAt: row.sentAt === null ? null : row.sentAt.toISOString(),
+        sentAt: row.mail?.sentAt === undefined || row.mail.sentAt === null ? null : row.mail.sentAt.toISOString(),
       })),
     };
   } finally {

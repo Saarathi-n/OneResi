@@ -27,23 +27,22 @@ import { useFetch } from '@/lib/useFetch';
 
 interface MailLine {
   id: number;
-  toAddress: string;
-  subject: string;
-  template: string;
-  provider: string;
+  toAddress: string | null;
+  subject: string | null;
+  template: string | null;
+  provider: string | null;
   status: string;
   deliveryState: string | null;
   error: string | null;
-  attempts: number | null;
-  outboxStatus: string | null;
+  attempts: number;
   createdAt: string;
   sentAt: string | null;
 }
 
 function statusTone(status: string): 'positive' | 'caution' | 'critical' | 'neutral' {
-  if (status === 'SENT') return 'positive';
-  if (status === 'PENDING') return 'caution';
-  if (status === 'FAILED' || status === 'ABANDONED') return 'critical';
+  if (status === 'sent') return 'positive';
+  if (status === 'queued' || status === 'retrying') return 'caution';
+  if (status === 'failed' || status === 'abandoned') return 'critical';
   return 'neutral';
 }
 
@@ -107,7 +106,7 @@ export default function MailLogPage() {
     );
   }
 
-  const failed = lines.filter((line) => line.status === 'FAILED').length;
+  const failed = lines.filter((line) => line.status === 'failed').length;
 
   return (
     <div className="space-y-4">
@@ -150,13 +149,13 @@ export default function MailLogPage() {
               <tbody>
                 {lines.map((line) => (
                   <tr key={line.id} className="border-b border-border last:border-0">
-                    <td className="type-body px-4 py-3 text-content">{line.toAddress}</td>
+                    <td className="type-body px-4 py-3 text-content">{line.toAddress ?? '—'}</td>
                     <td className="type-body max-w-64 truncate px-4 py-3 text-content-muted">
-                      {line.subject}
+                      {line.subject ?? line.template ?? '—'}
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={statusTone(line.status)} size="sm">
-                        {line.status.toLowerCase()}
+                        {line.status}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
@@ -164,7 +163,7 @@ export default function MailLogPage() {
                         {(line.deliveryState ?? '—').toLowerCase()}
                       </Badge>
                     </td>
-                    <td className="type-body px-4 py-3 text-content-muted">{line.attempts ?? '—'}</td>
+                    <td className="type-body px-4 py-3 text-content-muted">{line.attempts}</td>
                     <td className="type-body px-4 py-3 text-content-subtle">
                       {new Date(line.createdAt).toLocaleTimeString()}
                     </td>
