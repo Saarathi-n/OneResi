@@ -134,8 +134,19 @@ export type Guarded =
 export function useRequireRole(role: C.Role): Guarded {
   const router = useRouter();
   const { status } = useSession();
-  const [guarded, setGuarded] = useState<Guarded>({ state: 'loading' });
-  const decided = useRef(false);
+  const [guarded, setGuarded] = useState<Guarded>(() => {
+    if (status.state === 'signed-in') {
+      if (status.person.role !== role) {
+        return { state: 'redirecting' };
+      }
+      return { state: 'ok', person: status.person };
+    }
+    if (status.state === 'signed-out') {
+      return { state: 'redirecting' };
+    }
+    return { state: 'loading' };
+  });
+  const decided = useRef(status.state === 'signed-in' && status.person.role === role);
 
   useEffect(() => {
     if (status.state === 'loading' || decided.current) return;

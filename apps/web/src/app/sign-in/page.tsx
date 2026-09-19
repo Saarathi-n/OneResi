@@ -100,7 +100,7 @@ export default function SignInPage() {
       // Brief physical weight pause for admission confirmation before routing
       setTimeout(() => {
         router.push('/home');
-      }, 600);
+      }, 100);
       return;
     }
 
