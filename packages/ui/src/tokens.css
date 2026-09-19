@@ -79,6 +79,10 @@
      that should feel suspended rather than painted sit on this, and the blur does the rest. */
   --surface-glass: rgb(255 255 255 / 0.72);
 
+  /* Paper. Print renders on the one surface that never themes, so this token deliberately has
+     no dark value: a receipt prints white in every theme. */
+  --paper: #ffffff;
+
   /* edges */
   --border: #dde1e8;
   --border-strong: #c2c9d4;
@@ -212,6 +216,7 @@
   --color-surface-raised: var(--surface-raised);
   --color-surface-sunken: var(--surface-sunken);
   --color-surface-glass: var(--surface-glass);
+  --color-paper: var(--paper);
 
   --color-content: var(--content);
   --color-content-muted: var(--content-muted);

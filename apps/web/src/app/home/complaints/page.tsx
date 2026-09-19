@@ -36,6 +36,21 @@ import { useFetch } from '@/lib/useFetch';
 
 const COMPLAINTS_PATH = '/api/complaints';
 
+const CATEGORY_KEY = 'oneresi.complaint.category';
+
+function loadLastCategory(): ComplaintCategory | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(CATEGORY_KEY);
+    if (raw !== null && (COMPLAINT_CATEGORIES as readonly string[]).includes(raw)) {
+      return raw as ComplaintCategory;
+    }
+  } catch {
+    // Remembering is a convenience, never a requirement.
+  }
+  return null;
+}
+
 interface UpdateLine {
   at: string;
   by: string;
@@ -87,18 +102,22 @@ export default function ComplaintsPage() {
   const [reopenPending, setReopenPending] = useState(false);
 
   // Pre-fill: the household's live complaint is usually the same kind as the next one, so offer
-  // that category once — never overwrite a choice the person already made.
+  // that category first; failing that, the last kind this household reported. Both are offers —
+  // never an overwrite of a choice the person already made.
   const categoryOffered = useRef(false);
   useEffect(() => {
     if (categoryOffered.current || category !== '') return;
-    if (complaints.state.state !== 'ready' || complaints.state.data.length === 0) return;
+    if (complaints.state.state !== 'ready') return;
     const open = complaints.state.data.find(
       (complaint) => complaint.status === 'OPEN' || complaint.status === 'IN_PROGRESS',
     );
     if (open !== undefined) {
       setCategory(open.category);
-      categoryOffered.current = true;
+    } else {
+      const last = loadLastCategory();
+      if (last !== null) setCategory(last);
     }
+    categoryOffered.current = true;
   }, [complaints.state, category]);
 
   async function submit(): Promise<void> {
@@ -120,6 +139,11 @@ export default function ComplaintsPage() {
     });
     setPending(false);
     if (result.ok) {
+      try {
+        window.localStorage.setItem(CATEGORY_KEY, category);
+      } catch {
+        // Remembering is a convenience, never a requirement.
+      }
       setDescription('');
       setCategory('');
       setPriority('MEDIUM');

@@ -13,6 +13,7 @@ import {
   StatusPill,
   Money,
   EmptyState,
+  RelativeTime,
   buttonClass,
 } from '@oneresi/ui';
 import {
@@ -250,10 +251,7 @@ export default function ResidentHomePage() {
                     </p>
                     <p className="type-micro text-content-subtle">
                       {entry.enteredAt === null ? 'Waiting' : 'Arrived'} ·{' '}
-                      {new Date(entry.at).toLocaleTimeString('en-IN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      <RelativeTime value={entry.at} />
                     </p>
                   </div>
                   <StatusPill descriptor={APPROVAL_STATUS[entry.approvalStatus]} size="sm" />
@@ -319,11 +317,7 @@ function WaitingCard({
               </p>
               <p className="type-micro mt-1 text-content-muted">
                 {visitor.phone !== null ? `${visitor.phone} · ` : ''}
-                waiting since{' '}
-                {new Date(visitor.since).toLocaleTimeString('en-IN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                <RelativeTime value={visitor.since} />
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
