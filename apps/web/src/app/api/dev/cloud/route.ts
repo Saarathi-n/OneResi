@@ -438,8 +438,46 @@ export async function POST(request: NextRequest) {
         fields: ['confirm'],
       }, { status: 400 });
     }
+
+    // The registry is saved before anything is deleted: a destroy that loses the cloud's property
+    // registry because nobody ran the sync first is the one mistake this console exists to make
+    // impossible. The pull writes blocks, units and facilities into the local database — accounts,
+    // receipts and mail have no second home by design (ADR 0004), and the page says so.
+    // A destroy may therefore only run from a server that can see the cloud database.
+    if (process.env['DATABASE_URL'] === undefined || process.env['DATABASE_URL'] === '') {
+      return NextResponse.json({
+        code: 'INVALID_INPUT',
+        message:
+          'This server cannot see the cloud database, so the pre-destroy sync cannot run. Start ' +
+          'the dev server with the `pnpm cloud:env` export line in its shell and try again — a ' +
+          'destroy that cannot save the registry first is refused on purpose.',
+        fields: ['cloud'],
+      }, { status: 400 });
+    }
+    const pull = await run(
+      process.execPath,
+      ['scripts/db-pull.mjs', '--yes'],
+      join(STACK_DIR, '..', '..'),
+    );
+    if (pull.code !== 0) {
+      return NextResponse.json({
+        ran: 'destroy',
+        ok: false,
+        output:
+          '== pre-destroy sync FAILED — nothing was destroyed ==\n' +
+          'The database this pull failed to read from is the one the destroy would take, so it ' +
+          'was refused. If the database is already gone (a previous destroy half-finished), run ' +
+          'terraform destroy in infra/stack directly.\n\n' +
+          tail(pull.output, 10_000),
+      });
+    }
+
     const result = await run(tf, ['destroy', '-auto-approve', '-input=false']);
-    return NextResponse.json({ ran: 'destroy', ok: result.code === 0, output: tail(result.output) });
+    return NextResponse.json({
+      ran: 'destroy',
+      ok: result.code === 0,
+      output: `== pre-destroy sync (cloud registry pulled to local) ==\n${tail(pull.output, 4_000)}\n\n${tail(result.output)}`,
+    });
   }
 
   return NextResponse.json(
