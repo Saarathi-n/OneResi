@@ -158,6 +158,45 @@ describe('what SES says back', () => {
     });
   });
 
+  it('marks a sandbox recipient rejection permanent — no retry will verify a fictional address', async () => {
+    // SES in sandbox mode answers an unverified RECIPIENT with AccessDeniedException naming that
+    // recipient's identity. Every seeded fictional resident gets this answer; classified transient
+    // it meant 36 addresses × 5 attempts of poison rows starved the rate budget real mail needed.
+    const sandboxed = new Error(
+      "User arn:aws:sts::1:assumed-role/notifier is not authorized to perform: ses:SendEmail on resource: arn:aws:ses:ap-south-1:1:identity/priya@grihaone.local",
+    );
+    sandboxed.name = 'AccessDeniedException';
+    const provider = createSesProvider({
+      client: recordingSesClient({ failWith: sandboxed }).client,
+      configurationSetName: 'grihaone-mail',
+    });
+
+    await expect(provider.send(aRequest())).rejects.toMatchObject({
+      name: 'MailDeliveryError',
+      permanent: true,
+      providerCode: 'AccessDeniedException',
+    });
+  });
+
+  it('treats any other AccessDenied as a configuration problem — retryable, not dead', async () => {
+    // An AccessDenied that does not name THIS message's recipient is the IAM policy missing the
+    // sender or the configuration set: somebody's to fix, and the row must survive the fix.
+    const policy = new Error(
+      'User arn:aws:sts::1:assumed-role/notifier is not authorized to perform: ses:SendEmail on resource: arn:aws:ses:ap-south-1:1:configuration-set/grihaone-mail',
+    );
+    policy.name = 'AccessDeniedException';
+    const provider = createSesProvider({
+      client: recordingSesClient({ failWith: policy }).client,
+      configurationSetName: 'grihaone-mail',
+    });
+
+    await expect(provider.send(aRequest())).rejects.toMatchObject({
+      name: 'MailDeliveryError',
+      permanent: false,
+      providerCode: 'AccessDeniedException',
+    });
+  });
+
   it('marks a real rejection permanent, with the provider code on the error', async () => {
     const rejected = new Error('Recipient address suppressed by the account');
     rejected.name = 'MessageRejected';

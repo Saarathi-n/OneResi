@@ -104,6 +104,8 @@ function drain(
     now: clock,
     random: () => 0.5,
     logger: quiet.logger,
+    // A test's sends are instant fakes; the 1.1s provider-rate pause would only slow the suite.
+    sendPacingMs: 0,
     ...extra,
   });
 }

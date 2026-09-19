@@ -47,6 +47,15 @@ export const DEFAULT_BATCH_SIZE = 25;
  */
 export const DEFAULT_LEASE_MS = 60_000;
 
+/**
+ * The pause after a send the provider accepted. SES's sandbox allows one send per second — a drain
+ * that blasts a whole backlog gets `TooManyRequestsException` on nearly every real send and spends
+ * its attempts on throttling. Rejections (a sandboxed recipient, an unverified sender) answer in
+ * milliseconds and are NOT paced: they never reached the rate limit. 1.1s keeps the accepted-send
+ * rate under the cap; a 39-resident notice costs ~5s of real sends, well inside one invocation.
+ */
+export const SEND_PACING_MS = 1_100;
+
 /** Doubling, capped. `attempt` is the number of the attempt that just failed. */
 export function backoffMs(attempt: number): number {
   const exponent = Math.max(0, attempt - 1);
@@ -63,6 +72,8 @@ export interface DrainOptions {
   readonly provider?: MailProvider;
   readonly batchSize?: number;
   readonly leaseMs?: number;
+  /** Pause after each accepted send, for the provider's rate limit. 0 disables (tests). */
+  readonly sendPacingMs?: number;
   readonly logger?: Logger;
   readonly now?: () => Date;
   readonly random?: () => number;
@@ -243,6 +254,11 @@ export async function drainOutbox(options: DrainOptions = {}): Promise<DrainRepo
             note(`row ${row.id} was sent but could not be marked sent: ${describeError(cause)}`);
           }
           settlement = 'sent';
+          // The provider took the message, so it counts against the send rate: pace the next
+          // one (SEND_PACING_MS's comment). Rejections fall through without pausing.
+          if ((options.sendPacingMs ?? SEND_PACING_MS) > 0) {
+            await new Promise((resolve) => setTimeout(resolve, options.sendPacingMs ?? SEND_PACING_MS));
+          }
         } else {
           settlement = await settle({
             db,
