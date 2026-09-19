@@ -133,7 +133,9 @@ resource "aws_db_instance" "main" {
 
   # architecture.md says recovery is a restore from an automated snapshot. Unset means zero, which
   # means there are none.
-  backup_retention_period = 7
+  # One day: the account's free plan caps retention (FreeTierRestrictionError at 7), and a
+  # demo database needs yesterday, not a week.
+  backup_retention_period = 1
   backup_window           = "18:00-18:30" # 23:30 IST, before the 00:30 IST overdue job
   maintenance_window      = "sun:19:00-sun:20:00"
   copy_tags_to_snapshot   = true
