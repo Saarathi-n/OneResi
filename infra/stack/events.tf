@@ -117,6 +117,11 @@ locals {
     SES_EVENT_QUEUE_URL        = aws_sqs_queue.mail_events.id
     AWS_USE_DUALSTACK_ENDPOINT = "true"
     NODE_OPTIONS               = "--enable-source-maps"
+
+    # The bundle's Prisma client is generated on Windows (native) with the rhel engine shipped
+    # beside the handler (scripts/build-lambdas.mjs copies it). Naming the engine is what makes
+    # the client use it rather than hunting for a .dll it can never load on Amazon Linux.
+    PRISMA_QUERY_ENGINE_LIBRARY = "/var/task/libquery_engine-rhel-openssl-3.0.x.so.node"
   }
 }
 

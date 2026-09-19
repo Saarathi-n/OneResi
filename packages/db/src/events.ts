@@ -81,6 +81,11 @@ export async function cloudDatabaseUrlFromParts(
   const encode = (value: string): string => encodeURIComponent(value);
   return (
     `postgresql://${encode(DB_USER)}:${encode(password)}@${DB_HOST}` +
-    `:${DB_PORT ?? '5432'}/${DB_NAME ?? 'grihaone'}?sslmode=${env['DB_SSLMODE'] ?? 'require'}`
+    // connection_limit=2: a db.t4g.micro allows ~19 connections total, and every concurrent
+    // Lambda execution environment opens its own Prisma pool. Uncapped, two busy environments
+    // plus the app's pool exhaust the instance and the worker's own queries start failing with
+    // "remaining connection slots are reserved" — the mail drain then retries rows it could
+    // have sent. Two pooled connections per environment is plenty for a drain loop.
+    `:${DB_PORT ?? '5432'}/${DB_NAME ?? 'grihaone'}?sslmode=${env['DB_SSLMODE'] ?? 'require'}&connection_limit=2`
   );
 }

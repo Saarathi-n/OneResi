@@ -21,6 +21,13 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/__PROVIDER__"
+
+  // The Lambda bundles are built on Windows but run on Amazon Linux, so the generated client
+  // must carry a Linux engine beside the native one or it answers "could not locate the Query
+  // Engine for runtime rhel-openssl-3.0.x" at first query (the Lambda twin of the Docker engine
+  // bug). scripts/build-lambdas.mjs copies the rhel engine into each bundle and the function's
+  // PRISMA_QUERY_ENGINE_LIBRARY names it, the same arrangement the container image uses.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
