@@ -141,8 +141,25 @@ describe('the command it sends', () => {
 });
 
 describe('what SES says back', () => {
-  it('marks a rejection permanent, with the provider code on the error', async () => {
-    const rejected = new Error('Email address is not verified. The following identities failed');
+  it('treats an unverified address as transient — it survives until the verification click', async () => {
+    // A fresh stack's identities start PENDING until each mailbox owner clicks AWS's link; mail
+    // written in that window must retry into FAILED (requeueable), not be abandoned as dead.
+    const unverified = new Error('Email address is not verified. The following identities failed');
+    unverified.name = 'MessageRejected';
+    const provider = createSesProvider({
+      client: recordingSesClient({ failWith: unverified }).client,
+      configurationSetName: 'grihaone-mail',
+    });
+
+    await expect(provider.send(aRequest())).rejects.toMatchObject({
+      name: 'MailDeliveryError',
+      permanent: false,
+      providerCode: 'MessageRejected',
+    });
+  });
+
+  it('marks a real rejection permanent, with the provider code on the error', async () => {
+    const rejected = new Error('Recipient address suppressed by the account');
     rejected.name = 'MessageRejected';
     const provider = createSesProvider({
       client: recordingSesClient({ failWith: rejected }).client,

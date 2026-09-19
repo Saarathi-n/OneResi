@@ -40,6 +40,19 @@ function tagSafe(value: string): string {
  */
 const PERMANENT_FAILURES: readonly string[] = ['MessageRejected', 'BadRequestException'];
 
+/**
+ * The one rejection that is not permanent: "Email address is not verified" rides MessageRejected,
+ * but it is a deploy-cycle transient. Every fresh stack's identities start PENDING until each
+ * mailbox owner clicks AWS's verification link, and mail written in that window must survive the
+ * wait — retrying (bounded) lands it FAILED and requeueable, not ABANDONED and dead, so the
+ * message delivers the moment the click lands instead of being silently lost (the deploy-cycle
+ * bug this closed: a complaint and an announcement were abandoned on attempt 1 and nothing any
+ * person clicked later could bring them back).
+ */
+function isPermanentRejection(name: string, detail: string): boolean {
+  return PERMANENT_FAILURES.includes(name) && !detail.includes('not verified');
+}
+
 export function createSesProvider(options: SesProviderOptions = {}): MailProvider {
   let cachedClient: SesClientLike | undefined = options.client;
   let cachedSetName: string | undefined = options.configurationSetName;
@@ -94,7 +107,7 @@ export function createSesProvider(options: SesProviderOptions = {}): MailProvide
         const name = cause instanceof Error ? cause.name : 'UnknownError';
         const detail = cause instanceof Error ? cause.message : String(cause);
         throw new MailDeliveryError(`SES refused the message: ${detail}`, {
-          permanent: PERMANENT_FAILURES.includes(name),
+          permanent: isPermanentRejection(name, detail),
           providerCode: name,
           cause,
         });
