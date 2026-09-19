@@ -84,9 +84,10 @@ RUN set -eu; \
       fi; \
     done; \
     cp infra/docker/start.mjs /out/bin/start.mjs; \
-    for engine in packages/db/prisma/generated/postgresql/libquery_engine-*.so.node; do \
-      cp "$engine" /out/bin/libquery_engine.so.node; \
-    done; \
+    # The MUSL engine by name, never a glob: the schema's binaryTargets also emits the rhel engine
+    # for the Lambda bundles, and a glob copies rhel last — a glibc binary this Alpine container
+    # cannot load, which surfaces at first query as "ld-linux-x86-64.so.2: No such file or directory".
+    cp packages/db/prisma/generated/postgresql/libquery_engine-linux-musl-openssl-3.0.x.so.node /out/bin/libquery_engine.so.node; \
     echo "$found application(s) in the image"
 
 ########################################################################################################
