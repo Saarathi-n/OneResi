@@ -185,11 +185,19 @@ export const CreatePassInput = z.object({
 
 export const VerifyPassInput = z.object({ code: GateCode });
 
-export const RecordEntryInput = z.object({
-  passId: Id,
-  action: z.enum(['CHECK_IN', 'CHECK_OUT']),
-  idempotencyKey: z.string().length(32).optional(),
-});
+export const RecordEntryInput = z
+  .object({
+    /** A household-issued pass, for the entry its code admits. */
+    passId: Id.optional(),
+    /** A walk-in the household approved — the gate stamps the arrival on the log row. */
+    walkInLogId: Id.optional(),
+    action: z.enum(['CHECK_IN', 'CHECK_OUT']),
+    idempotencyKey: z.string().length(32).optional(),
+  })
+  .refine((input) => (input.passId !== undefined) !== (input.walkInLogId !== undefined), {
+    message: 'Name exactly one of passId and walkInLogId',
+    path: ['passId'],
+  });
 
 export const LogWalkInInput = z.object({
   unitId: Id,
@@ -220,11 +228,19 @@ export const RaiseComplaintInput = z.object({
   photoKeys: z.array(z.string().min(1).max(200)).max(3).default([]),
 });
 
-export const UpdateComplaintInput = z.object({
-  complaintId: Id,
-  status: z.enum(COMPLAINT_STATUSES),
-  note: z.string().trim().min(4, 'Say what changed').max(1000),
-});
+export const UpdateComplaintInput = z
+  .object({
+    complaintId: Id,
+    /** The next state on the transition map. Absent when the desk is only re-prioritising. */
+    status: z.enum(COMPLAINT_STATUSES).optional(),
+    /** Separate from status, so a desk can raise or lower urgency without moving the state. */
+    priority: z.enum(COMPLAINT_PRIORITIES).optional(),
+    note: z.string().trim().min(4, 'Say what changed').max(1000),
+  })
+  .refine((input) => input.status !== undefined || input.priority !== undefined, {
+    message: 'Pick the new status or the new priority',
+    path: ['status'],
+  });
 
 export const ReopenComplaintInput = z.object({
   complaintId: Id,

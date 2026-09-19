@@ -173,9 +173,9 @@ describe('the success path', () => {
     expect(mail.toAddress).toBe(TO);
     expect(mail.fromAddress).toBe(FROM);
     expect(mail.subject).toBe('Maintenance for September 2026');
-    expect(mail.bodyText).toContain(`${ORIGIN}/a/dues/204`);
+    expect(mail.bodyText).toContain(`${ORIGIN}/a/home/invoices`);
     expect(mail.bodyText).toContain('₹4,800.00');
-    expect(mail.bodyHtml).toContain(`${ORIGIN}/a/dues/204`);
+    expect(mail.bodyHtml).toContain(`${ORIGIN}/a/home/invoices`);
     expect(mail.status).toBe('SENT');
     expect(mail.sentAt).not.toBeNull();
     expect(JSON.parse(mail.variables)).toMatchObject({

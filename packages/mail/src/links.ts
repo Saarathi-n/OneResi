@@ -10,8 +10,9 @@ import type { RenderContext } from './types.js';
  * build hardcoded `http://localhost:3000` in six templates (D-22). And when the route structure
  * settles, this is the only file that changes.
  *
- * Route shape follows docs/plan/02-architecture.md: the marketing site and the committee desk are
- * served from `/` and `/admin/*`, the installable resident app from `/a/*`.
+ * Route shape: the marketing site and the committee desk are served from `/` and `/desk/*` by
+ * the web app, the installable resident app under `/a/*` (its basePath), and a receipt is a
+ * page of the web app beside it. Every path below is one that exists.
  */
 
 export const PATHS = {
@@ -19,21 +20,20 @@ export const PATHS = {
   /** UC-03's page, which the previous build linked to without ever building (D-22). */
   resetPassword: (token: string) => `/reset-password?token=${encodeURIComponent(token)}`,
 
-  /** Committee desk. */
-  registrationReview: (applicantId: number) => `/admin/residents/${applicantId}`,
-  bookingReview: (bookingId: number) => `/admin/bookings/${bookingId}`,
+  /** Committee desk queues — one screen per queue, so the link names the queue. */
+  registrationReview: '/desk/applications',
+  bookingReview: '/desk/bookings',
 
   /** Resident app. */
   home: '/a',
-  dues: '/a/dues',
-  invoice: (invoiceId: number) => `/a/dues/${invoiceId}`,
-  receipt: (receiptNo: string) => `/a/receipts/${encodeURIComponent(receiptNo)}`,
-  complaint: (complaintId: number) => `/a/complaints/${complaintId}`,
-  booking: (bookingId: number) => `/a/bookings/${bookingId}`,
-  notice: (announcementId: number) => `/a/notices/${announcementId}`,
-  /** Where a resident answers a visitor waiting at the gate. */
-  waitingVisitors: '/a/visitors',
-  gateLog: '/a/visitors/log',
+  dues: '/a/home/invoices',
+  receipt: (receiptNo: string) => `/receipts/${encodeURIComponent(receiptNo)}`,
+  complaint: '/a/home/complaints',
+  booking: '/a/home/facilities',
+  notice: '/a/home/notices',
+  /** Where a resident answers a visitor waiting at the gate, and reads the log afterwards. */
+  waitingVisitors: '/a/home/visitors',
+  gateLog: '/a/home/visitors',
 } as const;
 
 /**

@@ -39,7 +39,7 @@ function compose(vars: InvoiceOverdueVars): Block[] {
       { label: 'Amount', value: formatAmount(vars.amountPaise) },
       { label: 'Was due', value: formatDate(vars.dueOn) },
     ]),
-    action('Pay now', PATHS.invoice(vars.invoiceId)),
+    action('Pay now', PATHS.dues),
     note(
       'If you have already paid, or the amount does not look right, tell the committee and they ' +
         'will check the ledger rather than chase you again.',

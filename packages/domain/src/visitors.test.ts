@@ -307,6 +307,28 @@ class MemoryVisitorStore implements VisitorStore {
     return Promise.resolve({ ...log });
   }
 
+  stampWalkInEntry(
+    input: { logId: number; at: Date },
+    events: readonly OutboxEventInput[],
+  ): Promise<StoredVisitorLog | null> {
+    const log = this.logs.find((l) => l.id === input.logId);
+    if (log === undefined || log.approvalStatus !== 'APPROVED' || log.enteredAt !== null) {
+      return Promise.resolve(null);
+    }
+    log.enteredAt = input.at;
+    this.outbox.push(...events);
+    return Promise.resolve({ ...log });
+  }
+
+  stampWalkInExit(logId: number, at: Date): Promise<StoredVisitorLog | null> {
+    const log = this.logs.find((l) => l.id === logId);
+    if (log === undefined || log.enteredAt === null || log.exitedAt !== null) {
+      return Promise.resolve(null);
+    }
+    log.exitedAt = at;
+    return Promise.resolve({ ...log });
+  }
+
   createWalkInLog(input: NewVisitorLog, events: readonly OutboxEventInput[]): Promise<StoredVisitorLog> {
     const log: LogRow = { ...input, id: this.nextLogId++, exitedAt: null };
     this.logs.push(log);
@@ -330,7 +352,12 @@ class MemoryVisitorStore implements VisitorStore {
   findPendingWalkInsForSociety(): Promise<readonly (StoredVisitorLog & { home: StoredHome })[]> {
     return Promise.resolve(
       this.logs
-        .filter((l) => l.approvalStatus === 'PENDING')
+        .filter(
+          (l) =>
+            l.passId === null &&
+            (l.approvalStatus === 'PENDING' ||
+              (l.approvalStatus === 'APPROVED' && l.exitedAt === null)),
+        )
         .map((l) => {
           const home = this.homeFor(l.unitId);
           if (home === null) throw new Error(`test seed: unit ${l.unitId} has no home`);
@@ -1011,6 +1038,155 @@ describe('recordEntry', () => {
   });
 });
 
+describe('recordEntry for walk-ins', () => {
+  function seedWalkIn(
+    store: MemoryVisitorStore,
+    unitId: number,
+    approvalStatus: C.ApprovalStatus,
+  ): LogRow {
+    return store.seedLog({
+      passId: null,
+      unitId,
+      walkInName: 'Suresh the courier',
+      walkInPhone: '9886012345',
+      walkInPurpose: 'Package for B-101',
+      approvalStatus,
+      decidedById: approvalStatus === 'PENDING' ? null : 1,
+      decidedAt: approvalStatus === 'PENDING' ? null : new Date('2026-09-08T08:30:00Z'),
+      overrideReason: null,
+      enteredAt: null,
+      exitedAt: null,
+    });
+  }
+
+  it('records an approved walk-in as entered: the stamp, and the household told (D-29)', async () => {
+    const world = harness();
+    const { unitId } = seededWorld(world.store);
+    const log = seedWalkIn(world.store, unitId, 'APPROVED');
+
+    const result = await world.service.recordEntry(
+      GUARD,
+      C.RecordEntryInput.parse({ walkInLogId: log.id, action: 'CHECK_IN' }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(world.store.logs.find((l) => l.id === log.id)).toMatchObject({
+      enteredAt: new Date('2026-09-08T09:00:00Z'),
+      exitedAt: null,
+    });
+    // One in-app note and one push per ACTIVE resident of the home (D-29).
+    expect(world.store.outbox).toHaveLength(4);
+    expect(world.store.outbox.every((e) => e.type === 'visitor.arrived')).toBe(true);
+    expect(world.store.outbox.filter((e) => e.channel === 'IN_APP')).toHaveLength(2);
+    expect(world.store.outbox.filter((e) => e.channel === 'PUSH')).toHaveLength(2);
+  });
+
+  it('refuses a walk-in the household has not approved, pending or turned away', async () => {
+    const world = harness();
+    const { unitId } = seededWorld(world.store);
+    const pending = seedWalkIn(world.store, unitId, 'PENDING');
+    const rejected = seedWalkIn(world.store, unitId, 'REJECTED');
+
+    await expectError(
+      world.service.recordEntry(
+        GUARD,
+        C.RecordEntryInput.parse({ walkInLogId: pending.id, action: 'CHECK_IN' }),
+      ),
+      'STATE_NOT_ALLOWED',
+    );
+    await expectError(
+      world.service.recordEntry(
+        GUARD,
+        C.RecordEntryInput.parse({ walkInLogId: rejected.id, action: 'CHECK_IN' }),
+      ),
+      'STATE_NOT_ALLOWED',
+    );
+    expect(world.store.logs.find((l) => l.id === pending.id)?.enteredAt).toBeNull();
+  });
+
+  it('treats a retried arrival as a success with still one stamp, and refuses one after the visit closed', async () => {
+    const world = harness();
+    const { unitId } = seededWorld(world.store);
+    const log = seedWalkIn(world.store, unitId, 'APPROVED');
+    const input = C.RecordEntryInput.parse({ walkInLogId: log.id, action: 'CHECK_IN' });
+
+    const first = await world.service.recordEntry(GUARD, input);
+    const second = await world.service.recordEntry(GUARD, input);
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    expect(world.store.logs.find((l) => l.id === log.id)?.enteredAt).toEqual(
+      new Date('2026-09-08T09:00:00Z'),
+    );
+
+    await world.service.recordEntry(
+      GUARD,
+      C.RecordEntryInput.parse({ walkInLogId: log.id, action: 'CHECK_OUT' }),
+    );
+    await expectError(
+      world.service.recordEntry(GUARD, input),
+      'STATE_NOT_ALLOWED',
+    );
+  });
+
+  it('checks a walk-in out, and refuses a checkout with no entry or a second one', async () => {
+    const world = harness();
+    const { unitId } = seededWorld(world.store);
+    const log = seedWalkIn(world.store, unitId, 'APPROVED');
+
+    await expectError(
+      world.service.recordEntry(
+        GUARD,
+        C.RecordEntryInput.parse({ walkInLogId: log.id, action: 'CHECK_OUT' }),
+      ),
+      'STATE_NOT_ALLOWED',
+    );
+
+    await world.service.recordEntry(
+      GUARD,
+      C.RecordEntryInput.parse({ walkInLogId: log.id, action: 'CHECK_IN' }),
+    );
+    world.clock.advanceMs(30 * 60_000);
+    const out = await world.service.recordEntry(
+      GUARD,
+      C.RecordEntryInput.parse({ walkInLogId: log.id, action: 'CHECK_OUT' }),
+    );
+    expect(out.ok).toBe(true);
+    expect(world.store.logs.find((l) => l.id === log.id)?.exitedAt).toEqual(
+      new Date('2026-09-08T09:30:00Z'),
+    );
+
+    await expectError(
+      world.service.recordEntry(
+        GUARD,
+        C.RecordEntryInput.parse({ walkInLogId: log.id, action: 'CHECK_OUT' }),
+      ),
+      'ALREADY_DONE',
+    );
+  });
+
+  it('refuses anyone but the gate, and a visit that does not exist', async () => {
+    const world = harness();
+    const { unitId } = seededWorld(world.store);
+    const log = seedWalkIn(world.store, unitId, 'APPROVED');
+
+    await expectError(
+      world.service.recordEntry(
+        residentActor(world.store, unitId),
+        C.RecordEntryInput.parse({ walkInLogId: log.id, action: 'CHECK_IN' }),
+      ),
+      'FORBIDDEN',
+    );
+    await expectError(
+      world.service.recordEntry(
+        GUARD,
+        C.RecordEntryInput.parse({ walkInLogId: log.id + 100_000, action: 'CHECK_IN' }),
+      ),
+      'NOT_FOUND',
+    );
+  });
+});
+
 describe('logWalkIn', () => {
   it('logs a waiting walk-in and emails every ACTIVE resident of the home, one row each', async () => {
     const world = harness();
@@ -1385,7 +1561,7 @@ describe('waitingForHousehold', () => {
 });
 
 describe('waitingForSociety', () => {
-  it('is the kiosk’s queue: every household’s pending walk-ins, oldest first, each naming the home it waits on', async () => {
+  it('is the kiosk’s queue: pending walk-ins and approved visits not yet entered, oldest first, each naming the home it waits on', async () => {
     const world = harness();
     const { unitId, otherUnitId } = seededWorld(world.store);
     const older = world.store.seedLog({
@@ -1414,7 +1590,7 @@ describe('waitingForSociety', () => {
       enteredAt: null,
       exitedAt: null,
     });
-    world.store.seedLog({
+    const approved = world.store.seedLog({
       passId: null,
       unitId,
       walkInName: 'Already answered',
@@ -1427,18 +1603,39 @@ describe('waitingForSociety', () => {
       enteredAt: null,
       exitedAt: null,
     });
+    world.store.seedLog({
+      passId: null,
+      unitId,
+      walkInName: 'In and gone',
+      walkInPhone: null,
+      walkInPurpose: 'Visit',
+      approvalStatus: 'APPROVED',
+      decidedById: 1,
+      decidedAt: new Date('2026-09-08T08:30:00Z'),
+      overrideReason: null,
+      enteredAt: new Date('2026-09-08T08:40:00Z'),
+      exitedAt: new Date('2026-09-08T08:50:00Z'),
+    });
 
     const waiting: readonly SocietyWaitingVisitorView[] = await expectOk(
       world.service.waitingForSociety(GUARD),
     );
 
-    expect(waiting.map((w) => w.name)).toEqual(['Suresh the courier', 'Aunt Meera']);
+    expect(waiting.map((w) => w.name)).toEqual(['Suresh the courier', 'Aunt Meera', 'Already answered']);
     expect(waiting[0]).toMatchObject({
       logId: older.id,
       homeLabel: 'Brindavan · B-101',
       purpose: 'Package for B-101',
+      approvalStatus: 'PENDING',
+      enteredAt: null,
     });
     expect(waiting[1]).toMatchObject({ logId: newer.id, homeLabel: 'Brindavan · B-102' });
+    // The approved visit the gate has yet to record stays actionable; a closed one drops off.
+    expect(waiting[2]).toMatchObject({
+      logId: approved.id,
+      approvalStatus: 'APPROVED',
+      enteredAt: null,
+    });
   });
 
   it('refuses everyone but the gate — a household’s queue is not the society’s', async () => {

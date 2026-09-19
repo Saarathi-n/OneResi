@@ -72,17 +72,24 @@ export function complaintStore(db: Db): ComplaintStore {
 
         // The store applies only a transition the contract's state machine permits from the
         // CURRENT status — the caller validated against a snapshot, and the world may have
-        // moved since (D-20).
+        // moved since (D-20). A statusAfter equal to the current status is the
+        // re-prioritisation case: no move, so the machine does not govern it.
         const from = current.status as C.ComplaintStatus;
-        if (!C.COMPLAINT_TRANSITIONS[from].includes(input.statusAfter)) return null;
+        if (input.statusAfter !== from && !C.COMPLAINT_TRANSITIONS[from].includes(input.statusAfter)) {
+          return null;
+        }
 
         // Entering RESOLVED stamps the resolution; a RESOLVED -> OPEN move is a reopen whoever
-        // made it — the timestamp clears and the counter advances. Nothing else touches either.
+        // made it — the timestamp clears and the counter advances. Nothing else touches either,
+        // including a re-prioritisation of a complaint that already sits in RESOLVED.
         const applied = await tx.complaint.updateMany({
           where: { id: input.complaintId, status: current.status },
           data: {
             status: input.statusAfter,
-            ...(input.statusAfter === 'RESOLVED' ? { resolvedAt: input.at } : {}),
+            ...(input.priority === undefined ? {} : { priority: input.priority }),
+            ...(input.statusAfter === 'RESOLVED' && from !== 'RESOLVED'
+              ? { resolvedAt: input.at }
+              : {}),
             ...(from === 'RESOLVED' && input.statusAfter === 'OPEN'
               ? { resolvedAt: null, reopenCount: { increment: 1 } }
               : {}),

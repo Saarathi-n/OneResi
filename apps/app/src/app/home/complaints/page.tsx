@@ -174,6 +174,26 @@ function ComplaintCard({
 
       <p className="mt-2 type-body text-content-muted">{complaint.description}</p>
 
+      {complaint.photoKeys.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {complaint.photoKeys.map((key) => (
+            <a
+              key={key}
+              href={photoUrl(key)}
+              target="_blank"
+              rel="noreferrer"
+              className="block h-16 w-16 overflow-hidden rounded-lg border border-border"
+            >
+              <img
+                src={photoUrl(key)}
+                alt="You attached this to the complaint"
+                className="h-full w-full object-cover"
+              />
+            </a>
+          ))}
+        </div>
+      ) : null}
+
       {complaint.updates.length > 0 ? (
         <div className="mt-3 border-t border-border pt-3">
           <ul className="flex flex-col gap-2">

@@ -188,6 +188,7 @@ class MemoryComplaintStore implements ComplaintStore {
     input: {
       complaintId: number;
       statusAfter: C.ComplaintStatus;
+      priority?: C.ComplaintPriority;
       updatedById: number;
       note: string;
       at: Date;
@@ -200,8 +201,12 @@ class MemoryComplaintStore implements ComplaintStore {
     }
     const complaint = this.complaints.find((c) => c.id === input.complaintId);
     if (complaint === undefined) return Promise.resolve(null);
-    // The state machine from the CURRENT status; the caller has already validated it.
-    if (!C.COMPLAINT_TRANSITIONS[complaint.status].includes(input.statusAfter)) {
+    // The state machine from the CURRENT status; the caller has already validated it. A
+    // statusAfter equal to the current status is a re-prioritisation, not a move.
+    if (
+      input.statusAfter !== complaint.status &&
+      !C.COMPLAINT_TRANSITIONS[complaint.status].includes(input.statusAfter)
+    ) {
       return Promise.resolve(null);
     }
     const actor = this.residents.find((r) => r.id === input.updatedById);
@@ -216,7 +221,10 @@ class MemoryComplaintStore implements ComplaintStore {
     };
     complaint.updates.push(update);
     complaint.status = input.statusAfter;
-    if (input.statusAfter === 'RESOLVED') {
+    if (input.priority !== undefined) {
+      complaint.priority = input.priority;
+    }
+    if (input.statusAfter === 'RESOLVED' && complaint.resolvedAt === null) {
       complaint.resolvedAt = input.at;
     } else if (input.statusAfter === 'OPEN' && complaint.resolvedAt !== null) {
       // Whoever moved it back, the timestamp is cleared and the reopen is counted (D-20).
@@ -429,8 +437,11 @@ describe('update', () => {
       at: new Date('2026-09-08T09:00:00Z'),
     });
 
-    expect(world.store.outbox).toHaveLength(2);
-    expect(world.store.outbox.every((e) => e.type === 'complaint.updated' && e.channel === 'EMAIL')).toBe(true);
+    expect(world.store.outbox).toHaveLength(6);
+    expect(world.store.outbox.every((e) => e.type === 'complaint.updated')).toBe(true);
+    expect(world.store.outbox.filter((e) => e.channel === 'EMAIL')).toHaveLength(2);
+    expect(world.store.outbox.filter((e) => e.channel === 'IN_APP')).toHaveLength(2);
+    expect(world.store.outbox.filter((e) => e.channel === 'PUSH')).toHaveLength(2);
     expect(world.store.outbox[0]?.payload).toEqual(
       expect.objectContaining({
         recipientName: 'Asha Rao',
@@ -524,6 +535,60 @@ describe('update', () => {
       ),
       'CONFLICT',
     );
+  });
+
+  it('changes the priority alone — the state stands still, the household is still told', async () => {
+    const world = harness();
+    const { unitId } = seededWorld(world.store);
+    const complaint = world.store.seedComplaint({ unitId, status: 'IN_PROGRESS' });
+
+    const updated: ComplaintView = await expectOk(
+      world.service.update(
+        ADMIN,
+        C.UpdateComplaintInput.parse({ complaintId: complaint.id, priority: 'URGENT', note: 'Water has reached the lifts too' }),
+      ),
+    );
+
+    expect(updated.priority).toBe('URGENT');
+    expect(updated.status).toBe('IN_PROGRESS');
+    expect(updated.updates).toHaveLength(1);
+    // One email, one in-app note and one push per ACTIVE resident (D-29).
+    expect(world.store.outbox).toHaveLength(6);
+    expect(world.store.outbox.every((e) => e.type === 'complaint.updated')).toBe(true);
+    expect(world.store.outbox.filter((e) => e.channel === 'IN_APP')).toHaveLength(2);
+    expect(world.store.outbox.filter((e) => e.channel === 'PUSH')).toHaveLength(2);
+
+    await expectError(
+      world.service.update(
+        residentActor(world.store, unitId),
+        C.UpdateComplaintInput.parse({ complaintId: complaint.id, priority: 'LOW', note: 'I fixed it myself' }),
+      ),
+      'FORBIDDEN',
+    );
+  });
+
+  it('keeps the resolution timestamp and its window through a priority-only update (D-20)', async () => {
+    const world = harness();
+    const { unitId } = seededWorld(world.store);
+    const complaint = world.store.seedComplaint({
+      unitId,
+      status: 'RESOLVED',
+      resolvedAt: new Date('2026-09-05T09:00:00Z'),
+    });
+
+    const updated: ComplaintView = await expectOk(
+      world.service.update(
+        ADMIN,
+        C.UpdateComplaintInput.parse({ complaintId: complaint.id, priority: 'LOW', note: 'Downgraded after talking to the resident' }),
+      ),
+    );
+
+    expect(updated.status).toBe('RESOLVED');
+    expect(updated.priority).toBe('LOW');
+    expect(updated.resolvedAt).toEqual(new Date('2026-09-05T09:00:00Z'));
+    expect(updated.reopenableUntil).toEqual(new Date('2026-09-12T09:00:00Z'));
+    // The mail carries the window the complaint already had, not a fresh one from today.
+    expect(world.store.outbox[0]?.payload['reopenableUntil']).toBe('2026-09-12T09:00:00.000Z');
   });
 });
 

@@ -133,45 +133,57 @@ export function complaintsService(deps: ComplaintsDeps): ComplaintsService {
       const complaint = await store.findComplaintById(input.complaintId);
       if (complaint === null) return errors.notFound('complaint');
 
-      if (!C.COMPLAINT_TRANSITIONS[complaint.status].includes(input.status)) {
-        return errors.stateNotAllowed(
-          'That change is not allowed while the complaint is where it is now.',
-        );
+      // The machine governs only actual moves: a re-prioritisation leaves the status where it
+      // is, and every real move must be a transition the contract permits from the CURRENT
+      // status (D-20).
+      if (input.status !== undefined && input.status !== complaint.status) {
+        if (!C.COMPLAINT_TRANSITIONS[complaint.status].includes(input.status)) {
+          return errors.stateNotAllowed(
+            'That change is not allowed while the complaint is where it is now.',
+          );
+        }
       }
+      const statusAfter = input.status ?? complaint.status;
 
       const now = clock.now();
       const correlationId = C.idempotencyKey();
       const residents = await store.findResidentsForUnit(complaint.unitId);
-      const events = residents.map((resident) =>
-        mailEvent(
-          'complaint.updated',
-          {
-            name: resident.name,
-            email: resident.email,
-            recipientName: resident.name,
-            complaintId: complaint.id,
-            category: complaint.category,
-            status: input.status,
-            note: input.note,
-            updatedByName: actor.name,
-            updatedAt: now.toISOString(),
-            // Present exactly when the household can still reopen it (D-20).
-            ...(input.status === 'RESOLVED'
-              ? {
-                  reopenableUntil: new Date(
-                    now.getTime() + C.COMPLAINT_REOPEN_WINDOW_DAYS * MS_PER_DAY,
-                  ).toISOString(),
-                }
-              : {}),
-          },
-          correlationId,
-        ),
-      );
+      // The reopen window the complaint actually carries after this update: a fresh resolution
+      // starts it from now, a complaint that was already resolved keeps the window it has (D-20).
+      const reopenableUntil =
+        statusAfter === 'RESOLVED'
+          ? new Date(
+              (complaint.status === 'RESOLVED' && complaint.resolvedAt !== null
+                ? complaint.resolvedAt
+                : now
+              ).getTime() + C.COMPLAINT_REOPEN_WINDOW_DAYS * MS_PER_DAY,
+            ).toISOString()
+          : undefined;
+      const events = residents.flatMap((resident) => {
+        const payload = {
+          name: resident.name,
+          email: resident.email,
+          recipientName: resident.name,
+          complaintId: complaint.id,
+          category: complaint.category,
+          status: statusAfter,
+          note: input.note,
+          updatedByName: actor.name,
+          updatedAt: now.toISOString(),
+          // Present exactly when the household can still reopen it (D-20).
+          ...(reopenableUntil === undefined ? {} : { reopenableUntil }),
+        };
+        return [
+          mailEvent('complaint.updated', payload, correlationId),
+          ...inAppAndPushEvents(payload, 'complaint.updated', correlationId),
+        ];
+      });
 
       const updated = await store.applyComplaintUpdate(
         {
           complaintId: complaint.id,
-          statusAfter: input.status,
+          statusAfter,
+          ...(input.priority === undefined ? {} : { priority: input.priority }),
           updatedById: actor.userId,
           note: input.note,
           at: now,

@@ -60,6 +60,11 @@ export interface TableProps<Row> {
   readonly flashedRowKey?: string | undefined;
   /** A working tool, not a showcase: tighter rows for a ledger that has to answer at a glance. */
   readonly dense?: boolean | undefined;
+  /**
+   * The narrowest the table may become. Below it the wrapper scrolls sideways instead of the
+   * flexible columns crushing each other into per-word wrapping.
+   */
+  readonly minWidth?: number | string | undefined;
   /** Makes rows keyboard-navigable and activatable. */
   readonly onRowActivate?: ((row: Row) => void) | undefined;
   readonly className?: string | undefined;
@@ -92,6 +97,7 @@ export function Table<Row>({
   rowTone,
   flashedRowKey,
   dense = false,
+  minWidth,
   onRowActivate,
   className,
 }: TableProps<Row>): ReactNode {
@@ -158,6 +164,7 @@ export function Table<Row>({
     <div className={cn('w-full overflow-x-auto rounded-xl border border-border', className)}>
       <table
         className="w-full border-collapse bg-surface-raised"
+        style={minWidth === undefined ? undefined : { minWidth }}
         {...(interactive ? { role: 'grid' } : {})}
         aria-busy={pending}
       >

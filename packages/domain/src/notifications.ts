@@ -61,6 +61,13 @@ export function inAppNotification(
         body: `Your complaint about ${C.COMPLAINT_CATEGORY[payload.category as C.ComplaintCategory].label} has been recorded.`,
         href: null,
       };
+    case 'complaint.updated':
+      return {
+        type: event.type,
+        title: 'Complaint updated',
+        body: `Your complaint about ${C.COMPLAINT_CATEGORY[payload.category as C.ComplaintCategory].label} is now ${C.COMPLAINT_STATUS[payload.status as C.ComplaintStatus].label}. ${payload.note}`,
+        href: null,
+      };
     case 'complaint.reopened':
       return {
         type: event.type,
@@ -105,6 +112,12 @@ export function pushNotification(event: OutboxEventInput): PushWording | null {
       return {
         title: 'Complaint recorded',
         body: `Your complaint about ${C.COMPLAINT_CATEGORY[payload.category as C.ComplaintCategory].label} has been recorded.`,
+        path: null,
+      };
+    case 'complaint.updated':
+      return {
+        title: 'Complaint updated',
+        body: `Your complaint about ${C.COMPLAINT_CATEGORY[payload.category as C.ComplaintCategory].label} is now ${C.COMPLAINT_STATUS[payload.status as C.ComplaintStatus].label}. ${payload.note}`,
         path: null,
       };
     case 'complaint.reopened':

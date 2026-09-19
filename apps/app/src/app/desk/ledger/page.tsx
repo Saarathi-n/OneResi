@@ -91,7 +91,7 @@ export default function LedgerPage(): ReactNode {
                         {invoice.home.blockName}, {invoice.home.label}
                       </p>
                       <p className="type-label text-content-subtle">{formatPeriod(invoice.period)}</p>
-                      <Money value={invoice.amountPaise} compact />
+                      <Money value={invoice.amountPaise} compact animated={false} />
                       <p className="type-label text-content-muted">
                         {invoice.status === 'PAID' && invoice.paidAt !== null
                           ? `Paid ${formatDayYear(invoice.paidAt)}`
@@ -284,6 +284,12 @@ function CashSheet({
       setFailed('Enter the amount you actually received, in rupees.');
       return;
     }
+    if (amountPaise !== invoice.amountPaise) {
+      setFailed(
+        `The amount has to match the invoice in full (${C.formatMoney(invoice.amountPaise)}) — part settlement is not supported.`,
+      );
+      return;
+    }
     setPending(true);
     setFailed(null);
     const result = await simple<null>(`/api/billing/invoices/${invoice.id}/offline-payment`, {
@@ -335,12 +341,13 @@ function CashSheet({
         <Field
           label="Amount received"
           required
-          hint="In rupees. Enter less than the invoice for a part payment."
+          hint={`In rupees. The invoice stands at ${C.formatMoney(invoice.amountPaise)} — the amount has to match it in full.`}
         >
           <NumericInput
             value={rupees}
             onValueChange={setRupees}
             min={1}
+            max={invoice.amountPaise / 100}
             step={1}
             pending={pending}
           />

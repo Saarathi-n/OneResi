@@ -51,7 +51,7 @@ function compose(vars: AnnouncementPublishedVars): Block[] {
     heading(vars.title),
     ...paras(excerpt(vars.body)),
     details(rows),
-    action('Read it in the app', PATHS.notice(vars.announcementId)),
+    action('Read it in the app', PATHS.notice),
     note('Notices stay in the app, so this is not the only copy.'),
   ];
 }

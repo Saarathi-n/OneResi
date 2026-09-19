@@ -44,7 +44,7 @@ function compose(vars: ResidentRegisteredVars): Block[] {
   }
 
   blocks.push(
-    action('Review the application', PATHS.registrationReview(vars.applicantId)),
+    action('Review the application', PATHS.registrationReview),
     note(
       'Approving creates their account and tells them they can sign in. Declining tells them too, ' +
         'with your reason if you give one.',

@@ -77,6 +77,8 @@ export interface ComplaintWire {
   readonly category: C.ComplaintCategory;
   readonly priority: C.ComplaintPriority;
   readonly description: string;
+  /** Object keys of the photos the household attached — at most three. */
+  readonly photoKeys: readonly string[];
   readonly status: C.ComplaintStatus;
   readonly raisedAt: string;
   readonly resolvedAt: string | null;
@@ -124,6 +126,16 @@ export interface WaitingVisitorWire {
    * visitor waits on; a resident already knows which home is theirs.
    */
   readonly homeLabel?: string | undefined;
+}
+
+/**
+ * The society-wide waiting row, as the gate's feed reads it: whether the household has answered,
+ * and the arrival and exit stamps the gate records against its own approval.
+ */
+export interface SocietyWaitingVisitorWire extends WaitingVisitorWire {
+  readonly approvalStatus: C.ApprovalStatus;
+  readonly enteredAt: string | null;
+  readonly exitedAt: string | null;
 }
 
 export interface EntryLogWire {

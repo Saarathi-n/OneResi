@@ -82,7 +82,7 @@ export function BottomTabs({
                       </span>
                     ) : null}
                   </span>
-                  <span className="type-micro leading-none tracking-tight">{tab.label}</span>
+                  <span className="type-micro leading-tight">{tab.label}</span>
                 </Link>
               </li>
             );

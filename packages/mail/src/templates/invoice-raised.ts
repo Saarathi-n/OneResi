@@ -39,7 +39,7 @@ function compose(vars: InvoiceRaisedVars): Block[] {
       { label: 'Amount', value: formatAmount(vars.amountPaise) },
       { label: 'Due by', value: formatDate(vars.dueOn) },
     ]),
-    action('Pay now', PATHS.invoice(vars.invoiceId)),
+    action('Pay now', PATHS.dues),
     note(
       'You can also pay at the society office. Either way a receipt is issued and kept in the app.',
     ),

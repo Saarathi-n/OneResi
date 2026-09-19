@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Check, Copy } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { cn } from '../internal/cn.js';
 import { codeRevealVariants } from '../motion/transitions.js';
@@ -39,6 +39,9 @@ export function CodeDisplay({
 }: CodeDisplayProps): ReactNode {
   const motionTokens = useMotion();
   const [copied, setCopied] = useState(false);
+  // The reveal is a birth-of-the-code moment, not a refresh effect: once it has played for this
+  // mount, later data refreshes update digits in place instead of replaying the animation.
+  const revealedRef = useRef(false);
 
   async function copy(): Promise<void> {
     if (disabled || pending) return;
@@ -87,14 +90,18 @@ export function CodeDisplay({
 
           {code.split('').map((character, index) => (
             /* eslint-disable react/no-array-index-key -- a code's characters are fixed
-               positions that never reorder; the position is the identity. */
+               positions that never reorder; the position is the identity, and a stable key
+               keeps a refresh from remounting (and re-animating) the digits. */
             <motion.span
-              key={`${index}:${character}`}
+              key={index}
               aria-hidden
               custom={index}
               variants={codeRevealVariants(motionTokens)}
-              initial="hidden"
+              initial={revealedRef.current ? false : 'hidden'}
               animate="shown"
+              onAnimationComplete={() => {
+                revealedRef.current = true;
+              }}
               className={cn(
                 'inline-block text-content',
                 size === 'kiosk' ? 'type-code-kiosk' : 'type-code',

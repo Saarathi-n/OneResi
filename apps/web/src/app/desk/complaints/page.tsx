@@ -10,14 +10,15 @@ import {
   Field,
   PriorityPill,
   RelativeTime,
-  Select,
   Skeleton,
   Textarea,
   useToast,
+  cn,
 } from '@oneresi/ui';
 import {
   COMPLAINT_CATEGORY,
   COMPLAINT_STATUS,
+  COMPLAINT_TRANSITIONS,
   type ComplaintCategory,
   type ComplaintPriority,
   type ComplaintStatus,
@@ -27,8 +28,7 @@ import { useFetch } from '@/lib/useFetch';
 
 /**
  * The society's complaints, every household, filterable by status. The committee answers with a
- * state transition and a note — never a bare status flip, because the resident reads the note
- * (D-20: resolvedAt survives every later update, so a re-opened complaint keeps its history).
+ * state transition and a note — never a bare status flip, because the resident reads the note.
  */
 
 interface SocietyComplaint {
@@ -36,7 +36,7 @@ interface SocietyComplaint {
   readonly category: ComplaintCategory;
   readonly priority: ComplaintPriority;
   readonly description: string;
-  /** S3-style object keys, at most three (UC-06). */
+  /** S3-style object keys, at most three. */
   readonly photoKeys: readonly string[];
   readonly status: ComplaintStatus;
   readonly raisedAt: string;
@@ -57,13 +57,22 @@ const FILTERS: readonly { value: string; label: string }[] = [
   })),
 ];
 
-/** The transitions a committee member may take a complaint through. */
-const NEXT_STATUSES: Readonly<Record<ComplaintStatus, readonly ComplaintStatus[]>> = {
-  OPEN: ['IN_PROGRESS', 'CLOSED'],
-  IN_PROGRESS: ['RESOLVED', 'CLOSED'],
-  RESOLVED: ['CLOSED'],
-  CLOSED: [],
+/** The transitions a committee member may take a complaint through, straight from the contract. */
+const NEXT_STATUSES = COMPLAINT_TRANSITIONS;
+
+const STATUS_DESCRIPTIONS: Record<ComplaintStatus, string> = {
+  OPEN: 'Ticket remains open or is returned to the queue for committee review.',
+  IN_PROGRESS: 'Maintenance work is underway and assigned to staff or external contractors.',
+  RESOLVED: 'The issue has been resolved. The resident has 7 days to verify or reopen.',
+  CLOSED: 'The ticket is finalized and archived. No further transitions possible.',
 };
+
+const PRIORITY_SEGMENTS: readonly { value: ComplaintPriority; label: string }[] = [
+  { value: 'LOW', label: 'Low' },
+  { value: 'MEDIUM', label: 'Medium' },
+  { value: 'HIGH', label: 'High' },
+  { value: 'URGENT', label: 'Urgent' },
+];
 
 const STATUS_TONE = { ...COMPLAINT_STATUS };
 
@@ -75,6 +84,7 @@ export default function SocietyComplaintsPage() {
   const [filter, setFilter] = useState('ALL');
   const [openFor, setOpenFor] = useState<SocietyComplaint | null>(null);
   const [nextStatus, setNextStatus] = useState('');
+  const [nextPriority, setNextPriority] = useState<ComplaintPriority>('MEDIUM');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -98,6 +108,7 @@ export default function SocietyComplaintsPage() {
     }
     setOpenFor(complaint);
     setNextStatus(options[0] ?? '');
+    setNextPriority(complaint.priority);
     setNote('');
     setError(null);
   }
@@ -115,6 +126,7 @@ export default function SocietyComplaintsPage() {
       json: {
         complaintId: openFor.id,
         status: nextStatus,
+        priority: nextPriority,
         note: note.trim(),
       },
     });
@@ -213,7 +225,7 @@ export default function SocietyComplaintsPage() {
                           rel="noreferrer"
                           className="block h-16 w-16 overflow-hidden rounded-lg border border-border"
                         >
-                                                    <img
+                          <img
                             src={`/api/complaints/photos/file?key=${encodeURIComponent(key)}`}
                             alt="Attached to this complaint"
                             className="h-full w-full object-cover"
@@ -261,43 +273,137 @@ export default function SocietyComplaintsPage() {
         onClose={() => setOpenFor(null)}
         title="Update the complaint"
         description="Pick the new state and write the note. The resident sees both the moment you save."
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" size="md" onClick={() => setOpenFor(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              pending={pending}
+              pendingLabel="Saving"
+              onClick={() => void submitUpdate()}
+            >
+              Save update
+            </Button>
+          </>
+        }
       >
-        <div className="space-y-4">
-          <Field label="New status" required>
-            <Select
-              options={(openFor !== null ? NEXT_STATUSES[openFor.status] : []).map((status) => ({
-                value: status,
-                label: COMPLAINT_STATUS[status].label,
-              }))}
-              value={nextStatus}
-              onChange={(event) => setNextStatus(event.target.value)}
-            />
-          </Field>
+        <div className="space-y-5 py-1">
+          {/* Status Selection: Custom Paper Status Radio Cards */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="type-label font-medium text-content">
+                New status <span className="text-critical">*</span>
+              </span>
+              <span className="type-micro text-content-subtle">
+                Choose transition state
+              </span>
+            </div>
+            <div className="space-y-2" role="radiogroup" aria-label="New status">
+              {(openFor !== null ? NEXT_STATUSES[openFor.status] : []).map((status) => {
+                const isSelected = nextStatus === status;
+                return (
+                  <label
+                    key={status}
+                    className={cn(
+                      'relative flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-all',
+                      isSelected
+                        ? 'border-accent bg-accent-soft/30 shadow-xs ring-1 ring-accent edge-light'
+                        : 'border-border bg-surface-raised hover:border-border-strong hover:bg-surface-sunken/40',
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="complaint-status"
+                      value={status}
+                      checked={isSelected}
+                      onChange={() => setNextStatus(status)}
+                      className="sr-only"
+                    />
+                    <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border-strong bg-surface">
+                      {isSelected ? (
+                        <span className="h-2 w-2 rounded-full bg-accent" />
+                      ) : null}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge tone={COMPLAINT_STATUS[status].tone} size="sm">
+                          {COMPLAINT_STATUS[status].label}
+                        </Badge>
+                      </div>
+                      <p className="type-label mt-1 text-content-muted">
+                        {STATUS_DESCRIPTIONS[status] ?? COMPLAINT_STATUS[status].hint ?? ''}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Priority Selection: Segmented Pill Toggle */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="type-label font-medium text-content">Priority</span>
+              <span className="type-micro text-content-subtle">
+                Urgency for committee queue
+              </span>
+            </div>
+            <div
+              className="grid grid-cols-4 gap-1.5 rounded-pill border border-border bg-surface-sunken p-1"
+              role="radiogroup"
+              aria-label="Priority"
+            >
+              {PRIORITY_SEGMENTS.map((segment) => {
+                const isSelected = nextPriority === segment.value;
+                return (
+                  <button
+                    key={segment.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => setNextPriority(segment.value)}
+                    className={cn(
+                      'focus-ring flex items-center justify-center gap-1.5 rounded-pill py-2 px-2.5 type-label transition-all',
+                      isSelected
+                        ? 'border border-border-strong bg-surface-raised font-semibold text-content shadow-xs edge-light'
+                        : 'border border-transparent text-content-muted hover:bg-surface-raised/40 hover:text-content',
+                    )}
+                  >
+                    <PriorityPill priority={segment.value} compact />
+                    <span>{segment.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Generous Note Textarea with Paper Styling */}
           <Field
             label="Note to the resident"
             required
             hint="What was done, or what happens next. This is the part they read."
           >
             <Textarea
-              rows={4}
+              rows={5}
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Plumber visited, part replaced, water restored by evening."
+              placeholder="Plumber inspected leak, replacement valve ordered, water restored by evening."
+              className="bg-surface font-sans"
             />
           </Field>
+
           {error !== null ? (
-            <p className="type-body text-critical" role="alert">
+            <div
+              className="rounded-xl border border-critical-border bg-critical-soft p-3 text-critical type-body"
+              role="alert"
+            >
               {error}
-            </p>
+            </div>
           ) : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setOpenFor(null)}>
-              Cancel
-            </Button>
-            <Button pending={pending} pendingLabel="Saving" onClick={() => void submitUpdate()}>
-              Save update
-            </Button>
-          </div>
         </div>
       </Dialog>
     </div>

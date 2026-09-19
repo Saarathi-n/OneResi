@@ -44,6 +44,7 @@ export default function FacilitiesPage(): ReactNode {
   return (
     <Shell title="Facilities" tabs={RESIDENT_TABS} activeTab="/home/more" onRefresh={refresh}>
       <Tabs
+        variant="pill"
         label="Facility views"
         value={view}
         onValueChange={setView}

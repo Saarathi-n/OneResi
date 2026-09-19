@@ -18,7 +18,7 @@ import {
 import * as C from '@oneresi/contracts';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
-import { simple } from '@/lib/api';
+import { simple, photoUrl } from '@/lib/api';
 import { COMMITTEE_TABS } from '@/lib/tabs';
 import { useAsync } from '@/hooks/useAsync';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -33,6 +33,11 @@ import type { ComplaintWire } from '@/lib/types';
 
 const STATUS_FILTERS = ['ALL', ...C.COMPLAINT_STATUSES] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+const PRIORITY_OPTIONS = C.COMPLAINT_PRIORITIES.map((priority) => ({
+  value: priority,
+  label: C.COMPLAINT_PRIORITY[priority].label,
+}));
 
 function filterLabel(filter: StatusFilter): string {
   return filter === 'ALL' ? 'All' : C.COMPLAINT_STATUS[filter].label;
@@ -62,6 +67,7 @@ export default function DeskComplaintsPage(): ReactNode {
   return (
     <Shell title="Complaints" tabs={COMMITTEE_TABS} activeTab="/desk/complaints" onRefresh={refresh}>
       <Tabs
+        variant="pill"
         label="Filter by status"
         value={filter}
         onValueChange={(value) => {
@@ -111,6 +117,26 @@ export default function DeskComplaintsPage(): ReactNode {
                     </div>
 
                     <p className="mt-2 type-body text-content-muted">{complaint.description}</p>
+
+                    {complaint.photoKeys.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {complaint.photoKeys.map((key) => (
+                          <a
+                            key={key}
+                            href={photoUrl(key)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block h-16 w-16 overflow-hidden rounded-lg border border-border"
+                          >
+                            <img
+                              src={photoUrl(key)}
+                              alt="Attached to this complaint"
+                              className="h-full w-full object-cover"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
 
                     {complaint.updates.length > 0 ? (
                       <div className="mt-3 border-t border-border pt-3">
@@ -185,10 +211,12 @@ function UpdateSheet({
   readonly onClose: () => void;
   readonly onUpdated: () => void;
 }): ReactNode {
-  const [status, setStatus] = useState<string>(complaint.status);
+  const [status, setStatus] = useState('');
+  const [priority, setPriority] = useState<string>(complaint.priority);
   const [note, setNote] = useState('');
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<{ status?: string; note?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   // The state machine, not a guess: the desk is offered exactly the transitions the contract permits.
   const nextStatuses = C.COMPLAINT_TRANSITIONS[complaint.status];
@@ -196,7 +224,9 @@ function UpdateSheet({
   async function submit(): Promise<void> {
     if (pending) return;
     const problems: { status?: string; note?: string } = {};
-    if (!C.COMPLAINT_STATUSES.includes(status as C.ComplaintStatus)) {
+    // Validated against the transitions, not the status list — a status the machine forbids
+    // from here is a refusal, and one the sheet never offers anyway.
+    if (!nextStatuses.includes(status as C.ComplaintStatus)) {
       problems.status = 'Pick where this complaint stands';
     }
     if (note.trim().length < 4) problems.note = 'Say what changed — the resident reads this';
@@ -205,10 +235,11 @@ function UpdateSheet({
       return;
     }
     setErrors({});
+    setFormError(null);
     setPending(true);
     const result = await simple<ComplaintWire>(`/api/complaints/${complaint.id}/updates`, {
       method: 'POST',
-      json: { complaintId: complaint.id, status, note: note.trim() },
+      json: { complaintId: complaint.id, status, priority, note: note.trim() },
     });
     setPending(false);
     if (result.ok) {
@@ -217,7 +248,9 @@ function UpdateSheet({
     }
     if (result.error.field === 'status') setErrors({ status: result.error.message });
     else if (result.error.field === 'note') setErrors({ note: result.error.message });
-    else setErrors({ note: result.error.message });
+    // A refusal that names no field — a state the machine rejects, a stale page — belongs to
+    // the whole form, not to the note box.
+    else setFormError(result.error.message);
   }
 
   return (
@@ -246,7 +279,21 @@ function UpdateSheet({
             onChange={(event) => {
               setStatus(event.target.value);
             }}
+            placeholder="Choose the next status"
             options={nextStatuses.map((value) => ({ value, label: C.COMPLAINT_STATUS[value].label }))}
+          />
+        </Field>
+
+        <Field
+          label="Priority"
+          hint="How urgent it is now — raising or lowering it leaves the state alone."
+        >
+          <Select
+            value={priority}
+            onChange={(event) => {
+              setPriority(event.target.value);
+            }}
+            options={PRIORITY_OPTIONS}
           />
         </Field>
 
@@ -271,6 +318,15 @@ function UpdateSheet({
             }}
           />
         </Field>
+
+        {formError !== null ? (
+          <p
+            role="alert"
+            className="rounded-lg border border-critical-border bg-critical-soft px-4 py-3 type-body text-critical"
+          >
+            {formError}
+          </p>
+        ) : null}
       </div>
     </Sheet>
   );
