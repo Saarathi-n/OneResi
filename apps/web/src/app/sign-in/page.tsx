@@ -8,25 +8,42 @@ import {
   Field,
   Input,
   Logo,
-  Card,
-  CardBody,
   buttonClass,
 } from '@oneresi/ui';
+import { Icon } from '@/components/icons';
 import { signIn } from '@/lib/session';
 
-/** The sign-in screen. One form, the reset link, and the path to registration. */
+/**
+ * Sign in — "the gatehouse at dawn".
+ *
+ * Split card:
+ * - Left: deep forest accent panel with wordmark large, architectural gate tone,
+ *   and slowly crossfading real product truths.
+ * - Right: warm paper form with generous pre-focused email field, reveal password toggle,
+ *   inline field errors, full-width pill submit button, and quiet links below.
+ */
 
 /** The address used last time, so the second visit starts one field ahead. */
 const EMAIL_KEY = 'oneresi.sign-in.email';
+
+const PRODUCT_TRUTHS = [
+  'Receipts people can verify.',
+  'The gate log households can read.',
+  'Maintenance accounted for down to the rupee.',
+] as const;
 
 export default function SignInPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string | null; password?: string | null }>({});
   const [remembered, setRemembered] = useState(false);
   const [passwordChanged, setPasswordChanged] = useState(false);
+  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [quoteVisible, setQuoteVisible] = useState(true);
 
   useEffect(() => {
     try {
@@ -43,112 +60,274 @@ export default function SignInPage() {
     }
   }, []);
 
+  // Crossfade rotating product copy on the gatehouse accent panel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setQuoteVisible(false);
+      setTimeout(() => {
+        setQuoteIndex((prev) => (prev + 1) % PRODUCT_TRUTHS.length);
+        setQuoteVisible(true);
+      }, 400);
+    }, 4600);
+    return () => clearInterval(interval);
+  }, []);
+
   async function handleSubmit(): Promise<void> {
+    setFieldErrors({});
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setFieldErrors({ email: 'Enter your email address.' });
+      return;
+    }
+    if (!password) {
+      setFieldErrors({ password: 'Enter your password.' });
+      return;
+    }
+
     setPending(true);
-    setError(null);
-    const result = await signIn(email, password);
+    const result = await signIn(trimmedEmail, password);
+
     if (result.ok) {
       try {
-        window.localStorage.setItem(EMAIL_KEY, email.trim());
+        window.localStorage.setItem(EMAIL_KEY, trimmedEmail);
       } catch {
         // Remembering is a convenience, never a requirement.
       }
-      router.push('/home');
+      setPending(false);
+      setSuccess(true);
+
+      // Brief physical weight pause for admission confirmation before routing
+      setTimeout(() => {
+        router.push('/home');
+      }, 600);
       return;
     }
+
     setPending(false);
-    setError(result.error.message);
+    // Display error inline under the password field (never loose alerts)
+    setFieldErrors({ password: result.error.message });
   }
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
+      {/* Top Navigation */}
       <header className="border-b border-border bg-surface-raised">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" aria-label="OneResi home">
+          <Link href="/" aria-label="OneResi home" className="focus-ring rounded-pill">
             <Logo variant="wordmark" size={28} />
           </Link>
-          <Link href="/register" className={buttonClass('ghost', 'sm')}>
-            Create an account
-          </Link>
+          <div className="flex items-center gap-3">
+            <span className="type-body text-content-muted hidden sm:inline">New here?</span>
+            <Link href="/register" className={buttonClass('ghost', 'sm', 'rounded-pill')}>
+              Register
+            </Link>
+          </div>
         </div>
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-6 py-12">
-        <Card className="w-full max-w-md" elevation={1}>
-          <CardBody>
-            <h1 className="type-title text-content">Sign in to your society</h1>
-            <p className="type-body mt-2 text-content-muted">
-              Use the email address you registered with.
-            </p>
+      {/* Main Content: The Gatehouse Split Card */}
+      <main className="flex flex-1 items-center justify-center p-4 sm:p-6 md:p-10">
+        <div className="w-full max-w-4xl overflow-hidden rounded-2xl md:rounded-3xl border border-border bg-surface-raised shadow-e3 flex flex-col md:flex-row">
+          {/* Left Panel: Deep Forest Accent Gatehouse Panel (desktop only) */}
+          <div
+            className="hidden md:flex md:w-5/12 lg:w-1/2 flex-col justify-between p-8 lg:p-12 relative overflow-hidden text-[var(--accent-on)]"
+            style={{
+              background: 'linear-gradient(165deg, var(--accent) 0%, var(--accent-pressed) 100%)',
+            }}
+          >
+            {/* Edge light & subtle dawn accent glow */}
+            <div
+              className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full opacity-20 blur-3xl"
+              style={{ background: 'radial-gradient(circle, var(--accent-soft) 0%, transparent 70%)' }}
+              aria-hidden
+            />
 
-            {passwordChanged ? (
-              <p className="type-body mt-4 rounded-lg bg-positive-soft px-4 py-3 text-positive">
-                Your password was changed. Sign in with the new one.
+            {/* Top Branding */}
+            <div className="relative z-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-pill bg-white/10 backdrop-blur-xs text-white/90 text-xs font-medium border border-white/15">
+                <Icon name="shield" size={14} />
+                <span>The Gatehouse</span>
+              </div>
+              <div className="mt-8">
+                <Logo variant="wordmark" size={34} tone="inherit" />
+              </div>
+              <p className="type-body text-white/80 mt-3 max-w-xs">
+                One quiet, verifiable ledger for Indian gated communities.
               </p>
-            ) : null}
+            </div>
 
-            <form
-              className="mt-6 space-y-5"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void handleSubmit();
-              }}
-              noValidate
-            >
-              <Field label="Email" required>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  inputMode="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                />
-              </Field>
-              {remembered ? (
-                <p className="type-micro -mt-2 text-content-subtle">
-                  We filled in the address you signed in with last time.
+            {/* Middle Rotating Product Truth */}
+            <div className="relative z-10 my-8 py-6 border-y border-white/15">
+              <div className="min-h-[4.5rem] flex flex-col justify-center">
+                <p
+                  className={`type-title text-white font-serif italic text-xl transition-opacity duration-400 ease-in-out ${
+                    quoteVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'
+                  }`}
+                >
+                  &ldquo;{PRODUCT_TRUTHS[quoteIndex]}&rdquo;
                 </p>
+              </div>
+
+              {/* Progress indicator dots */}
+              <div className="flex items-center gap-2 mt-4" aria-hidden>
+                {PRODUCT_TRUTHS.map((truth, idx) => (
+                  <button
+                    key={truth}
+                    type="button"
+                    onClick={() => {
+                      setQuoteIndex(idx);
+                      setQuoteVisible(true);
+                    }}
+                    className={`h-1.5 rounded-pill transition-all duration-300 focus-ring ${
+                      idx === quoteIndex ? 'w-6 bg-white' : 'w-2 bg-white/30 hover:bg-white/50'
+                    }`}
+                    aria-label={`View truth ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom Assurance */}
+            <div className="relative z-10 flex items-center justify-between text-xs text-white/60">
+              <span>Residents · Committee · Gate</span>
+              <span>Encrypted</span>
+            </div>
+          </div>
+
+          {/* Right Panel: Warm Paper Sign-In Form */}
+          <div className="w-full md:w-7/12 lg:w-1/2 p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-between bg-surface-raised">
+            <div>
+              <div className="flex items-center justify-between">
+                <h1 className="type-title text-content text-2xl">Sign in</h1>
+                <span className="type-label text-content-subtle font-normal">Registered portal</span>
+              </div>
+              <p className="type-body mt-2 text-content-muted">
+                Enter your email and password to enter your society.
+              </p>
+
+              {passwordChanged ? (
+                <div className="mt-4 rounded-xl bg-positive-soft border border-positive-border px-4 py-3 text-positive flex items-center gap-2.5">
+                  <Icon name="check" size={16} className="shrink-0" />
+                  <p className="type-body text-sm font-medium">
+                    Your password was changed. Sign in with the new one.
+                  </p>
+                </div>
               ) : null}
 
-              <Field label="Password" required>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                />
-              </Field>
-
-              {error !== null ? (
-                <p className="type-body text-critical" role="alert">
-                  {error}
-                </p>
-              ) : null}
-
-              <Button
-                type="submit"
-                pending={pending}
-                pendingLabel="Signing you in"
-                fullWidth
-                size="lg"
+              <form
+                className="mt-6 space-y-5"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleSubmit();
+                }}
+                noValidate
               >
-                Sign in
-              </Button>
-            </form>
+                <Field
+                  label="Email"
+                  required
+                  error={fieldErrors.email}
+                  hint={
+                    remembered
+                      ? 'We filled in the address you signed in with last time.'
+                      : undefined
+                  }
+                >
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    value={email}
+                    autoFocus
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      if (fieldErrors.email) {
+                        setFieldErrors((prev) => ({ ...prev, email: null }));
+                      }
+                    }}
+                    required
+                    placeholder="name@example.com"
+                  />
+                </Field>
 
-            <p className="type-body mt-6 text-content-subtle">
-              Forgot your password?{' '}
-              <Link href="/reset-password" className="text-accent underline underline-offset-2">
-                Request a reset link
+                <Field label="Password" required error={fieldErrors.password}>
+                  <div className="relative flex items-center">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        if (fieldErrors.password) {
+                          setFieldErrors((prev) => ({ ...prev, password: null }));
+                        }
+                      }}
+                      required
+                      placeholder="Enter your password"
+                      className="pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="focus-ring absolute right-2.5 flex items-center justify-center p-2 rounded-pill text-content-subtle hover:text-content hover:bg-surface transition-colors cursor-pointer"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
+                    </button>
+                  </div>
+                </Field>
+
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    pending={pending}
+                    pendingLabel="Signing you in"
+                    disabled={success}
+                    fullWidth
+                    size="lg"
+                    className="rounded-pill shadow-e1 transition-transform active:scale-[0.99]"
+                  >
+                    {success ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Icon name="check" size={18} />
+                        <span>Admitted</span>
+                      </span>
+                    ) : (
+                      'Sign in'
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+
+            {/* Below the form: Quiet navigation links */}
+            <div className="mt-8 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
+              <Link
+                href="/register"
+                className="type-label text-content-muted hover:text-accent transition-colors"
+              >
+                New here? <span className="font-semibold text-accent underline underline-offset-2">Register</span>
               </Link>
-            </p>
-          </CardBody>
-        </Card>
+              <Link
+                href="/reset-password"
+                className="type-label text-content-subtle hover:text-content transition-colors underline underline-offset-2"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          </div>
+        </div>
       </main>
+
+      {/* Subtle Footer Note */}
+      <footer className="py-4 text-center">
+        <p className="type-micro text-content-subtle">
+          OneResi · Residential Society Operating System
+        </p>
+      </footer>
     </div>
   );
 }
