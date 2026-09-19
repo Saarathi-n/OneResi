@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Badge, Button, Card, CardBody, CardHeader, Skeleton } from '@grihaone/ui';
-import { call } from '@/lib/session';
+import { call, useGuardedSession } from '@/lib/session';
 
 /**
  * The deployment console: what Terraform holds (state, outputs), what AWS is running (the
@@ -39,6 +39,9 @@ interface RunOutcome {
 }
 
 export default function CloudConsolePage() {
+  // The page is committee-only like its API; without the guard an expired session left the
+  // skeleton spinning forever — the API answered 401 and nothing ever replaced the skeleton.
+  const guarded = useGuardedSession('COMMITTEE');
   const [status, setStatus] = useState<CloudStatus | null>(null);
   const [plan, setPlan] = useState<RunOutcome | undefined>();
   const [deployRun, setDeployRun] = useState<RunOutcome | undefined>();
@@ -87,7 +90,7 @@ export default function CloudConsolePage() {
     void refresh();
   }
 
-  if (status === null) {
+  if (guarded.state !== 'signed-in' || status === null) {
     return (
       <div className="mx-auto max-w-3xl space-y-4 p-6">
         <Skeleton variant="text" width={220} height={32} />
