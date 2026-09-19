@@ -38,6 +38,8 @@ export const duration = {
   base: 220,
   slow: 320,
   deliberate: 480,
+  /** A figure counting up to its value. Long enough to read, short enough to trust. */
+  count: 600,
 } as const;
 
 export type DurationName = keyof typeof duration;
@@ -86,8 +88,9 @@ export const radius = {
   sm: 6,
   md: 8,
   lg: 12,
-  xl: 16,
-  '2xl': 22,
+  xl: 20,
+  '2xl': 24,
+  '3xl': 28,
   pill: 999,
 } as const;
 

@@ -67,6 +67,17 @@ export { EmptyState, type EmptyStateProps } from './components/EmptyState.js';
 export { ErrorState, type ErrorStateProps } from './components/ErrorState.js';
 export { ToastProvider, type ToastOptions, type ToastApi, useToast } from './components/Toast.js';
 
+// Theme
+export {
+  ThemeToggle,
+  useTheme,
+  applyTheme,
+  systemTheme,
+  THEME_STORAGE_KEY,
+  type Theme,
+  type ThemeChoice,
+} from './components/ThemeToggle.js';
+
 // Motion
 export { useMotion, type Motion, createMotion } from './motion/useMotion.js';
 export {

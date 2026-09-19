@@ -58,6 +58,8 @@ export interface TableProps<Row> {
   readonly rowTone?: ((row: Row) => Tone | undefined) | undefined;
   /** The key of the row that just changed: it washes its tone once. */
   readonly flashedRowKey?: string | undefined;
+  /** A working tool, not a showcase: tighter rows for a ledger that has to answer at a glance. */
+  readonly dense?: boolean | undefined;
   /** Makes rows keyboard-navigable and activatable. */
   readonly onRowActivate?: ((row: Row) => void) | undefined;
   readonly className?: string | undefined;
@@ -89,6 +91,7 @@ export function Table<Row>({
   rowPending,
   rowTone,
   flashedRowKey,
+  dense = false,
   onRowActivate,
   className,
 }: TableProps<Row>): ReactNode {
@@ -96,6 +99,8 @@ export function Table<Row>({
   const [focusRow, setFocusRow] = useState(0);
   const interactive = onRowActivate !== undefined;
   const span = columns.length;
+  const cellPad = dense ? 'px-3 py-1.5' : 'px-3 py-3';
+  const headPad = dense ? 'px-3 py-1.5' : 'px-3 py-2.5';
 
   function focusAt(index: number): void {
     const bounded = Math.min(Math.max(index, 0), rows.length - 1);
@@ -179,7 +184,8 @@ export function Table<Row>({
                     sorted ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'
                   }
                   className={cn(
-                    'type-label bg-surface-sunken px-3 py-2.5 font-medium text-content-muted',
+                    'type-label bg-surface-sunken font-medium text-content-muted',
+                    headPad,
                     align,
                     column.secondary === true ? 'hidden md:table-cell' : undefined,
                   )}
@@ -229,7 +235,7 @@ export function Table<Row>({
                   <td
                     key={column.id}
                     className={cn(
-                      'px-3 py-3',
+                      cellPad,
                       column.secondary === true ? 'hidden md:table-cell' : undefined,
                     )}
                   >
@@ -270,7 +276,8 @@ export function Table<Row>({
                     <td
                       key={column.id}
                       className={cn(
-                        'type-body relative px-3 py-3 text-content',
+                        'type-body relative text-content',
+                        cellPad,
                         ALIGN[column.align ?? 'start'],
                         column.secondary === true ? 'hidden md:table-cell' : undefined,
                       )}

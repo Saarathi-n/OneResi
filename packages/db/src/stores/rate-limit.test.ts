@@ -85,6 +85,12 @@ describe('rateLimiter', () => {
     const limiter = rateLimiter(db);
     const key = `expire-${Date.now()}`;
 
+    // Start well inside the second so first and second comfortably share the same window
+    const msIntoSecond = Date.now() % 1000;
+    if (msIntoSecond > 600) {
+      await new Promise((resolve) => setTimeout(resolve, 1050 - msIntoSecond));
+    }
+
     const first = await limiter.consume(key, { attempts: 1, windowSeconds: 1 });
     expect(first.allowed).toBe(true);
     const second = await limiter.consume(key, { attempts: 1, windowSeconds: 1 });

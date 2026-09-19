@@ -21,11 +21,14 @@ const VARIANT: Readonly<Record<ButtonVariant, string>> = {
   danger: 'bg-critical text-critical-on border-critical hover:bg-critical-hover',
 };
 
+/** Actions are pills at every size — the curve is the identity, not a per-size decision. Pills
+ * carry a step more horizontal padding than a cornered button would, so labels keep their air
+ * where the ends round away. */
 const SIZE: Readonly<Record<ButtonSize, string>> = {
-  sm: 'h-8 px-3 gap-1.5 type-label rounded-md',
-  md: 'h-11 px-4 gap-2 type-body rounded-lg',
-  lg: 'h-12 px-5 gap-2 type-body rounded-lg',
-  kiosk: 'h-16 px-8 gap-3 type-title rounded-xl',
+  sm: 'h-8 px-3.5 gap-1.5 type-label rounded-pill',
+  md: 'h-11 px-5 gap-2 type-body rounded-pill',
+  lg: 'h-12 px-6 gap-2 type-body rounded-pill',
+  kiosk: 'h-16 px-10 gap-3 type-title rounded-pill',
 };
 
 export function buttonClass(
