@@ -46,6 +46,11 @@ const STACK_NAME = 'grihaone-dev';
 const STACK_DIR = stackDir();
 const ACCOUNT_ID = '215671569291';
 const REGION = 'ap-south-1';
+/** The repository root — two levels above infra/stack — where the Dockerfile and scripts live. */
+const REPO_ROOT = join(STACK_DIR, '..', '..');
+/** The state bucket bootstrap owns. Its presence is what tells deploy the backend exists. */
+const BOOTSTRAP_DIR = join(STACK_DIR, '..', 'bootstrap');
+const STATE_BUCKET = 'grihaone-tfstate-215671569291-ap-south-1';
 
 /**
  * The last plan this server process saw: apply refuses without a changes-planned one. A holder
@@ -70,6 +75,20 @@ function terraformPath(): string | null {
   ].filter((p): p is string => typeof p === 'string' && p !== '');
   for (const candidate of candidates) {
     if (candidate !== 'terraform' && !existsSync(candidate)) continue;
+    return candidate;
+  }
+  return null;
+}
+
+/** Docker by the same idea: DOCKER_PATH, then Docker Desktop's install location, then PATH. */
+function dockerPath(): string | null {
+  const candidates = [
+    process.env['DOCKER_PATH'],
+    'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe',
+    'docker',
+  ].filter((p): p is string => typeof p === 'string' && p !== '');
+  for (const candidate of candidates) {
+    if (candidate !== 'docker' && !existsSync(candidate)) continue;
     return candidate;
   }
   return null;
@@ -101,6 +120,18 @@ function run(
 /** Keeps a long apply from shipping megabytes to the browser: the tail carries the verdict. */
 function tail(output: string, limit = 30_000): string {
   return output.length <= limit ? output : `… (truncated to the last ${limit} characters)\n${output.slice(-limit)}`;
+}
+
+/** One deploy step's output, trimmed to what the page can show. */
+function renderSteps(steps: readonly { label: string; result: { code: number; output: string } }[]): string {
+  return steps
+    .map((step) => `== ${step.label} — exit ${step.result.code} ==\n${tail(step.result.output, 4_000)}`)
+    .join('\n\n');
+}
+
+/** A failed deploy: everything that ran, so the failing step is visible on the page. */
+function deployFailed(steps: readonly { label: string; result: { code: number; output: string } }[]): NextResponse {
+  return NextResponse.json({ ran: 'deploy', ok: false, output: renderSteps(steps) });
 }
 
 /** The AWS probes, each independent: one that cannot answer says so, none fails the panel. */
@@ -295,6 +326,100 @@ export async function POST(request: NextRequest) {
     // refused every path that could have replaced it in between.
     spendLastPlan();
     return NextResponse.json({ ran: 'apply', ok: result.code === 0, output: tail(result.output) });
+  }
+
+  if (action === 'deploy') {
+    if (body?.confirm !== 'deploy') {
+      return NextResponse.json({
+        code: 'INVALID_INPUT',
+        message: 'Type the word to confirm the deploy.',
+        fields: ['confirm'],
+      }, { status: 400 });
+    }
+    // The playbook's first-deploy sequence (docs/DEPLOY-PLAYBOOK.md §3) as one button: bundles,
+    // the state bucket if a teardown removed it, the ECR repository alone (images cannot be
+    // pushed into a repository that does not exist), both images built and pushed, then the full
+    // apply — which starts the migrate task and the service. Idempotent: with the stack already
+    // up, every step is a no-op except the image rebuild, and the apply finds nothing to change.
+    const docker = dockerPath();
+    if (docker === null) {
+      return NextResponse.json({
+        code: 'INVALID_INPUT',
+        message: 'Docker is not running or not installed — start Docker Desktop first.',
+      }, { status: 400 });
+    }
+
+    const steps: { label: string; result: { code: number; output: string } }[] = [];
+    const step = async (label: string, command: string, args: readonly string[], cwd: string) => {
+      const result = await run(command, args, cwd);
+      steps.push({ label, result });
+      return result.code === 0;
+    };
+
+    const engine = await run(docker, ['version', '--format', '{{.Server.Version}}']);
+    if (engine.code !== 0) {
+      return NextResponse.json({
+        ran: 'deploy',
+        ok: false,
+        output: 'Docker answered but the engine did not — start Docker Desktop and wait for it, then deploy again.',
+      });
+    }
+
+    // 1. The Lambda bundles the apply consumes.
+    if (!await step('build lambda bundles', process.execPath, ['scripts/build-lambdas.mjs'], REPO_ROOT)) {
+      return deployFailed(steps);
+    }
+
+    // 2. The state bucket, only when a teardown removed it (head-bucket answers 404/403).
+    const bucket = await run('aws', ['s3api', 'head-bucket', '--bucket', STATE_BUCKET, '--region', REGION]);
+    if (bucket.code !== 0) {
+      if (!await step('bootstrap state bucket (init)', tf, ['init', '-input=false'], BOOTSTRAP_DIR)) {
+        return deployFailed(steps);
+      }
+      if (!await step('bootstrap state bucket (apply)', tf, ['apply', '-auto-approve', '-input=false'], BOOTSTRAP_DIR)) {
+        return deployFailed(steps);
+      }
+    }
+
+    // 3. ECR alone, then the images into it.
+    if (!await step('terraform init', tf, ['init', '-input=false'], STACK_DIR)) {
+      return deployFailed(steps);
+    }
+    if (!await step('create the image repository', tf, ['apply', '-target=aws_ecr_repository.app', '-auto-approve', '-input=false'], STACK_DIR)) {
+      return deployFailed(steps);
+    }
+    const repoUrl = await run(tf, ['output', '-raw', 'ecr_repository_url'], STACK_DIR);
+    const repository = repoUrl.output.trim();
+    if (repoUrl.code !== 0 || repository === '') {
+      steps.push({ label: 'read the repository URL', result: repoUrl });
+      return deployFailed(steps);
+    }
+    const registry = `${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com`;
+    const login = await run('aws', ['ecr', 'get-login-password', '--region', REGION]);
+    if (login.code !== 0) {
+      steps.push({ label: 'ecr login password', result: login });
+      return deployFailed(steps);
+    }
+    const dockerLogin = await run(docker, ['login', '--username', 'AWS', '--password', login.output.trim(), registry]);
+    steps.push({ label: 'ecr login', result: dockerLogin });
+    if (dockerLogin.code !== 0) return deployFailed(steps);
+
+    for (const [target, tag] of [['runtime', 'latest'], ['migrate', 'migrate']] as const) {
+      if (!await step(`build the ${target} image`, docker, ['build', '--file', 'infra/docker/Dockerfile', '--target', target, '--tag', `${repository}:${tag}`, '.'], REPO_ROOT)) {
+        return deployFailed(steps);
+      }
+      if (!await step(`push the ${target} image`, docker, ['push', `${repository}:${tag}`], REPO_ROOT)) {
+        return deployFailed(steps);
+      }
+    }
+
+    // 4. The full apply: RDS, the migrate task, the service behind the load balancer.
+    if (!await step('apply the stack', tf, ['apply', '-auto-approve', '-input=false'], STACK_DIR)) {
+      return deployFailed(steps);
+    }
+
+    spendLastPlan();
+    return NextResponse.json({ ran: 'deploy', ok: true, output: renderSteps(steps) });
   }
 
   if (action === 'stop' || action === 'start') {

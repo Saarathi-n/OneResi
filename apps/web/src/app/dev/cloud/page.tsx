@@ -32,7 +32,7 @@ interface CloudStatus {
 }
 
 interface RunOutcome {
-  ran: 'plan' | 'apply' | 'stop' | 'start' | 'destroy';
+  ran: 'deploy' | 'plan' | 'apply' | 'stop' | 'start' | 'destroy';
   ok: boolean;
   changes?: boolean;
   output: string;
@@ -41,11 +41,13 @@ interface RunOutcome {
 export default function CloudConsolePage() {
   const [status, setStatus] = useState<CloudStatus | null>(null);
   const [plan, setPlan] = useState<RunOutcome | undefined>();
+  const [deployRun, setDeployRun] = useState<RunOutcome | undefined>();
   const [applyRun, setApplyRun] = useState<RunOutcome | undefined>();
   const [scaleRun, setScaleRun] = useState<RunOutcome | undefined>();
   const [destroyRun, setDestroyRun] = useState<RunOutcome | undefined>();
   const [pending, setPending] = useState<string | null>(null);
 
+  const [deployWord, setDeployWord] = useState('');
   const [applyWord, setApplyWord] = useState('');
   const [destroyWord, setDestroyWord] = useState('');
 
@@ -59,7 +61,7 @@ export default function CloudConsolePage() {
   }, [refresh]);
 
   async function run(
-    target: 'plan' | 'apply' | 'stop' | 'start' | 'destroy',
+    target: 'deploy' | 'plan' | 'apply' | 'stop' | 'start' | 'destroy',
     confirm?: string,
   ): Promise<void> {
     setPending(target);
@@ -71,6 +73,10 @@ export default function CloudConsolePage() {
     const outcome: RunOutcome = result.ok
       ? result.data
       : { ran: target, ok: false, output: result.error.message };
+    if (target === 'deploy') {
+      setDeployRun(outcome);
+      if (result.ok) setDeployWord('');
+    }
     if (target === 'plan') setPlan(outcome);
     if (target === 'apply') {
       setApplyRun(outcome);
@@ -161,6 +167,38 @@ export default function CloudConsolePage() {
               </pre>
             </div>
           ) : null}
+        </CardBody>
+      </Card>
+
+      <Card elevation={1}>
+        <CardHeader
+          title="Deploy"
+          subtitle="The whole first-deploy sequence as one button: bundles, the state bucket if a teardown removed it, the image repository, both images built and pushed, then the full apply."
+        />
+        <CardBody className="space-y-3">
+          <p className="type-body text-content-muted">
+            Needs Docker Desktop running and AWS credentials in this server&apos;s environment. Safe
+            against an already-deployed stack: every step is idempotent and the final apply finds
+            nothing to change. Budget guard: the stack&apos;s alarms watch the account either way.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              className="type-input h-11 w-40 rounded-lg border border-border-strong bg-surface-raised px-3.5"
+              placeholder="type: deploy"
+              value={deployWord}
+              onChange={(event) => setDeployWord(event.target.value)}
+              aria-label="Type the word deploy to confirm"
+            />
+            <Button
+              disabled={deployWord !== 'deploy'}
+              pending={pending === 'deploy'}
+              pendingLabel="Deploying (15-30 min)"
+              onClick={() => void run('deploy', 'deploy')}
+            >
+              Deploy the stack
+            </Button>
+          </div>
+          {deployRun !== undefined ? <Output outcome={deployRun} /> : null}
         </CardBody>
       </Card>
 

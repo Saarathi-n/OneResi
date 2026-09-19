@@ -70,7 +70,14 @@ export function connection(): Promise<Connection> {
   if (existing !== undefined) return existing;
 
   const opened = open();
-  if (process.env.NODE_ENV !== 'production') globalCache[cacheKey] = opened;
+  // Always cached, in every environment. The previous skip-in-production meant every `getDb()`
+  // outside the app's own memoized runtime constructed a NEW Prisma pool that `closeDb()` could
+  // not see (the cache it reads was never written): the load balancer's 30-second health probe
+  // leaked a pool each time, and so did every Lambda invocation, until RDS answered "remaining
+  // connection slots are reserved" — which is exactly what the second deploy cycle hit. The
+  // dev-server reload concern the skip existed for is already handled: a reload resets module
+  // state, and the next `getDb()` simply opens a fresh pool.
+  globalCache[cacheKey] = opened;
   return opened;
 }
 
