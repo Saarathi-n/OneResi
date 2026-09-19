@@ -93,13 +93,35 @@ cd infra/bootstrap && "$TF" init && "$TF" apply && cd ../..
 cd infra/stack && "$TF" init
 "$TF" apply -target=aws_ecr_repository.app -auto-approve
 
-# 3d. Both images. `terraform output docker_commands` prints these with the real repo URL.
+# 3d. Images. `terraform output docker_commands` prints these with the real repo URL.
+#     Do NOT rebuild an image whose inputs did not change. A `docker build` of a
+#     1.5 GB Next standalone takes ~10 min even when every layer would cache.
+#     Skip rules:
+#       runtime  — rebuild only if apps/, packages/, or infra/docker changed
+#                  since the local `grihaone-app:latest` was built.
+#       migrate  — rebuild only if packages/db/prisma, packages/db/scripts, or
+#                  infra/docker changed. A domain/PWA/mail-only commit does not
+#                  touch migrate. Retag the existing local image and push it.
+#     After a full destroy, ECR is gone but local images remain — retag + push,
+#     do not rebuild.
 export PATH="/c/Program Files/Docker/Docker/resources/bin:$PATH"
-aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 215671569291.dkr.ecr.ap-south-1.amazonaws.com
-docker build --file infra/docker/Dockerfile --target runtime --tag <repo-url>:latest .
-docker push <repo-url>:latest
-docker build --file infra/docker/Dockerfile --target migrate --tag <repo-url>:migrate .
-docker push <repo-url>:migrate
+REPO=215671569291.dkr.ecr.ap-south-1.amazonaws.com/grihaone-dev
+# Windows Credential Manager often dies after a reboot ("A specified logon
+# session does not exist"). Write the token into a throwaway DOCKER_CONFIG
+# instead of `docker login`:
+mkdir -p /tmp/docker-conf
+AUTH=$(aws ecr get-login-password --region ap-south-1 | tr -d '\n' | base64 -w0)
+printf '{"auths":{"%s":{"auth":"%s"}}}\n' 215671569291.dkr.ecr.ap-south-1.amazonaws.com "$AUTH" > /tmp/docker-conf/config.json
+export DOCKER_CONFIG=/tmp/docker-conf
+
+# Rebuild runtime only when its inputs changed; otherwise retag what you have.
+docker build --file infra/docker/Dockerfile --target runtime --tag $REPO:latest .   # skip if grihaone-app:latest is current
+docker tag grihaone-app:latest $REPO:latest
+docker push $REPO:latest
+
+# Rebuild migrate only when schema/scripts/Dockerfile changed.
+docker tag grihaone-app:migrate $REPO:migrate   # or build --target migrate if those inputs changed
+docker push $REPO:migrate
 
 # 3e. The full apply. RDS ~5-8 min, the migrate task runs (node interpreter), the service
 #     comes up behind the ALB. Failures here are readable, not crash-loops.
@@ -112,9 +134,11 @@ docker push <repo-url>:migrate
 
 ### Code-change redeploy (stack already up)
 
-`pnpm lambdas:build` (if handlers changed) → rebuild + push BOTH images (tags unchanged:
-`latest` / `migrate`) → `"$TF" apply`. ECS does a rolling replacement. Migrations run because
-Terraform starts the migrate task on every apply.
+`pnpm lambdas:build` (if `packages/mail` or `infra/lambda` changed) → rebuild **only the
+images whose inputs changed** (runtime for apps/packages, migrate for prisma/scripts) →
+push those tags → `"$TF" apply`. ECS does a rolling replacement. Migrations run because
+Terraform starts the migrate task on every apply — that is cheap even when the migrate
+image itself is unchanged.
 
 ---
 
