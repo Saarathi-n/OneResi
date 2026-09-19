@@ -43,17 +43,21 @@ export function BottomTabs({
         {/* Animated sliding indicator on active tab */}
         <div
           aria-hidden
-          className="pointer-events-none absolute top-1 bottom-1 left-1.5 transition-transform ease-[cubic-bezier(0.32,0.72,0,1)]"
-          style={{
-            width: `calc(${tabWidthPercent}% - 3px)`,
-            transform: `translateX(${safeIndex * 100}%)`,
-            transitionDuration: reduced ? '0ms' : '260ms',
-          }}
+          className="pointer-events-none absolute inset-x-1.5 top-1 bottom-1"
         >
-          {/* Top indicator bar matching reference 24 */}
-          <div className="mx-auto h-0.5 w-6 rounded-full bg-accent" />
-          {/* Subtle frosted capsule background */}
-          <div className="mt-0.5 h-[calc(100%-4px)] w-full rounded-full bg-accent-soft/40" />
+          <div
+            className="h-full transition-transform ease-[cubic-bezier(0.32,0.72,0,1)] px-1"
+            style={{
+              width: `${tabWidthPercent}%`,
+              transform: `translateX(${safeIndex * 100}%)`,
+              transitionDuration: reduced ? '0ms' : '260ms',
+            }}
+          >
+            {/* Top indicator bar matching reference 24 */}
+            <div className="mx-auto h-0.5 w-6 rounded-full bg-accent" />
+            {/* Subtle frosted capsule background */}
+            <div className="mt-0.5 h-[calc(100%-4px)] w-full rounded-full bg-accent-soft/40" />
+          </div>
         </div>
 
         <ul className="relative flex items-center justify-around">

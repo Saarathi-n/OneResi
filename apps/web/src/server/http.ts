@@ -47,8 +47,24 @@ export function meta(request: NextRequest): RequestMeta {
           .split(',')
           .map((hop) => hop.trim())
           .filter((hop) => hop.length > 0);
-  const viewer = hops.length >= 2 ? hops[hops.length - 2] : hops[0];
-  const ip = viewer ?? (request.headers.get('x-real-ip') ?? 'unknown');
+
+  const hasCloudFront = request.headers.has('x-amz-cf-id');
+  const cfViewer = request.headers.get('cloudfront-viewer-address');
+  let ip: string;
+  if (hasCloudFront && cfViewer !== null && cfViewer.length > 0) {
+    const lastColon = cfViewer.lastIndexOf(':');
+    const rawIp = lastColon !== -1 ? cfViewer.slice(0, lastColon) : cfViewer;
+    ip = rawIp.replace(/^\[|\]$/g, '');
+  } else if (hops.length > 0) {
+    if (hasCloudFront && hops.length >= 2) {
+      ip = hops[hops.length - 2] ?? hops[0] ?? 'unknown';
+    } else {
+      ip = hops[hops.length - 1] ?? 'unknown';
+    }
+  } else {
+    ip = request.headers.get('x-real-ip') ?? 'unknown';
+  }
+
   const userAgent = request.headers.get('user-agent');
   const requested = request.headers.get('x-request-id');
   return {
@@ -75,6 +91,7 @@ const STATUS: Record<ErrorCode, number> = {
   LIMIT_REACHED: 409,
   WINDOW_CLOSED: 409,
   ALREADY_DONE: 409,
+  INTERNAL_ERROR: 500,
 };
 
 function errorBody(error: DomainError): { code: string; message: string; field?: string } {

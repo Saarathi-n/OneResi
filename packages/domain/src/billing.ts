@@ -162,7 +162,7 @@ export function billingService(deps: BillingDeps): BillingService {
 
       const now = clock.now();
       const dueOn = utcMidnight(input.dueDate);
-      if (input.dueDate < now.toISOString().slice(0, 10)) {
+      if (input.dueDate < istDayString(now)) {
         return errors.invalid('The due date cannot be in the past.', 'dueDate');
       }
 
@@ -252,7 +252,7 @@ export function billingService(deps: BillingDeps): BillingService {
     async recordOffline(actor, input): Promise<Result<InvoiceView>> {
       if (actor.role !== 'A') return errors.forbidden('record an offline payment');
       const receivedOn = utcMidnight(input.receivedOn);
-      if (input.receivedOn > clock.now().toISOString().slice(0, 10)) {
+      if (input.receivedOn > istDayString(clock.now())) {
         return errors.invalid('The received date cannot be in the future.', 'receivedOn');
       }
       return settle(actor, {
@@ -457,9 +457,15 @@ export function paymentStreak(invoices: readonly StreakInvoice[]): number {
     if (inv.status !== 'PAID' || inv.paidAt === null) {
       break;
     }
-    const due = typeof inv.dueOn === 'string' ? new Date(inv.dueOn).getTime() : inv.dueOn.getTime();
-    const paid = typeof inv.paidAt === 'string' ? new Date(inv.paidAt).getTime() : inv.paidAt.getTime();
-    if (paid <= due) {
+    const dueDay =
+      typeof inv.dueOn === 'string'
+        ? inv.dueOn.slice(0, 10)
+        : inv.dueOn.toISOString().slice(0, 10);
+    const paidDay =
+      typeof inv.paidAt === 'string'
+        ? C.istDayString(new Date(inv.paidAt))
+        : C.istDayString(inv.paidAt);
+    if (paidDay <= dueDay) {
       streak += 1;
     } else {
       break;

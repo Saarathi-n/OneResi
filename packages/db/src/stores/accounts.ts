@@ -160,6 +160,9 @@ export function accountStore(db: Db): AccountStore {
           await stampClaim(tx, input.userId, {
             resolvedUnitId: unitId,
             resolvedAt: decidedAt,
+            ...(input.decidedById !== undefined && input.decidedById !== null
+              ? { decidedById: input.decidedById }
+              : {}),
             ...(input.reason === null ? {} : { decisionReason: input.reason }),
           });
         } else {
@@ -168,6 +171,9 @@ export function accountStore(db: Db): AccountStore {
           // shows the committee.
           await stampClaim(tx, input.userId, {
             resolvedAt: decidedAt,
+            ...(input.decidedById !== undefined && input.decidedById !== null
+              ? { decidedById: input.decidedById }
+              : {}),
             ...(input.reason === null ? {} : { decisionReason: input.reason }),
           });
         }
@@ -350,7 +356,12 @@ function claimData(userId: number, claim: StoredClaim) {
 async function stampClaim(
   tx: Tx,
   userId: number,
-  stamps: { resolvedUnitId?: number; resolvedAt: Date; decisionReason?: string },
+  stamps: {
+    resolvedUnitId?: number;
+    resolvedAt: Date;
+    decisionReason?: string;
+    decidedById?: number;
+  },
 ): Promise<void> {
   await tx.registrationClaim.updateMany({ where: { userId }, data: stamps });
 }
@@ -365,21 +376,23 @@ async function linkClaimHome(
   userId: number,
   claim: ClaimResolution,
 ): Promise<number> {
-  const block =
-    (await tx.block.findUnique({ where: { name: claim.blockName } })) ??
-    (await tx.block.create({ data: { name: claim.blockName, floors: 1 } }));
-  const unit =
-    (await tx.unit.findUnique({
-      where: { blockId_label: { blockId: block.id, label: claim.unitLabel } },
-    })) ??
-    (await tx.unit.create({
-      data: {
-        blockId: block.id,
-        label: claim.unitLabel,
-        type: claim.unitType,
-        monthlyChargePaise: claim.monthlyChargePaise,
-      },
-    }));
+  const block = await tx.block.upsert({
+    where: { name: claim.blockName },
+    update: {},
+    create: { name: claim.blockName, floors: 1 },
+  });
+
+  const unit = await tx.unit.upsert({
+    where: { blockId_label: { blockId: block.id, label: claim.unitLabel } },
+    update: {},
+    create: {
+      blockId: block.id,
+      label: claim.unitLabel,
+      type: claim.unitType,
+      monthlyChargePaise: claim.monthlyChargePaise,
+    },
+  });
+
   await tx.residentUser.update({ where: { id: userId }, data: { unitId: unit.id } });
   return unit.id;
 }

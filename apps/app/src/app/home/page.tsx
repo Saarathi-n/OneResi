@@ -8,7 +8,7 @@ import { paise } from '@grihaone/contracts';
 import { Money, useToast } from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { Shell } from '@/components/Shell';
-import type { TabDef } from '@/components/BottomTabs';
+import { RESIDENT_TABS } from '@/lib/tabs';
 import { simple } from '@/lib/api';
 import { usePerson } from '@/lib/session';
 import { useAsync } from '@/hooks/useAsync';
@@ -26,14 +26,6 @@ import type { EntryLogWire, InvoiceWire, NoticeWire, NotificationsWire, WaitingV
  * - 'Society Notices': pinned notice card with 'Pinned' badge.
  * - 'Recent Gate Entries': timeline feed with timestamps.
  */
-
-const PWA_HOME_TABS: readonly TabDef[] = [
-  { href: '/home', label: 'Home', icon: 'home' },
-  { href: '/home/invoices', label: 'Invoices', icon: 'receipt' },
-  { href: '/home/visitors', label: 'Visitors', icon: 'users' },
-  { href: '/home/notices', label: 'Notices', icon: 'clipboard' },
-  { href: '/home/more', label: 'More', icon: 'more' },
-];
 
 const QUICK_ACTIONS = [
   { label: 'New Pass', href: '/home/visitors' },
@@ -176,7 +168,7 @@ export default function ResidentHomePage(): ReactNode {
     <Shell
       title={residentName}
       subtitle={residentHome}
-      tabs={PWA_HOME_TABS}
+      tabs={RESIDENT_TABS}
       activeTab="/home"
       onRefresh={refreshAll}
       headerRight={notificationBellAffordance}

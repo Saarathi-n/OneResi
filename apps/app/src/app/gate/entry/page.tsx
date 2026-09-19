@@ -13,6 +13,7 @@ import { Shell } from '@/components/Shell';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { call } from '@/lib/api';
 import { rowStyle, screenClass } from '@/lib/motion';
+import { enqueue, newIdempotencyKey } from '@/lib/replay-queue';
 import { openCheckIns, removeOpenCheckIn, type OpenCheckIn } from '../lib/checkin-store';
 import { formatTimeOfDay } from '../lib/time';
 
@@ -53,9 +54,15 @@ export default function EntryPage(): ReactNode {
       return next;
     });
 
+    const idempotencyKey = newIdempotencyKey();
+    const payload =
+      entry.passId < 0
+        ? { walkInLogId: -entry.passId, action: 'CHECK_OUT' as const, idempotencyKey }
+        : { passId: entry.passId, action: 'CHECK_OUT' as const, idempotencyKey };
+
     const outcome = await call('/api/gate/entry', {
       method: 'POST',
-      json: { passId: entry.passId, action: 'CHECK_OUT' },
+      json: payload,
     });
     setBusyPassId(null);
 
@@ -67,10 +74,15 @@ export default function EntryPage(): ReactNode {
     }
 
     if ('network' in outcome && outcome.network) {
-      setFailures((prev) => ({
-        ...prev,
-        [entry.passId]: 'You appear to be offline. Try again once the signal returns.',
-      }));
+      enqueue({
+        path: '/api/gate/entry',
+        method: 'POST',
+        body: payload,
+        description: `Check-out for ${entry.visitorName}`,
+      });
+      removeOpenCheckIn(entry.passId);
+      setOpen(openCheckIns());
+      setNotice(`${entry.visitorName} checked out (queued offline) at ${formatTimeOfDay(new Date())}`);
       return;
     }
 

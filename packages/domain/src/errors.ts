@@ -48,7 +48,7 @@ export const errors = {
   /** For a failure with no expected cause. The detail is logged, never returned. */
   unexpected: (detail: unknown): Result<never> =>
     fail({
-      code: 'INVALID_INPUT',
+      code: 'INTERNAL_ERROR',
       message: 'Something went wrong on our side. Please try again.',
       detail: detail instanceof Error ? detail.message : String(detail),
     }),
@@ -66,4 +66,5 @@ export const STATUS_FOR: Record<DomainError['code'], number> = {
   LIMIT_REACHED: 409,
   WINDOW_CLOSED: 410,
   ALREADY_DONE: 409,
+  INTERNAL_ERROR: 500,
 };

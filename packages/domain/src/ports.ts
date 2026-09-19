@@ -48,6 +48,7 @@ export const ERROR_CODES = [
   'LIMIT_REACHED',
   'WINDOW_CLOSED',
   'ALREADY_DONE',
+  'INTERNAL_ERROR',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 

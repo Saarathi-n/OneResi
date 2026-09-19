@@ -507,6 +507,7 @@ export interface AccountStore {
       readonly approve: boolean;
       readonly reason: string | null;
       readonly claim: ClaimResolution | null;
+      readonly decidedById?: number | null;
     },
     events: readonly OutboxEventInput[],
   ): Promise<StoredAccount | null>;

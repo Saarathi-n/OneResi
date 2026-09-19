@@ -150,7 +150,10 @@ export function billingStore(db: Db): BillingStore {
             where: { id: input.invoiceId, status: { in: ['UNPAID', 'OVERDUE'] } },
             data: { status: 'PAID' },
           });
-          if (applied.count === 0) return null;
+          if (applied.count === 0) {
+            const winner = await tx.payment.findUnique({ where: { reference: input.reference } });
+            return winner === null ? null : toPayment(winner);
+          }
 
           // The period's next receipt number, allocated inside this transaction so the
           // increment rolls back with the payment and the run stays gap-free (D-37). The
@@ -175,8 +178,11 @@ export function billingStore(db: Db): BillingStore {
           return toPayment(payment);
         });
       } catch (error) {
-        // Two confirmations of one reference racing: one won, this one is a null.
-        if (isUniqueViolation(error)) return null;
+        // Two confirmations of one reference racing: return the winner's payment idempotently.
+        if (isUniqueViolation(error)) {
+          const winner = await db.payment.findUnique({ where: { reference: input.reference } });
+          return winner === null ? null : toPayment(winner);
+        }
         throw error;
       }
     },

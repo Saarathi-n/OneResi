@@ -73,9 +73,9 @@ function inAppAndPushEvents(
   ];
 }
 
-/** The UTC calendar day of `at` — the day a pass is good for, and the day it is stored as (D-72). */
-function utcDay(at: Date): string {
-  return at.toISOString().slice(0, 10);
+/** The IST calendar day of `at` — the day a pass is good for, and the day it is stored as (D-72). */
+function istDay(at: Date): string {
+  return C.istDayString(at);
 }
 
 /** `2026-09-15` at UTC midnight — how a pass's validOn is stored. */
@@ -85,7 +85,7 @@ function utcMidnight(day: string): Date {
 
 /** The last day a pass may be issued for (D-72). */
 function latestIssueableDay(now: Date): string {
-  return utcDay(new Date(now.getTime() + C.MAX_PASS_LEAD_DAYS * 86_400_000));
+  return istDay(new Date(now.getTime() + C.MAX_PASS_LEAD_DAYS * 86_400_000));
 }
 
 /** "Block A · A-101" — the way a destination is said out loud at a gate. */
@@ -231,14 +231,13 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
   ): Promise<Result<null>> {
     const pass = await store.findPassById(passId);
     if (pass === null) return errors.notFound('pass');
-    const today = utcDay(clock.now());
+    const today = istDay(clock.now());
 
     if (action === 'CHECK_IN') {
       if (
         pass.status === 'USED' &&
         pass.enteredAt !== null &&
-        pass.exitedAt === null &&
-        utcDay(pass.validOn) === today
+        pass.exitedAt === null
       ) {
         // The retry of a check-in that already happened is a success, not a second row (D-40).
         return ok(null);
@@ -246,7 +245,7 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
       if (pass.status !== 'ACTIVE') {
         return errors.stateNotAllowed('This pass can no longer be checked in.');
       }
-      if (utcDay(pass.validOn) !== today) {
+      if (istDay(pass.validOn) !== today) {
         return errors.stateNotAllowed('This pass is not valid today.');
       }
 
@@ -298,6 +297,7 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
   async function recordWalkInEntry(
     logId: number,
     action: 'CHECK_IN' | 'CHECK_OUT',
+    idempotencyKey?: string,
   ): Promise<Result<null>> {
     const log = await store.findLogById(logId);
     if (log === null) return errors.notFound('visit');
@@ -318,9 +318,13 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
       const residents = await store.findResidentsForUnit(log.unitId);
       const stamped = await store.stampWalkInEntry(
         { logId: log.id, at },
-        arrivedEvents(residents, log.walkInName ?? '', log.walkInPurpose ?? '', C.idempotencyKey()),
+        arrivedEvents(residents, log.walkInName ?? '', log.walkInPurpose ?? '', idempotencyKey ?? C.idempotencyKey()),
       );
       if (stamped === null) {
+        const recheck = await store.findLogById(logId);
+        if (recheck !== null && recheck.enteredAt !== null && recheck.exitedAt === null) {
+          return ok(null);
+        }
         return errors.stateNotAllowed('The household has not let this visitor in.');
       }
       return ok(null);
@@ -345,7 +349,7 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
       if (actor.unitId === null) return errors.forbidden('issue a visitor pass');
 
       const now = clock.now();
-      const today = utcDay(now);
+      const today = istDay(now);
       // A pass valid last week was previously accepted (D-72).
       if (input.validDate < today) {
         return errors.invalid('Choose today or a later date.', 'validDate');
@@ -415,7 +419,7 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
       if (actor.unitId === null) return errors.forbidden('see expected visitors');
       // USED-today means the visitor already walked in; arrivedAt says so inside the same list.
       const passes = await store.findPassesForUnit(actor.unitId, {
-        validOn: utcMidnight(utcDay(clock.now())),
+        validOn: utcMidnight(istDay(clock.now())),
         statuses: ['ACTIVE', 'USED'],
       });
       return ok(passes.map(passView));
@@ -434,7 +438,7 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
       if (pass.status === 'CANCELLED') return ok(refuse('CANCELLED'));
       if (pass.status === 'EXPIRED') return ok(refuse('EXPIRED'));
       if (pass.status === 'USED') return ok(refuse('ALREADY_USED'));
-      if (utcDay(pass.validOn) !== utcDay(clock.now())) return ok(refuse('WRONG_DAY'));
+      if (istDay(pass.validOn) !== istDay(clock.now())) return ok(refuse('WRONG_DAY'));
 
       const home = await store.findHome(pass.unitId);
       // A valid pass whose home has vanished is data corruption, not a gate decision.
@@ -454,7 +458,7 @@ export function visitorsService(deps: VisitorsDeps): VisitorsService {
       if (actor.role !== 'S' && actor.role !== 'A') return errors.forbidden('work the gate');
 
       if (input.walkInLogId !== undefined) {
-        return recordWalkInEntry(input.walkInLogId, input.action);
+        return recordWalkInEntry(input.walkInLogId, input.action, input.idempotencyKey);
       }
       if (input.passId === undefined) {
         // The contract's refine makes this unreachable; the guard keeps the type honest.

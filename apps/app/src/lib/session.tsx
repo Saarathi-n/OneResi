@@ -4,7 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import type * as C from '@grihaone/contracts';
-import { adoptSession, clearAccessToken, onSessionDropped, simple } from './api';
+import { adoptSession, clearAccessToken, onSessionDropped, simple, call } from './api';
+import { flush } from './replay-queue';
 import type { PersonWire, SessionWire } from './types';
 
 /**
@@ -61,13 +62,16 @@ export function SessionProvider({ children }: { readonly children: ReactNode }):
   const booted = useRef(false);
 
   const loadMe = useCallback(async () => {
-    const result = await simple<PersonWire>('/api/auth/me');
-    if (result.ok) {
-      setStatus({ state: 'signed-in', person: result.data });
-    } else {
-      clearAccessToken();
-      setStatus({ state: 'signed-out' });
+    const outcome = await call<PersonWire>('/api/auth/me');
+    if (outcome.ok) {
+      setStatus({ state: 'signed-in', person: outcome.data });
+      return;
     }
+    if ('network' in outcome && outcome.network) {
+      return;
+    }
+    clearAccessToken();
+    setStatus({ state: 'signed-out' });
   }, []);
 
   useEffect(() => {
@@ -98,6 +102,7 @@ export function SessionProvider({ children }: { readonly children: ReactNode }):
       });
       if (!result.ok) return { ok: false, error: result.error.message };
       adoptSession(result.data);
+      void flush();
       setStatus({ state: 'signed-in', person: result.data.person });
       return { ok: true, person: result.data.person };
     },

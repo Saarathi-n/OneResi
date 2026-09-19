@@ -69,7 +69,10 @@ export function connection(): Promise<Connection> {
   const existing = globalCache[cacheKey];
   if (existing !== undefined) return existing;
 
-  const opened = open();
+  const opened = open().catch((err: unknown) => {
+    delete globalCache[cacheKey];
+    throw err;
+  });
   // Always cached, in every environment. The previous skip-in-production meant every `getDb()`
   // outside the app's own memoized runtime constructed a NEW Prisma pool that `closeDb()` could
   // not see (the cache it reads was never written): the load balancer's 30-second health probe

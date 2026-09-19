@@ -225,7 +225,18 @@ export const RaiseComplaintInput = z.object({
   priority: z.enum(COMPLAINT_PRIORITIES).default('MEDIUM'),
   description: z.string().trim().min(10, 'Describe the problem in a sentence or two').max(2000),
   /** S3 object keys, produced by a presigned upload. At most three, per the submitted model. */
-  photoKeys: z.array(z.string().min(1).max(200)).max(3).default([]),
+  photoKeys: z
+    .array(
+      z
+        .string()
+        .min(1)
+        .max(200)
+        .refine((key) => !key.includes('\n') && !key.includes('\r'), {
+          message: 'Photo key cannot contain newlines',
+        }),
+    )
+    .max(3)
+    .default([]),
 });
 
 export const UpdateComplaintInput = z

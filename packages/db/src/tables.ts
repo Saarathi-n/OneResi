@@ -31,6 +31,8 @@ export const INFRASTRUCTURE_TABLES = [
   'refreshToken',
   'rateLimitWindow',
   'receiptSequence',
+  'bookingSlotHold',
+  'pushSubscription',
   'schemaFingerprint',
 ] as const;
 

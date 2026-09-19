@@ -156,6 +156,9 @@ export function facilitiesService(deps: FacilitiesDeps): FacilitiesService {
       if (input.bookingDate < today) {
         return errors.windowClosed('A past date cannot be booked.');
       }
+      if (input.bookingDate === today && minutesOf(input.startTime) <= istMinutesOfDay(clock.now())) {
+        return errors.windowClosed('That slot has already passed.');
+      }
       const latest = dayStringOf(new Date(Date.parse(`${today}T00:00:00.000Z`) + C.MAX_BOOKING_LEAD_DAYS * MS_PER_DAY));
       if (input.bookingDate > latest) {
         return errors.windowClosed(`Bookings open at most ${C.MAX_BOOKING_LEAD_DAYS} days ahead.`);

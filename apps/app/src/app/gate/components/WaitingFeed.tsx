@@ -59,6 +59,9 @@ export function WaitingFeed(): ReactNode {
     if (row.approvalStatus === 'PENDING') {
       return <StatusPill descriptor={APPROVAL_STATUS.PENDING} size="sm" />;
     }
+    if (row.approvalStatus === 'REJECTED') {
+      return <Badge tone="critical" size="sm">turned away</Badge>;
+    }
     if (row.exitedAt !== null) {
       return <Badge tone="neutral" size="sm">in and out</Badge>;
     }

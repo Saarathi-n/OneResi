@@ -647,7 +647,7 @@ describe('issuePass', () => {
     expect(pass.code).toMatch(/^\d{6}$/);
 
     world.store.rejectNextCodes = 5;
-    await expectError(world.service.issuePass(actor, input), 'INVALID_INPUT');
+    await expectError(world.service.issuePass(actor, input), 'INTERNAL_ERROR');
   });
 });
 

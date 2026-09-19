@@ -155,7 +155,11 @@ export function Shell({
         </div>
 
         <main
-          className={cn('mx-auto w-full max-w-lg px-4 pt-4 pb-8', pull === 0 ? undefined : 'pull-settle')}
+          className={cn(
+            'mx-auto w-full max-w-lg px-4 pt-4',
+            tabs !== undefined ? 'pb-24' : 'pb-8',
+            pull === 0 ? undefined : 'pull-settle',
+          )}
           style={
             pull === 0
               ? { transitionDuration: `${settleMs}ms`, transform: 'translateY(0px)' }

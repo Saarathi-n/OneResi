@@ -22,16 +22,16 @@ function mailEvent(
   return { type, channel: 'EMAIL', payload, correlationId };
 }
 
-/** A calendar day (`YYYY-MM-DD`) as the UTC midnight it is stored at. */
-function utcMidnight(day: string): Date {
-  return new Date(`${day}T00:00:00.000Z`);
-}
-
 /** The society's calendar. IST has no daylight saving, so one fixed offset is exact. */
 const IST_OFFSET_MINUTES = 330;
 
 function istDayString(at: Date): string {
   return new Date(at.getTime() + IST_OFFSET_MINUTES * 60_000).toISOString().slice(0, 10);
+}
+
+/** End of the specified calendar day in IST (midnight transitioning to next IST day). */
+function endOfDayIst(day: string): Date {
+  return new Date(Date.parse(`${day}T00:00:00.000Z`) + 86_400_000 - IST_OFFSET_MINUTES * 60_000);
 }
 
 function noticeView(announcement: StoredAnnouncement): NoticeView {
@@ -89,7 +89,7 @@ export function noticesService(deps: NoticesDeps): NoticesService {
           // An object key from a presigned upload. Opaque; the service never opens one.
           attachmentKey: input.attachmentKey ?? null,
           expiresAt:
-            input.expiresOn === undefined ? null : utcMidnight(input.expiresOn),
+            input.expiresOn === undefined ? null : endOfDayIst(input.expiresOn),
           publishedAt: now,
         },
         (created) =>

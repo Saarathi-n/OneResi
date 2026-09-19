@@ -155,10 +155,12 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const path = event.notification.data && typeof event.notification.data.path === 'string'
+  let path = event.notification.data && typeof event.notification.data.path === 'string'
     ? event.notification.data.path
     : '';
-  const target = new URL('/a' + path, self.location.origin).href;
+  if (path.length > 0 && !path.startsWith('/')) path = '/' + path;
+  const targetPath = path.startsWith('/a/') || path === '/a' ? path : '/a' + (path === '/' ? '' : path);
+  const target = new URL(targetPath, self.location.origin).href;
 
   event.waitUntil(
     (async () => {
