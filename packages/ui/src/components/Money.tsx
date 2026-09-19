@@ -29,7 +29,7 @@ export interface MoneyProps {
   readonly value: Paise;
   /** Drops the paise on round amounts. For a list, not for a receipt. */
   readonly compact?: boolean | undefined;
-  readonly size?: 'body' | 'title' | 'display' | undefined;
+  readonly size?: 'body' | 'title' | 'display' | 'mega' | undefined;
   /** Status colouring, for a credit or an overdue balance. `gold` is for the hero figure. */
   readonly tone?: 'default' | 'positive' | 'critical' | 'gold' | undefined;
   /** A soft halo behind the digits. Pairs with `gold`, and earns its keep in dark mode. */
@@ -42,10 +42,11 @@ export interface MoneyProps {
   readonly className?: string | undefined;
 }
 
-const SIZE: Readonly<Record<'body' | 'title' | 'display', string>> = {
+const SIZE: Readonly<Record<'body' | 'title' | 'display' | 'mega', string>> = {
   body: 'type-body',
   title: 'type-title',
   display: 'type-display',
+  mega: 'type-mega',
 };
 
 const TONE: Readonly<Record<'default' | 'positive' | 'critical' | 'gold', string>> = {

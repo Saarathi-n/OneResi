@@ -24,6 +24,25 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* The grain of the paper the product is printed on — one fixed layer over everything, never
+   intercepting a pointer. Multiply presses it into light paper, soft-light lifts it out of
+   the dark. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  background-image: var(--paper-grain);
+  opacity: var(--grain-opacity);
+  mix-blend-mode: multiply;
+}
+
+.dark body::after,
+[data-theme='dark'] body::after {
+  mix-blend-mode: soft-light;
+}
+
 /* Pull-to-refresh pulls the whole page; this keeps the overscroll inside the column. */
 .app-scroll {
   overscroll-behavior-y: contain;

@@ -39,3 +39,12 @@ export function formatCalendarDateShort(iso: string): string {
     year: 'numeric',
   });
 }
+
+/** A `YYYY-MM` billing period as `September 2026`, pinned to UTC like every date here. A period
+ * is the month the money is for, not a database key — `2026-09` is for the wire, never for a
+ * person. Falls back to the raw string when it does not parse. */
+export function formatPeriod(period: string): string {
+  const parsed = new Date(`${period.slice(0, 7)}-01T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return period;
+  return parsed.toLocaleDateString('en-IN', { timeZone: 'UTC', month: 'long', year: 'numeric' });
+}

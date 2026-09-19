@@ -7,3 +7,30 @@
  * use would not be generated without this line (documented in packages/ui/src/tokens.css).
  */
 @source '../../../../packages/ui/src';
+
+/*
+ * The grain of the paper the whole product is printed on. One fixed layer, laid once, over
+ * everything — modals included, the way grain covers a photograph rather than a region of the
+ * page. It never intercepts a pointer and never prints.
+ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  background-image: var(--paper-grain);
+  opacity: var(--grain-opacity);
+  mix-blend-mode: multiply;
+}
+
+.dark body::after,
+[data-theme='dark'] body::after {
+  mix-blend-mode: soft-light;
+}
+
+@media print {
+  body::after {
+    display: none;
+  }
+}
