@@ -81,6 +81,6 @@ export async function cloudDatabaseUrlFromParts(
   const encode = (value: string): string => encodeURIComponent(value);
   return (
     `postgresql://${encode(DB_USER)}:${encode(password)}@${DB_HOST}` +
-    `:${DB_PORT ?? '5432'}/${DB_NAME ?? 'oneresi'}?sslmode=${env['DB_SSLMODE'] ?? 'require'}`
+    `:${DB_PORT ?? '5432'}/${DB_NAME ?? 'grihaone'}?sslmode=${env['DB_SSLMODE'] ?? 'require'}`
   );
 }

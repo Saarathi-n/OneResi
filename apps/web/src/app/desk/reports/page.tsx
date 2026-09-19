@@ -11,8 +11,8 @@ import {
   Input,
   useToast,
   cn,
-} from '@oneresi/ui';
-import { formatCalendarDate, istDayString } from '@oneresi/contracts';
+} from '@grihaone/ui';
+import { formatCalendarDate, istDayString } from '@grihaone/contracts';
 import { authHeaders } from '@/lib/session';
 
 /**

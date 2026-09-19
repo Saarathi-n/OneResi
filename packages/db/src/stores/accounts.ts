@@ -1,4 +1,4 @@
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import type {
   RefreshToken,
   RegistrationClaim,
@@ -8,7 +8,7 @@ import type {
   ClaimResolution,
   StoredClaim,
   StoredRefreshToken,
-} from '@oneresi/domain';
+} from '@grihaone/domain';
 import type { Db } from '../client.js';
 import { isUniqueViolation, sharedLookups, toAccount, writeEvents } from './shared.js';
 import type { Tx } from './shared.js';

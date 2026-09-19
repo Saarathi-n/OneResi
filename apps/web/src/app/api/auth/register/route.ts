@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { RegisterInput } from '@oneresi/contracts';
+import { RegisterInput } from '@grihaone/contracts';
 import { services } from '@/server/runtime';
 import { meta, parseBody, toResponse } from '@/server/http';
 

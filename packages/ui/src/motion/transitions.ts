@@ -1,7 +1,7 @@
 'use client';
 
 import type { TargetAndTransition, Transition, Variants } from 'framer-motion';
-import type { GateVerdict } from '@oneresi/contracts';
+import type { GateVerdict } from '@grihaone/contracts';
 import { duration, seconds } from '../tokens.js';
 import type { Motion } from './useMotion.js';
 

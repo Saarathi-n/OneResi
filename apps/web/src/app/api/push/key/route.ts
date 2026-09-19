@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pushPublicKey } from '@oneresi/mail';
+import { pushPublicKey } from '@grihaone/mail';
 
 /**
  * The browser's first step towards subscribing: the application server's public VAPID key.

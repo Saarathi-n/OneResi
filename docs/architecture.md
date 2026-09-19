@@ -1,6 +1,6 @@
-# OneResi — Architecture
+# GrihaOne — Architecture
 
-Implementation architecture for the system specified in the OneResi SRS, 29 use cases and
+Implementation architecture for the system specified in the GrihaOne SRS, 29 use cases and
 UML models. The application tier is unchanged from the technology stack submitted in the
 DA1 Review 1 deck. Only the deployment tier moved, from Vercel to AWS provisioned with
 Terraform — see [adr/0001](adr/0001-aws-instead-of-vercel.md).
@@ -25,7 +25,7 @@ flowchart TB
   ADM["Admin<br/>committee member"]
   SEC["Security<br/>shared gate device"]
 
-  SYS["OneResi<br/>residential community<br/>management system"]
+  SYS["GrihaOne<br/>residential community<br/>management system"]
 
   MAIL["Email service<br/>Amazon SES"]
   FILES["Object storage<br/>Amazon S3"]

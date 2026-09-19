@@ -45,7 +45,7 @@ function compose(vars: RegistrationDeclinedVars): Block[] {
   return blocks;
 }
 
-export const subject = (): string => 'About your OneResi application';
+export const subject = (): string => 'About your GrihaOne application';
 
 export const text = (vars: RegistrationDeclinedVars, context: RenderContext): string =>
   renderText(compose(vars), context);

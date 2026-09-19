@@ -6,6 +6,6 @@ variable "aws_region" {
 
 variable "project_name" {
   type        = string
-  default     = "oneresi"
+  default     = "grihaone"
   description = "Prefix for the bucket name. Only change this if you also change ../stack."
 }

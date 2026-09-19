@@ -1,6 +1,6 @@
 'use client';
 
-import type { PersonView } from '@oneresi/domain';
+import type { PersonView } from '@grihaone/domain';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -18,7 +18,7 @@ interface StoredSession {
 
 type Listener = (person: PersonView | null) => void;
 
-const SESSION_KEY = 'oneresi.active.session';
+const SESSION_KEY = 'grihaone.active.session';
 
 function hydrateFromStorage(): void {
   if (typeof window === 'undefined') return;

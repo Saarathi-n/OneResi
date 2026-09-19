@@ -255,7 +255,7 @@ describe('a rolled-back transaction', () => {
 
 describe('passwordHash', () => {
   it('is excluded by select, and the exclusion is asserted by shape not by field name', async () => {
-    const person = await aUser(db, { email: 'hash-check@oneresi.test' });
+    const person = await aUser(db, { email: 'hash-check@grihaone.test' });
 
     const projected = await db.residentUser.findMany({
       where: { id: person.id },
@@ -268,7 +268,7 @@ describe('passwordHash', () => {
   });
 
   it('is excluded by omit — along with every other credential column', async () => {
-    const person = await aUser(db, { email: 'omit-check@oneresi.test' });
+    const person = await aUser(db, { email: 'omit-check@grihaone.test' });
 
     const row = await db.residentUser.findUniqueOrThrow({
       where: { id: person.id },
@@ -277,11 +277,11 @@ describe('passwordHash', () => {
 
     expectNoHash(row, 'residentUser.findUnique(omit)');
     expectNoHashField(row, 'residentUser.findUnique(omit)');
-    expect(row.email).toBe('omit-check@oneresi.test');
+    expect(row.email).toBe('omit-check@grihaone.test');
   });
 
   it('is not the only column that has to go', async () => {
-    const person = await aUser(db, { email: 'reset-token@oneresi.test' });
+    const person = await aUser(db, { email: 'reset-token@grihaone.test' });
 
     const halfDone = await db.residentUser.findUniqueOrThrow({
       where: { id: person.id },
@@ -295,7 +295,7 @@ describe('passwordHash', () => {
   });
 
   it('is caught by the helper when it does leak, so the assertion above is not vacuous', async () => {
-    const person = await aUser(db, { email: 'leak-check@oneresi.test' });
+    const person = await aUser(db, { email: 'leak-check@grihaone.test' });
     const row = await db.residentUser.findUniqueOrThrow({ where: { id: person.id } });
 
     expect(row.passwordHash).toMatch(/^\$2[aby]\$/);

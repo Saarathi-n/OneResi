@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { cn } from '@oneresi/ui';
+import { cn } from '@grihaone/ui';
 import { Icon } from './icons';
 import { BottomTabs, type TabDef } from './BottomTabs';
 import { useReducedMotion } from '../hooks/useReducedMotion';

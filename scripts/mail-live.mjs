@@ -98,7 +98,7 @@ async function main() {
   if (config === null) return 1;
 
   const token = `ML${randomBytes(6).toString('hex').toUpperCase()}`;
-  const subject = `OneResi delivery probe ${token}`;
+  const subject = `GrihaOne delivery probe ${token}`;
   out(`probe   ${token} → ${config.probeTo} (region ${config.region})`);
 
   const provider = createSesProvider({

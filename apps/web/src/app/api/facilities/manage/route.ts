@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { CreateFacilityInput } from '@oneresi/contracts';
+import { CreateFacilityInput } from '@grihaone/contracts';
 import { services } from '@/server/runtime';
 import { actor, parseBody, toResponse } from '@/server/http';
 

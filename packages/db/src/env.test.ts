@@ -40,7 +40,7 @@ const mirror = (await import(
   pathToFileURL(join(packageRoot, 'scripts', 'target.mjs')).href
 )) as TargetMirror;
 
-const scratch = mkdtempSync(join(tmpdir(), 'oneresi-env-'));
+const scratch = mkdtempSync(join(tmpdir(), 'grihaone-env-'));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 /** Whatever the call produced: a value, or the message it refused with. */
@@ -72,13 +72,13 @@ describe('resolveDatabaseUrl for the local target', () => {
   it('returns a file URL with nothing configured at all', () => {
     const url = resolveDatabaseUrl({});
     expect(url.startsWith('file:')).toBe(true);
-    expect(url.endsWith('/.data/oneresi.db')).toBe(true);
+    expect(url.endsWith('/.data/grihaone.db')).toBe(true);
     // Prisma wants forward slashes even on Windows.
     expect(url).not.toContain('\\');
   });
 
   it('creates the directory it points at, so a fresh clone has nothing to prepare', () => {
-    const file = join(scratch, 'nested', 'deeper', 'oneresi.db');
+    const file = join(scratch, 'nested', 'deeper', 'grihaone.db');
     expect(existsSync(join(scratch, 'nested'))).toBe(false);
 
     const url = resolveDatabaseUrl({ LOCAL_DB_FILE: file });
@@ -89,7 +89,7 @@ describe('resolveDatabaseUrl for the local target', () => {
 
   it('honours LOCAL_DB_FILE so a test run cannot touch the development database', () => {
     expect(localDatabaseFile({ LOCAL_DB_FILE: '/tmp/somewhere.db' })).toBe('/tmp/somewhere.db');
-    expect(localDatabaseFile({})).toMatch(/[\\/]\.data[\\/]oneresi\.db$/);
+    expect(localDatabaseFile({})).toMatch(/[\\/]\.data[\\/]grihaone\.db$/);
   });
 });
 
@@ -112,13 +112,13 @@ describe('resolveDatabaseUrl for the cloud target', () => {
     expect(() =>
       resolveDatabaseUrl({
         DB_TARGET: 'cloud',
-        DATABASE_URL: 'postgresql://user:pass@db.internal:5432/oneresi',
+        DATABASE_URL: 'postgresql://user:pass@db.internal:5432/grihaone',
       }),
     ).toThrow(/sslmode=require/);
   });
 
   it('accepts a URL that states it', () => {
-    const url = 'postgresql://user:pass@db.internal:5432/oneresi?sslmode=require';
+    const url = 'postgresql://user:pass@db.internal:5432/grihaone?sslmode=require';
     expect(resolveDatabaseUrl({ DB_TARGET: 'cloud', DATABASE_URL: url })).toBe(url);
   });
 });
@@ -127,8 +127,8 @@ describe('assertRuntimeConfig', () => {
   const production = {
     NODE_ENV: 'production',
     DB_TARGET: 'cloud',
-    DATABASE_URL: 'postgresql://user:pass@db.internal:5432/oneresi?sslmode=require',
-    APP_ORIGIN: 'https://oneresi.example',
+    DATABASE_URL: 'postgresql://user:pass@db.internal:5432/grihaone?sslmode=require',
+    APP_ORIGIN: 'https://grihaone.example',
     JWT_SECRET: 'x'.repeat(32),
   } satisfies NodeJS.ProcessEnv;
 
@@ -158,7 +158,7 @@ describe('assertRuntimeConfig', () => {
       /DB_TARGET must be "cloud" in production/,
     );
     expect(() =>
-      assertRuntimeConfig({ ...production, APP_ORIGIN: 'http://oneresi.example' }),
+      assertRuntimeConfig({ ...production, APP_ORIGIN: 'http://grihaone.example' }),
     ).toThrow(/APP_ORIGIN must be an https origin/);
   });
 });

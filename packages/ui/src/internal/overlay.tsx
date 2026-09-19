@@ -29,7 +29,7 @@ export function Portal({ children }: { children: ReactNode }): ReactNode {
 
   useEffect(() => {
     const element = document.createElement('div');
-    element.setAttribute('data-oneresi-portal', '');
+    element.setAttribute('data-grihaone-portal', '');
     document.body.appendChild(element);
     setHost(element);
     return () => {

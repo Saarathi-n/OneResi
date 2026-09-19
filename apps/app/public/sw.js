@@ -1,5 +1,5 @@
 /**
- * The OneResi app-shell service worker. Hand-rolled and deliberately small — no workbox, no
+ * The GrihaOne app-shell service worker. Hand-rolled and deliberately small — no workbox, no
  * dependency. It is served from /a/sw.js, so its scope ends at /a/: the website the container
  * also hosts never lands in this cache, and this app never caches the website.
  *
@@ -17,7 +17,7 @@
  *   - anything cross-origin passes straight through (dev's API lives on port 3000).
  */
 
-const VERSION = 'oneresi-app-v1';
+const VERSION = 'grihaone-app-v1';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const STATIC_CACHE = `${VERSION}-static`;
@@ -120,7 +120,7 @@ self.addEventListener('fetch', (event) => {
  * but this app (D-22).
  */
 self.addEventListener('push', (event) => {
-  const payload = { title: 'OneResi', body: 'You have a new notification.', path: null };
+  const payload = { title: 'GrihaOne', body: 'You have a new notification.', path: null };
   if (event.data !== null) {
     try {
       const parsed = event.data.json();

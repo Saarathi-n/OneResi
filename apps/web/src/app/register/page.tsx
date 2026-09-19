@@ -15,7 +15,7 @@ import {
   Textarea,
   buttonClass,
   cn,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import {
   Email,
   Password,
@@ -25,7 +25,7 @@ import {
   UNIT_TYPES,
   UNIT_TYPE,
   type UnitType,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 import { call } from '@/lib/session';
 
@@ -42,7 +42,7 @@ import { call } from '@/lib/session';
  * Draft persistence in localStorage preserved (passwords excluded).
  */
 
-const DRAFT_KEY = 'oneresi.registration.draft';
+const DRAFT_KEY = 'grihaone.registration.draft';
 
 const STEPS = [
   { id: 'home', label: 'Your home', hint: 'Select or describe your residence in the society' },
@@ -135,7 +135,7 @@ function passwordScore(value: string): number {
   if (value.length >= 10) score += 1;
   if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
   if (/\d/.test(value) || /[^A-Za-z0-9]/.test(value)) score += 1;
-  if (!/^(?:password|oneresi|qwerty|12345)/i.test(value)) score += 1;
+  if (!/^(?:password|grihaone|qwerty|12345)/i.test(value)) score += 1;
   return score;
 }
 
@@ -363,7 +363,7 @@ export default function RegisterPage() {
       <div className="flex min-h-dvh flex-col bg-surface">
         <header className="border-b border-border bg-surface-raised">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-            <Link href="/" aria-label="OneResi home" className="focus-ring rounded-pill">
+            <Link href="/" aria-label="GrihaOne home" className="focus-ring rounded-pill">
               <Logo variant="wordmark" size={28} />
             </Link>
           </div>
@@ -457,7 +457,7 @@ export default function RegisterPage() {
       {/* Top Navigation */}
       <header className="border-b border-border bg-surface-raised">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" aria-label="OneResi home" className="focus-ring rounded-pill">
+          <Link href="/" aria-label="GrihaOne home" className="focus-ring rounded-pill">
             <Logo variant="wordmark" size={28} />
           </Link>
           <div className="flex items-center gap-3">

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Button, Field, Input, Logo } from '@oneresi/ui';
+import { Button, Field, Input, Logo } from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { simple } from '@/lib/api';
 import { screenClass } from '@/lib/motion';

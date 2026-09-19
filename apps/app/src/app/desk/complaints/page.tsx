@@ -14,8 +14,8 @@ import {
   Tabs,
   Textarea,
   useToast,
-} from '@oneresi/ui';
-import * as C from '@oneresi/contracts';
+} from '@grihaone/ui';
+import * as C from '@grihaone/contracts';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
 import { simple, photoUrl } from '@/lib/api';

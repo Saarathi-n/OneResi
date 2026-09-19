@@ -1,7 +1,7 @@
-import type { Tone } from '@oneresi/contracts';
+import type { Tone } from '@grihaone/contracts';
 
 /**
- * Tone to classes. A tone is supplied by the enumeration descriptor in `@oneresi/contracts`,
+ * Tone to classes. A tone is supplied by the enumeration descriptor in `@grihaone/contracts`,
  * so no component chooses a colour for a value and a unit type can never render as a warning.
  */
 

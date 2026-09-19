@@ -4,8 +4,8 @@ import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { paise } from '@oneresi/contracts';
-import { Money, useToast } from '@oneresi/ui';
+import { paise } from '@grihaone/contracts';
+import { Money, useToast } from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { Shell } from '@/components/Shell';
 import type { TabDef } from '@/components/BottomTabs';
@@ -133,7 +133,7 @@ export default function ResidentHomePage(): ReactNode {
   const residentHome =
     person !== null && person.home !== null
       ? `${person.home.blockName} · ${person.home.label}`
-      : 'OneResi';
+      : 'GrihaOne';
 
   const liveWaiting = waiting.state.state === 'ready' ? waiting.state.data : [];
   const waitingVisitors = liveWaiting.filter((item) => !decidedIds.has(item.logId));

@@ -1,4 +1,4 @@
-# OneResi — UI revamp brief
+# GrihaOne — UI revamp brief
 
 A self-contained handoff: what the app is, where every surface lives, the rules any change must
 keep, and the upgrades to make. Written for an agent (or a person) who has never seen this
@@ -8,7 +8,7 @@ repository.
 
 ## 1. What the app is
 
-OneResi is a residential community management system for gated societies in India: maintenance
+GrihaOne is a residential community management system for gated societies in India: maintenance
 billing with numbered receipts, a front gate with visitor passes and a walk-in approval loop,
 complaints with a reopen window, amenity bookings, notices, and web push. One API, one database,
 three client surfaces:
@@ -20,7 +20,7 @@ three client surfaces:
 
 Roles: `A` = committee, `S` = gate staff, `R` = resident. Money is stored and crossed as integer
 paise; the UI formats rupees. Dates cross as ISO; a calendar day renders as that day everywhere
-(`formatCalendarDate` in `@oneresi/contracts`).
+(`formatCalendarDate` in `@grihaone/contracts`).
 
 Seeded sign-ins (password `starling-marble-97-QUAY`, override with `SEED_PASSWORD`):
 `ashvinksg@gmail.com` (committee), `ashvin.ks2024@vitstudent.ac.in` (gate),
@@ -32,7 +32,7 @@ visitor passes, a gate log.
 
 ### The design system — `packages/ui/src`
 
-Every visual decision routes through here; both apps import only from `@oneresi/ui`.
+Every visual decision routes through here; both apps import only from `@grihaone/ui`.
 
 - `tokens.css` — 140 CSS variables in light AND dark (`.dark` / `[data-theme='dark']` on the root
   flips them; the dark values already exist). Colors, surfaces, borders, elevation shadows, the
@@ -97,12 +97,12 @@ rupees happen in React, never in a handler.
    else runs.
 3. **One vitest suite at a time** (`pnpm test`); never two concurrently. No `next build` in
    parallel with anything.
-4. **Verify after every change**: `pnpm --filter @oneresi/web typecheck` (and `@oneresi/app`),
+4. **Verify after every change**: `pnpm --filter @grihaone/web typecheck` (and `@grihaone/app`),
    `pnpm lint`, `pnpm check:copy`. Before finishing: `pnpm test`, and the end-to-end walk
    (`pnpm db:reset && pnpm db:seed`, dev server with `APP_ORIGIN=http://localhost:3000`, then
    `node scripts/e2e-local.mjs` — currently 118 checks, all must stay green).
-5. **Dev servers**: web `APP_ORIGIN=http://localhost:3000 pnpm --filter @oneresi/web dev`, app
-   `pnpm --filter @oneresi/app dev`. Kill by port before restarting.
+5. **Dev servers**: web `APP_ORIGIN=http://localhost:3000 pnpm --filter @grihaone/web dev`, app
+   `pnpm --filter @grihaone/app dev`. Kill by port before restarting.
 6. Design tokens are the only place colors/spacing/typography are invented. A hex in a page is a
    bug.
 7. Every interactive element needs its state: loading (Skeleton exists), empty (EmptyState
@@ -151,7 +151,7 @@ Perfect symmetry, same-height cards, sentences that all start the same way. Conc
 ### E. Pre-fill and memory (engagement rule)
 
 `apps/web/src/app/home/invoices/page.tsx` already remembers the last payment method
-(`localStorage` key `oneresi.payment.method`) — extend the pattern:
+(`localStorage` key `grihaone.payment.method`) — extend the pattern:
 
 - Last complaint category pre-selected on the raise form (web + PWA).
 - Recent visitor names offered as chips on the pass form (the domain already returns them in the

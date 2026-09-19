@@ -8,11 +8,11 @@ import {
   ErrorState,
   RelativeTime,
   Skeleton,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import {
   ANNOUNCEMENT_CATEGORY,
   type AnnouncementCategory,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { useFetch } from '@/lib/useFetch';
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SignJWT } from 'jose';
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 import { joseAccessToken } from './access-token.js';
 import type { AccessTokenClaims } from './access-token.js';
 

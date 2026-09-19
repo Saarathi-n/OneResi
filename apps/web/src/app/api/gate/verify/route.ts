@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { VerifyPassInput } from '@oneresi/contracts';
+import { VerifyPassInput } from '@grihaone/contracts';
 import { services } from '@/server/runtime';
 import { actor, meta, parseBody, toResponse } from '@/server/http';
 

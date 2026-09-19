@@ -7,7 +7,7 @@ import {
   Button,
   Card,
   buttonClass,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import { CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
 import { useReducedMotion } from '@/hooks/useReducedMotion';

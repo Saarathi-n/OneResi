@@ -12,7 +12,7 @@ import {
   noticesStore,
   notificationsStore,
   rateLimiter,
-} from '@oneresi/db';
+} from '@grihaone/db';
 import {
   accountsService,
   visitorsService,
@@ -30,20 +30,20 @@ import {
   type Clock,
   type PushTransport,
   type ServiceEnv,
-} from '@oneresi/domain';
-import { startMailWorker, type MailWorkerHandle } from '@oneresi/mail/worker';
-import { startPushWorker, type PushWorkerHandle } from '@oneresi/mail/push-worker';
-import { startInAppWorker, type InAppWorkerHandle } from '@oneresi/mail/in-app-worker';
-import { createWebPushTransport } from '@oneresi/mail/providers/webpush';
-import { pushDriver } from '@oneresi/mail';
-import { BCRYPT_COST } from '@oneresi/contracts';
+} from '@grihaone/domain';
+import { startMailWorker, type MailWorkerHandle } from '@grihaone/mail/worker';
+import { startPushWorker, type PushWorkerHandle } from '@grihaone/mail/push-worker';
+import { startInAppWorker, type InAppWorkerHandle } from '@grihaone/mail/in-app-worker';
+import { createWebPushTransport } from '@grihaone/mail/providers/webpush';
+import { pushDriver } from '@grihaone/mail';
+import { BCRYPT_COST } from '@grihaone/contracts';
 
 /**
  * The composition root (docs/plan/02-architecture.md). One module constructs the Prisma client,
  * every store adapter, and every service from packages/domain/src/ports.ts — a route handler
  * receives a wired service and never reaches around this seam.
  *
- * This file is the ONLY place in apps/web that imports @oneresi/db; the eslint layering rule
+ * This file is the ONLY place in apps/web that imports @grihaone/db; the eslint layering rule
  * keeps route handlers off it, and everything they use flows through here.
  */
 
@@ -57,9 +57,9 @@ const clock: Clock = { now: (): Date => new Date() };
  * secret is a forged-token vulnerability that looks like a working app (D-05).
  */
 function devJwtSecret(): Uint8Array {
-  const holder = globalThis as { __oneresiDevJwtSecret?: Uint8Array };
-  holder.__oneresiDevJwtSecret ??= new Uint8Array(randomBytes(32));
-  return holder.__oneresiDevJwtSecret;
+  const holder = globalThis as { __grihaoneDevJwtSecret?: Uint8Array };
+  holder.__grihaoneDevJwtSecret ??= new Uint8Array(randomBytes(32));
+  return holder.__grihaoneDevJwtSecret;
 }
 
 function jwtSecret(): Uint8Array {
@@ -87,8 +87,8 @@ let shutdownRegistered = false;
 
 /** Stops the local workers (if running) and closes the single Prisma client. */
 async function shutdown(): Promise<void> {
-  const pending = (globalThis as { __oneresiWebRuntime?: Promise<BuiltRuntime> })
-    .__oneresiWebRuntime;
+  const pending = (globalThis as { __grihaoneWebRuntime?: Promise<BuiltRuntime> })
+    .__grihaoneWebRuntime;
   if (pending === undefined) return;
   const rt = await pending.catch(() => null);
   await rt?.mailWorker?.stop();
@@ -210,10 +210,10 @@ async function buildRuntime(): Promise<BuiltRuntime> {
   };
 }
 
-const holder = globalThis as { __oneresiWebRuntime?: Promise<BuiltRuntime> };
+const holder = globalThis as { __grihaoneWebRuntime?: Promise<BuiltRuntime> };
 
 /** Every service, wired. Memoized on globalThis so a dev-server hot reload reuses the same client. */
 export function services(): Promise<BuiltRuntime> {
-  holder.__oneresiWebRuntime ??= buildRuntime();
-  return holder.__oneresiWebRuntime;
+  holder.__grihaoneWebRuntime ??= buildRuntime();
+  return holder.__grihaoneWebRuntime;
 }

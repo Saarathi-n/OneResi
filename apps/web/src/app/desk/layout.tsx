@@ -9,7 +9,7 @@ import {
   Skeleton,
   useToast,
   buttonClass,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import { signOut, useGuardedSession } from '@/lib/session';
 
 /**

@@ -50,7 +50,7 @@ const HELP = `
 
   environment
     DATABASE_URL   the cloud side, normally from \`pnpm cloud:env\`
-    LOCAL_DB_FILE  the local side, defaulting to .data/oneresi.db
+    LOCAL_DB_FILE  the local side, defaulting to .data/grihaone.db
 
   moves blocks, units and facilities only. Accounts, tokens and the outbox are not synced.
 `;

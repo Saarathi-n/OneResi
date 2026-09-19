@@ -19,7 +19,7 @@ terraform {
   # workspace. `terraform workspace new staging` stores state under `env:/staging/...` on its own,
   # and `local.name_prefix` keeps the AWS resource names apart (D-49).
   backend "s3" {
-    bucket       = "oneresi-tfstate-215671569291-ap-south-1"
+    bucket       = "grihaone-tfstate-215671569291-ap-south-1"
     key          = "stack/terraform.tfstate"
     region       = "ap-south-1"
     encrypt      = true

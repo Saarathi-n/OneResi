@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { COMPLAINT_PRIORITIES, COMPLAINT_PRIORITY } from '@oneresi/contracts';
-import type { ComplaintPriority } from '@oneresi/contracts';
+import { COMPLAINT_PRIORITIES, COMPLAINT_PRIORITY } from '@grihaone/contracts';
+import type { ComplaintPriority } from '@grihaone/contracts';
 import { cn } from '../internal/cn.js';
 import { toneMarkClass, toneSoftClass } from '../internal/tone.js';
 

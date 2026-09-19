@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Card, RelativeTime } from '@oneresi/ui';
+import { Button, Card, RelativeTime } from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { PushSetting } from '@/components/PushSetting';

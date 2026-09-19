@@ -1,4 +1,4 @@
-import type { RateLimiter, RateLimitVerdict } from '@oneresi/domain';
+import type { RateLimiter, RateLimitVerdict } from '@grihaone/domain';
 import type { Db } from '../client.js';
 
 /**

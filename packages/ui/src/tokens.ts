@@ -1,4 +1,4 @@
-import type { Tone } from '@oneresi/contracts';
+import type { Tone } from '@grihaone/contracts';
 
 /**
  * Every number the design system decides, in one module.
@@ -129,7 +129,7 @@ export type ElevationLevel = 0 | 1 | 2 | 3 | 4;
  * The four layers a tone needs. `base` is text and icon, `soft` is a fill behind it, `border`
  * is the edge, `on` is what sits legibly on a solid `base` fill.
  *
- * A tone arrives from `@oneresi/contracts` — it is a property of the enumeration member, not a
+ * A tone arrives from `@grihaone/contracts` — it is a property of the enumeration member, not a
  * decision a component makes, which is what keeps a unit type from rendering as a warning.
  */
 export type ToneLayer = 'base' | 'soft' | 'border' | 'on';

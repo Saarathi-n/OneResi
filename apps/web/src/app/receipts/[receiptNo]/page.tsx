@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Button, EmptyState, Logo, Skeleton } from '@oneresi/ui';
+import { Button, EmptyState, Logo, Skeleton } from '@grihaone/ui';
 import {
   PAYMENT_METHOD,
   formatPeriod,
@@ -11,7 +11,7 @@ import {
   paise,
   type PaymentMethod,
   type UnitType,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { call } from '@/lib/session';
 
 /**
@@ -100,7 +100,7 @@ export default function ReceiptPage() {
       {/* Screen navigation header */}
       <header className="no-print border-b border-border bg-surface-raised/80 backdrop-blur-sm sticky top-0 z-20">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-          <Link href="/home" aria-label="Back to OneResi" className="focus-ring rounded-md">
+          <Link href="/home" aria-label="Back to GrihaOne" className="focus-ring rounded-md">
             <Logo variant="wordmark" size={24} />
           </Link>
           <div className="flex items-center gap-3">
@@ -401,7 +401,7 @@ function RubberStamp() {
           fill="currentColor"
           fontSize="27"
           fontWeight="800"
-          fontFamily="var(--font-oneresi-sans)"
+          fontFamily="var(--font-grihaone-sans)"
           letterSpacing="0.08em"
           textAnchor="middle"
           style={{ textTransform: 'uppercase' }}

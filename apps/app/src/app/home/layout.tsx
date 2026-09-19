@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Skeleton } from '@oneresi/ui';
+import { Skeleton } from '@grihaone/ui';
 import { useRequireRole } from '@/lib/session';
 
 /**

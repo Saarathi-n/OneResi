@@ -9,7 +9,7 @@ import {
   Input,
   Logo,
   buttonClass,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { roleHome, signIn } from '@/lib/session';
 
@@ -24,7 +24,7 @@ import { roleHome, signIn } from '@/lib/session';
  */
 
 /** The address used last time, so the second visit starts one field ahead. */
-const EMAIL_KEY = 'oneresi.sign-in.email';
+const EMAIL_KEY = 'grihaone.sign-in.email';
 
 const PRODUCT_TRUTHS = [
   'Receipts people can verify.',
@@ -142,7 +142,7 @@ export default function SignInPage() {
       {/* Top Navigation */}
       <header className="border-b border-border bg-surface-raised">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" aria-label="OneResi home" className="focus-ring rounded-pill">
+          <Link href="/" aria-label="GrihaOne home" className="focus-ring rounded-pill">
             <Logo variant="wordmark" size={28} />
           </Link>
           <div className="flex items-center gap-3">
@@ -401,7 +401,7 @@ export default function SignInPage() {
       {/* Subtle Footer Note */}
       <footer className="py-4 text-center">
         <p className="type-micro text-content-subtle">
-          OneResi · Residential Society Operating System
+          GrihaOne · Residential Society Operating System
         </p>
       </footer>
     </div>

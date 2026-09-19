@@ -1,5 +1,5 @@
 {
-  "name": "@oneresi/mail",
+  "name": "@grihaone/mail",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -19,8 +19,8 @@
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.700.0",
     "@aws-sdk/client-sqs": "^3.700.0",
-    "@oneresi/contracts": "workspace:*",
-    "@oneresi/db": "workspace:*",
+    "@grihaone/contracts": "workspace:*",
+    "@grihaone/db": "workspace:*",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

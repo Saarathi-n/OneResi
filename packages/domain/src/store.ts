@@ -1,4 +1,4 @@
-import type * as C from '@oneresi/contracts';
+import type * as C from '@grihaone/contracts';
 
 /**
  * The data ports the services run on. The db package implements these — domain never touches a

@@ -1,11 +1,11 @@
 'use client';
 
-import { duration, spring, stagger } from '@oneresi/ui';
+import { duration, spring, stagger } from '@grihaone/ui';
 
 /**
  * The one motion contract for this app.
  *
- * framer-motion is not a dependency here — it belongs to @oneresi/ui, whose components do their
+ * framer-motion is not a dependency here — it belongs to @grihaone/ui, whose components do their
  * own animation. What moves at the app level (screens, rows, verdicts) is CSS keyframes declared
  * once in globals.css, and this module is the only place that decides which class, which
  * duration, and which delay — every animated component goes through here, so

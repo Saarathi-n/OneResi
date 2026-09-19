@@ -5,7 +5,7 @@
 One monorepo, one API, two front ends, one schema, two database targets.
 
 ```
-oneresi/
+grihaone/
   apps/
     web/          Next.js — marketing site + committee/admin desk. SSR, indexable.
     app/          Next.js — installable PWA. Residents and the gate. Offline-tolerant.

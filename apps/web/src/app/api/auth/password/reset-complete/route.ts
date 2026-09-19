@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { CompletePasswordResetInput } from '@oneresi/contracts';
+import { CompletePasswordResetInput } from '@grihaone/contracts';
 import { services } from '@/server/runtime';
 import { parseBody, toResponse } from '@/server/http';
 

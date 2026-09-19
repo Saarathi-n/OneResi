@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { randomUUID } from 'node:crypto';
-import { ACCESS_TOKEN_TTL_SECONDS, ROLES, type Role } from '@oneresi/contracts';
+import { ACCESS_TOKEN_TTL_SECONDS, ROLES, type Role } from '@grihaone/contracts';
 import type { Clock } from './clock.js';
 
 /**

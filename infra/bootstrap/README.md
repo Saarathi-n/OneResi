@@ -6,7 +6,7 @@ One bucket. Applied once, ever.
 `terraform init` in that directory. Something has to create it, and that something cannot itself use
 a remote backend. So this directory exists, it uses **local state**, and it provisions exactly one
 thing: a versioned, encrypted, private S3 bucket named
-`oneresi-tfstate-<account-id>-<region>`.
+`grihaone-tfstate-<account-id>-<region>`.
 
 ## Apply it
 

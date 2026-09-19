@@ -2,8 +2,8 @@
 
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Card, Field, Money, Sheet, StatusPill, Textarea, useToast } from '@oneresi/ui';
-import * as C from '@oneresi/contracts';
+import { Button, Card, Field, Money, Sheet, StatusPill, Textarea, useToast } from '@grihaone/ui';
+import * as C from '@grihaone/contracts';
 import { AsyncView, CardListSkeleton } from '@/components/AsyncView';
 import { Shell } from '@/components/Shell';
 import { simple } from '@/lib/api';

@@ -41,7 +41,7 @@ interface Connection {
  * Cached per process, and on `globalThis` outside production so a dev-server reload does not open
  * a new pool on every edit.
  */
-const cacheKey = '__oneresi_db__';
+const cacheKey = '__grihaone_db__';
 const globalCache = globalThis as unknown as { [cacheKey]?: Promise<Connection> };
 
 async function open(): Promise<Connection> {

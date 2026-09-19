@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { afterAll } from 'vitest';
-import type { Db } from '@oneresi/db';
+import type { Db } from '@grihaone/db';
 
 /**
  * An isolated database per test file.
@@ -67,7 +67,7 @@ export async function testDatabase(): Promise<TestDb> {
     const file = join(dir, `${suffix}.db`);
     copyFileSync(TEMPLATE_SQLITE, file);
 
-    const { PrismaClient } = await import('@oneresi/db/generated/sqlite');
+    const { PrismaClient } = await import('@grihaone/db/generated/sqlite');
     const db = new PrismaClient({
       datasourceUrl: `file:${file.replaceAll('\\', '/')}`,
     }) as unknown as Db;
@@ -83,7 +83,7 @@ export async function testDatabase(): Promise<TestDb> {
   const base = process.env.DATABASE_URL;
   if (base === undefined) throw new Error('DB_TARGET=cloud needs DATABASE_URL');
 
-  const schema = `oneresi_test_${suffix}`;
+  const schema = `grihaone_test_${suffix}`;
   const url = new URL(base);
   url.searchParams.set('schema', schema);
 
@@ -99,7 +99,7 @@ export async function testDatabase(): Promise<TestDb> {
     },
   );
 
-  const { PrismaClient } = await import('@oneresi/db/generated/postgresql');
+  const { PrismaClient } = await import('@grihaone/db/generated/postgresql');
   const db = new PrismaClient({ datasourceUrl: url.toString() });
 
   cleanups.push(async () => {

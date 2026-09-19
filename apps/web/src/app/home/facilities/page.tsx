@@ -12,14 +12,14 @@ import {
   Skeleton,
   StatusPill,
   useToast,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import {
   BOOKING_STATUS,
   MAX_BOOKING_HOURS,
   formatCalendarDate,
   formatMoney,
   paise,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 
@@ -33,7 +33,7 @@ const FACILITIES_PATH = '/api/facilities';
 const BOOKINGS_PATH = '/api/facilities/bookings';
 
 /** The facility booked (or browsed) last, so the next visit opens on it. */
-const LAST_FACILITY_KEY = 'oneresi.facility.last';
+const LAST_FACILITY_KEY = 'grihaone.facility.last';
 
 interface FacilityLine {
   id: number;

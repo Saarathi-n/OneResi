@@ -46,7 +46,7 @@ export const Password = z
   .max(200, 'That is longer than we can store')
   .refine((v) => /[a-z]/.test(v) && /[A-Z]/.test(v), 'Mix upper and lower case')
   .refine((v) => /\d/.test(v) || /[^A-Za-z0-9]/.test(v), 'Include a number or a symbol')
-  .refine((v) => !/^(?:password|oneresi|qwerty|12345)/i.test(v), 'Choose something less common');
+  .refine((v) => !/^(?:password|grihaone|qwerty|12345)/i.test(v), 'Choose something less common');
 
 export const PersonName = z.string().trim().min(2, 'Enter a full name').max(120);
 

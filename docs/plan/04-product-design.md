@@ -37,7 +37,7 @@ Delivered once, consumed everywhere:
 ```
 packages/ui/brand/
   mark.svg              24px-optimised, single path, currentColor
-  wordmark.svg          mark + "OneResi"
+  wordmark.svg          mark + "GrihaOne"
   Logo.tsx              the only place the mark appears in code
   icons/                192, 512, 1024, maskable 512, apple-touch 180, favicon.ico
 ```

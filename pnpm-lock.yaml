@@ -11,10 +11,10 @@ importers:
       '@eslint/js':
         specifier: 9.24.0
         version: 9.24.0
-      '@oneresi/contracts':
+      '@grihaone/contracts':
         specifier: workspace:*
         version: link:packages/contracts
-      '@oneresi/db':
+      '@grihaone/db':
         specifier: workspace:*
         version: link:packages/db
       '@types/node':
@@ -53,10 +53,10 @@ importers:
 
   apps/app:
     dependencies:
-      '@oneresi/contracts':
+      '@grihaone/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@oneresi/ui':
+      '@grihaone/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       next:
@@ -93,19 +93,19 @@ importers:
 
   apps/web:
     dependencies:
-      '@oneresi/contracts':
+      '@grihaone/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@oneresi/db':
+      '@grihaone/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@oneresi/domain':
+      '@grihaone/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@oneresi/mail':
+      '@grihaone/mail':
         specifier: workspace:*
         version: link:../../packages/mail
-      '@oneresi/ui':
+      '@grihaone/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       jose:
@@ -157,10 +157,10 @@ importers:
       '@aws-sdk/client-sns':
         specifier: ^3.700.0
         version: 3.1130.0
-      '@oneresi/contracts':
+      '@grihaone/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@oneresi/domain':
+      '@grihaone/domain':
         specifier: workspace:*
         version: link:../domain
       '@prisma/client':
@@ -179,7 +179,7 @@ importers:
 
   packages/domain:
     dependencies:
-      '@oneresi/contracts':
+      '@grihaone/contracts':
         specifier: workspace:*
         version: link:../contracts
       bcryptjs:
@@ -201,10 +201,10 @@ importers:
       '@aws-sdk/client-sqs':
         specifier: ^3.700.0
         version: 3.1126.0
-      '@oneresi/contracts':
+      '@grihaone/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@oneresi/db':
+      '@grihaone/db':
         specifier: workspace:*
         version: link:../db
       web-push:
@@ -220,7 +220,7 @@ importers:
 
   packages/ui:
     dependencies:
-      '@oneresi/contracts':
+      '@grihaone/contracts':
         specifier: workspace:*
         version: link:../contracts
       clsx:

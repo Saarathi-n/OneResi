@@ -1,11 +1,11 @@
-# OneResi — Data Model
+# GrihaOne — Data Model
 
 Twelve entities, as submitted. This document is the reconciled version of two artifacts that
 do not agree with each other, plus the corrections the use cases require.
 
 ## The problem being reconciled
 
-`er.mmd` and `oneresi_ddl.sql` describe different models. The DDL was written to import cleanly
+`er.mmd` and `grihaone_ddl.sql` describe different models. The DDL was written to import cleanly
 into Oracle SQL Developer Data Modeler and produce connector lines, and in the process it drops
 columns the ER model carries — including `RESIDENT_USER.password_hash`, without which no one can
 log in. Meanwhile the ER model omits constraints the DDL states precisely.
@@ -163,7 +163,7 @@ erDiagram
 
 ## Columns the DDL dropped
 
-Present in `er.mmd`, absent from `oneresi_ddl.sql`. None are decorative — the third column
+Present in `er.mmd`, absent from `grihaone_ddl.sql`. None are decorative — the third column
 names the use case that fails without them.
 
 | Table | Column | Required by |
@@ -234,7 +234,7 @@ than join.
 
 ## For the final report
 
-Once these are agreed, `oneresi_ddl.sql` should be regenerated from the reconciled model so the
+Once these are agreed, `grihaone_ddl.sql` should be regenerated from the reconciled model so the
 report's ER figure and the running database match. The delta tables above are the errata list to
 cite when explaining why the submitted DDL and the delivered schema differ.
 

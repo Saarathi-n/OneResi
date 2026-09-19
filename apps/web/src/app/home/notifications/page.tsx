@@ -12,7 +12,7 @@ import {
   Skeleton,
   useToast,
   buttonClass,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 

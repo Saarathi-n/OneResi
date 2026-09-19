@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Field, Input, Logo } from '@oneresi/ui';
+import { Button, Field, Input, Logo } from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { roleHome, useSession } from '@/lib/session';
 

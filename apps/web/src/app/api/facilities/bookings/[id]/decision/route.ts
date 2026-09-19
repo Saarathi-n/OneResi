@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { DecideBookingInput } from '@oneresi/contracts';
+import { DecideBookingInput } from '@grihaone/contracts';
 import { services } from '@/server/runtime';
 import { actor, parseBody, toResponse } from '@/server/http';
 

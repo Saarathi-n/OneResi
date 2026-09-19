@@ -1,5 +1,5 @@
 import type { Db } from '../client.js';
-import type { NoticesStore } from '@oneresi/domain';
+import type { NoticesStore } from '@grihaone/domain';
 import {
   announcementInclude,
   toAnnouncement,

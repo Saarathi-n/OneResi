@@ -1,4 +1,4 @@
-import { BOOKING_STATUS, type Paise } from '@oneresi/contracts';
+import { BOOKING_STATUS, type Paise } from '@grihaone/contracts';
 import { action, details, note, para, quote, renderHtml, renderText } from '../document.js';
 import { asObject, clockTime, date, int, money, oneOf, optStr, str } from '../decode.js';
 import { formatDate, formatWindow, money as formatAmount } from '../format.js';

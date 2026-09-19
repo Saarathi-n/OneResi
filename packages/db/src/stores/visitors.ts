@@ -1,6 +1,6 @@
-import type * as C from '@oneresi/contracts';
+import type * as C from '@grihaone/contracts';
 import type { Db, Prisma } from '../client.js';
-import type { VisitorStore } from '@oneresi/domain';
+import type { VisitorStore } from '@grihaone/domain';
 import {
   findPassIn,
   isUniqueViolation,

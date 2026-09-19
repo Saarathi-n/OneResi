@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as C from '@oneresi/contracts';
+import * as C from '@grihaone/contracts';
 
 describe('Onboarding & Customer Tracking Validation Safety', () => {
   function passwordScore(value: string): number {
@@ -8,7 +8,7 @@ describe('Onboarding & Customer Tracking Validation Safety', () => {
     if (value.length >= 10) score += 1;
     if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
     if (/\d/.test(value) || /[^A-Za-z0-9]/.test(value)) score += 1;
-    if (!/^(?:password|oneresi|qwerty|12345)/i.test(value)) score += 1;
+    if (!/^(?:password|grihaone|qwerty|12345)/i.test(value)) score += 1;
     return score;
   }
 
@@ -34,7 +34,7 @@ describe('Onboarding & Customer Tracking Validation Safety', () => {
 
   it('validates email addresses strictly', () => {
     expect(C.Email.safeParse('aarav.sharma@example.com').success).toBe(true);
-    expect(C.Email.safeParse('resident+flat101@oneresi.in').success).toBe(true);
+    expect(C.Email.safeParse('resident+flat101@grihaone.in').success).toBe(true);
 
     expect(C.Email.safeParse('not-an-email').success).toBe(false);
     expect(C.Email.safeParse('@missing-user.com').success).toBe(false);

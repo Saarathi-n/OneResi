@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 /**
  * A minimal stroke icon set for web pages. lucide-react belongs to
- * @oneresi/ui, not to this package, so the glyphs the app needs are drawn here
+ * @grihaone/ui, not to this package, so the glyphs the app needs are drawn here
  * — 24px grid, currentColor, stroke only, so they inherit content colour and tone.
  */
 

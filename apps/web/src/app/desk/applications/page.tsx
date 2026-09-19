@@ -15,8 +15,8 @@ import {
   Skeleton,
   Textarea,
   useToast,
-} from '@oneresi/ui';
-import { UNIT_TYPE, type UnitType } from '@oneresi/contracts';
+} from '@grihaone/ui';
+import { UNIT_TYPE, type UnitType } from '@grihaone/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 

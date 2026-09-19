@@ -41,7 +41,7 @@ export function resolveTarget(env: NodeJS.ProcessEnv = process.env): Target {
 }
 
 export function localDatabaseFile(env: NodeJS.ProcessEnv = process.env): string {
-  return env.LOCAL_DB_FILE ?? join(repoRoot, '.data', 'oneresi.db');
+  return env.LOCAL_DB_FILE ?? join(repoRoot, '.data', 'grihaone.db');
 }
 
 /**

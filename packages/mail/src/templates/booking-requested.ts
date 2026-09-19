@@ -1,4 +1,4 @@
-import type { Paise } from '@oneresi/contracts';
+import type { Paise } from '@grihaone/contracts';
 import { action, details, heading, note, para, renderHtml, renderText } from '../document.js';
 import { asObject, clockTime, date, int, money, str } from '../decode.js';
 import { formatDate, formatWindow, money as formatAmount } from '../format.js';

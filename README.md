@@ -1,6 +1,6 @@
-# OneResi
+# GrihaOne
 
-OneResi is a residential community management system for an apartment complex or gated society: one
+GrihaOne is a residential community management system for an apartment complex or gated society: one
 product with three surfaces — a resident app, a committee desk, and a gate kiosk — sharing one API
 and one database.
 
@@ -58,13 +58,13 @@ Local development runs against a SQLite file with the real schema and the real m
 
 ```bash
 git clone <this repository>
-cd oneresi
+cd grihaone
 pnpm install
 pnpm bootstrap
 ```
 
 `pnpm bootstrap` is idempotent and does four things: generates the two Prisma clients from the one
-base schema, applies every migration to `.data/oneresi.db`, seeds it, and prints the sign-in
+base schema, applies every migration to `.data/grihaone.db`, seeds it, and prints the sign-in
 accounts. `pnpm db:migrate` and `pnpm db:seed` are the same steps individually — bootstrap runs both,
 so you do not need to run them again here. Re-run bootstrap after pulling a migration or switching
 branches.
@@ -72,8 +72,8 @@ branches.
 Then start the two front ends, in two terminals:
 
 ```bash
-pnpm --filter @oneresi/web dev    # http://localhost:3000
-pnpm --filter @oneresi/app dev    # http://localhost:3001/a
+pnpm --filter @grihaone/web dev    # http://localhost:3000
+pnpm --filter @grihaone/app dev    # http://localhost:3001/a
 ```
 
 Sign in with the accounts the bootstrap output printed (the seed's password is a fixed default
@@ -85,7 +85,7 @@ for local data, and `SEED_PASSWORD` sets a different one):
 | `ashvin.ks2024@vitstudent.ac.in` | Gate staff | The kiosk: verify a pass, record an entry, log a walk-in |
 | `saarathin@gmail.com` | Resident | The app: dues, receipts, complaints, bookings, visitors |
 
-Two more residents sit in the registration queue with status PENDING — `vikram@oneresi.in`, with
+Two more residents sit in the registration queue with status PENDING — `vikram@grihaone.in`, with
 a live claim to a flat that is not on the register yet, and `kabir.chowdhury@gmail.com` — so the
 committee's approve/decline flow has something to work on. Everyone after the first account who
 registers queues the same way.
@@ -103,7 +103,7 @@ writable copies that silently swap produce divergence that cannot be merged afte
 
 | | `DB_TARGET=local` (the default) | `DB_TARGET=cloud` |
 |---|---|---|
-| Engine | SQLite file at `.data/oneresi.db` | RDS for PostgreSQL 16 |
+| Engine | SQLite file at `.data/grihaone.db` | RDS for PostgreSQL 16 |
 | Needs | nothing installed, nothing configured | `DATABASE_URL`, a PostgreSQL URL with `sslmode=require` |
 | If misconfigured | — | the process refuses to start rather than serving local data |
 

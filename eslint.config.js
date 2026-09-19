@@ -46,28 +46,28 @@ const UNPROJECTED = [
 const PRISMA_DIRECT = {
   group: ['@prisma/client', '@prisma/client/*', '**/prisma/generated/*'],
   message:
-    'Prisma is reached through @oneresi/db, which chooses the engine at boot. Importing the ' +
+    'Prisma is reached through @grihaone/db, which chooses the engine at boot. Importing the ' +
     'generated client directly is how a second, divergent data layer starts (D-15).',
 };
 
 const NOT_IN_UI = {
   group: [
-    '@oneresi/db',
-    '@oneresi/db/*',
-    '@oneresi/domain',
-    '@oneresi/domain/*',
-    '@oneresi/mail',
-    '@oneresi/mail/*',
+    '@grihaone/db',
+    '@grihaone/db/*',
+    '@grihaone/domain',
+    '@grihaone/domain/*',
+    '@grihaone/mail',
+    '@grihaone/mail/*',
   ],
   message:
-    'packages/ui may import @oneresi/contracts and nothing else — no data access, ever ' +
+    'packages/ui may import @grihaone/contracts and nothing else — no data access, ever ' +
     '(docs/plan/WIRING.md). Take the data as a prop.',
 };
 
 const NOT_IN_A_HANDLER = {
-  group: ['@oneresi/db', '@oneresi/db/*'],
+  group: ['@grihaone/db', '@grihaone/db/*'],
   message:
-    'A route handler authenticates, parses with a contract, calls one @oneresi/domain service and ' +
+    'A route handler authenticates, parses with a contract, calls one @grihaone/domain service and ' +
     'maps the result. It contains no rule and no query (docs/plan/WIRING.md rule 4).',
 };
 

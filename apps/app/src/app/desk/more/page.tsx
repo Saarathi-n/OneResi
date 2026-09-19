@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Card } from '@oneresi/ui';
+import { Card } from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { Shell } from '@/components/Shell';
 import { COMMITTEE_TABS } from '@/lib/tabs';

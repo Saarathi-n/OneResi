@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { OtpInput } from '@oneresi/ui';
+import { OtpInput } from '@grihaone/ui';
 
 /**
  * Code entry for someone holding a phone in one hand and squinting in daylight. The six segments

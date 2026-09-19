@@ -21,7 +21,7 @@ import { IconButton } from './IconButton.js';
 
 export type ThemeChoice = 'light' | 'dark';
 
-export const THEME_STORAGE_KEY = 'oneresi.theme';
+export const THEME_STORAGE_KEY = 'grihaone.theme';
 
 export function systemTheme(): ThemeChoice {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

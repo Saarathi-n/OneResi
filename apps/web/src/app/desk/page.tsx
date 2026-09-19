@@ -11,8 +11,8 @@ import {
   ProgressRing,
   Skeleton,
   buttonClass,
-} from '@oneresi/ui';
-import { formatMoney, formatPeriod, paise } from '@oneresi/contracts';
+} from '@grihaone/ui';
+import { formatMoney, formatPeriod, paise } from '@grihaone/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 

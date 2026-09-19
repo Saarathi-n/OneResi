@@ -1,4 +1,4 @@
-import { getDb, type Db } from '@oneresi/db';
+import { getDb, type Db } from '@grihaone/db';
 import type { SendEmailCommandInput } from '@aws-sdk/client-sesv2';
 import { MailAssertionError, MailDeliveryError } from './errors.js';
 import type { SesClientLike } from './providers/ses.js';
@@ -302,7 +302,7 @@ export class MailExpectation {
 /**
  * ```ts
  * await expectMail()
- *   .to('priya@oneresi.local')
+ *   .to('priya@grihaone.local')
  *   .withTemplate('invoice.raised')
  *   .withSubject(/Maintenance for September/)
  *   .withVars({ amount: '₹4,800.00', dueDate: '15 Sep 2026' })

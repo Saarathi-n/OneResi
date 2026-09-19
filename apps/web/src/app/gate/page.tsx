@@ -12,7 +12,7 @@ import {
   buttonClass,
   cn,
   useToast,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import { call, roleHome, useGuardedSession } from '@/lib/session';
 import {
   GATE_REFUSAL_REASON,
@@ -20,7 +20,7 @@ import {
   type GateRefusalReason,
   type GateVerdict,
   type Role,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 
 /**
@@ -51,8 +51,8 @@ type GateDecision =
 const CODE_SLOT_KEYS = ['slot-1', 'slot-2', 'slot-3', 'slot-4', 'slot-5', 'slot-6'] as const;
 const NUMPAD_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
 
-const LAST_UNIT_KEY = 'oneresi.gate.lastUnit';
-const LAST_PURPOSE_KEY = 'oneresi.gate.lastPurpose';
+const LAST_UNIT_KEY = 'grihaone.gate.lastUnit';
+const LAST_PURPOSE_KEY = 'grihaone.gate.lastPurpose';
 
 const PURPOSES = ['Delivery', 'Cab', 'Staff', 'Guest', 'Service', 'Other'];
 
@@ -313,7 +313,7 @@ export default function GatePage() {
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className="font-bold text-2xl sm:text-3xl tracking-tight text-content">
-              OneResi
+              GrihaOne
             </span>
             <span className="text-xl sm:text-2xl font-normal text-content">
               Gate Terminal · Main North Gate - Gulmohar Court
@@ -732,7 +732,7 @@ function GateSkeleton() {
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="font-bold text-2xl sm:text-3xl tracking-tight text-content">
-              OneResi
+              GrihaOne
             </span>
             <span className="text-xl sm:text-2xl font-normal text-content">
               Gate Terminal · Main North Gate - Gulmohar Court

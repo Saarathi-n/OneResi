@@ -21,7 +21,7 @@ import {
  */
 
 const VAPID: VapidSettings = {
-  subject: 'mailto:admin@oneresi.test',
+  subject: 'mailto:admin@grihaone.test',
   publicKey: 'BPb2NeV2LwYFhFxStz0JXjmS7FJmZy1hZQq5zF5uQk3cO7XjGcQbVnOa3P3zI9jBq2E4Tt6Yy8sA',
   privateKey: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
 };
@@ -176,7 +176,7 @@ describe('every other failure', () => {
  */
 describe('the environment it reads', () => {
   const KEYS = {
-    VAPID_SUBJECT: 'mailto:admin@oneresi.test',
+    VAPID_SUBJECT: 'mailto:admin@grihaone.test',
     VAPID_PUBLIC_KEY: 'a-public-key',
     VAPID_PRIVATE_KEY: 'a-private-key',
   };
@@ -200,7 +200,7 @@ describe('the environment it reads', () => {
       publicKey: KEYS.VAPID_PUBLIC_KEY,
       privateKey: KEYS.VAPID_PRIVATE_KEY,
     });
-    expect(() => vapidSettings({ ...KEYS, VAPID_SUBJECT: 'admin@oneresi.test' })).toThrow(/mailto/);
+    expect(() => vapidSettings({ ...KEYS, VAPID_SUBJECT: 'admin@grihaone.test' })).toThrow(/mailto/);
     expect(() => vapidSettings({ ...KEYS, VAPID_PRIVATE_KEY: '' })).toThrow(/VAPID_PRIVATE_KEY/);
   });
 

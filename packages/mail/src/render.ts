@@ -86,7 +86,7 @@ export function assertRenderSafe(rendered: RenderedMail, origin: string): void {
  * `MailMessage` table at the end of a run.
  *
  * `docs/plan/04-product-design.md` has the list. The previous build sent subjects like
- * "Password Reset Request (UC-03)" and "[OneResi Notice] … (UC-24)" (D-51).
+ * "Password Reset Request (UC-03)" and "[GrihaOne Notice] … (UC-24)" (D-51).
  */
 export const COURSEWORK_PATTERNS: readonly RegExp[] = [
   /UC[-\s]?\d{2}/i,

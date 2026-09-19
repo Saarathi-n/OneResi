@@ -1,4 +1,4 @@
-import type * as C from '@oneresi/contracts';
+import type * as C from '@grihaone/contracts';
 import type { OutboxEventInput } from './store.js';
 
 /**

@@ -1,5 +1,5 @@
-import type { OutboxChannel, OutboxEventType } from '@oneresi/contracts';
-import { accountStore, getDb, type Db } from '@oneresi/db';
+import type { OutboxChannel, OutboxEventType } from '@grihaone/contracts';
+import { accountStore, getDb, type Db } from '@grihaone/db';
 import { describeError, isPermanent } from './errors.js';
 import { decodePushJob } from './payload.js';
 import { consoleLogger, type Logger } from './types.js';
@@ -21,7 +21,7 @@ import {
  * come from `worker.ts`, so the two channels can never disagree about what five attempts mean.
  *
  * The dispatcher is a callback, not an import. The layering in docs/plan/WIRING.md keeps
- * packages/mail from importing @oneresi/domain — the push wording is the domain's business — so
+ * packages/mail from importing @grihaone/domain — the push wording is the domain's business — so
  * the composition root (runtime.ts, or the Lambda) supplies the function. The types below are
  * structural: `notifications.dispatchPush({userId, event})` satisfies `PushDispatcher` because
  * every field lines up, and no package boundary is crossed to say so.

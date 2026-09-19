@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { COMPLAINT_STATUSES } from '@oneresi/contracts';
+import { COMPLAINT_STATUSES } from '@grihaone/contracts';
 import { services } from '@/server/runtime';
 import { actor, toResponse } from '@/server/http';
 

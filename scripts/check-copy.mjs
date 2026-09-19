@@ -463,7 +463,7 @@ const FIXTURES = [
   {
     why: 'a URL does not blank the rest of the line',
     ext: '.ts',
-    source: "const l = 'https://oneresi.in/x'; const t = 'Seeded';",
+    source: "const l = 'https://grihaone.in/x'; const t = 'Seeded';",
     violations: 1,
   },
   {
@@ -584,7 +584,7 @@ const FIXTURES = [
   {
     why: 'mail subject in a template',
     ext: '.ts',
-    source: "export const subject = 'OneResi - Maintenance Invoice for 2026-09 (UC-21)';",
+    source: "export const subject = 'GrihaOne - Maintenance Invoice for 2026-09 (UC-21)';",
     violations: 1,
   },
   {

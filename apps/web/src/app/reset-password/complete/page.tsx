@@ -11,7 +11,7 @@ import {
   Input,
   Logo,
   buttonClass,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import { call } from '@/lib/session';
 
 /**
@@ -110,7 +110,7 @@ export default function ResetCompletePage() {
     <div className="flex min-h-dvh flex-col bg-surface">
       <header className="border-b border-border bg-surface-raised">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" aria-label="OneResi home">
+          <Link href="/" aria-label="GrihaOne home">
             <Logo variant="wordmark" size={28} />
           </Link>
           <Link href="/sign-in" className={buttonClass('ghost', 'sm')}>

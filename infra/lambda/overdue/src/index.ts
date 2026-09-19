@@ -10,8 +10,8 @@
  *
  * The database password is fetched from Secrets Manager under the one ARN this role can read.
  */
-import { cloudDatabaseUrlFromParts, getDb, closeDb, billingStore } from '@oneresi/db';
-import { billingService } from '@oneresi/domain';
+import { cloudDatabaseUrlFromParts, getDb, closeDb, billingStore } from '@grihaone/db';
+import { billingService } from '@grihaone/domain';
 
 interface ScheduledEvent {
   'detail-type'?: string;

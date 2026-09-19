@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Button, Field, Input, Logo, Select, Textarea, Stepper } from '@oneresi/ui';
-import * as C from '@oneresi/contracts';
+import { Button, Field, Input, Logo, Select, Textarea, Stepper } from '@grihaone/ui';
+import * as C from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 import { simple } from '@/lib/api';
 import type { RegistrationOptionsWire } from '@/lib/types';
@@ -20,7 +20,7 @@ import { rowStyle, screenClass } from '@/lib/motion';
  * a unit or set a charge.
  */
 
-const DRAFT_KEY = 'oneresi.register-draft.v1';
+const DRAFT_KEY = 'grihaone.register-draft.v1';
 
 interface Draft {
   step: number;
@@ -121,7 +121,7 @@ function validateStep(draft: Draft, step: number): FieldErrors {
   return errors;
 }
 
-/** Mirrors the shared password policy in @oneresi/contracts, so client and server cannot disagree. */
+/** Mirrors the shared password policy in @grihaone/contracts, so client and server cannot disagree. */
 function passwordVerdict(password: string): {
   acceptable: boolean;
   firstProblem?: string;
@@ -133,7 +133,7 @@ function passwordVerdict(password: string): {
   if (password.length >= 14) score += 1;
   if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
   if (/\d/.test(password) || /[^A-Za-z0-9]/.test(password)) score += 1;
-  if (/^(?:password|oneresi|qwerty|12345)/i.test(password)) {
+  if (/^(?:password|grihaone|qwerty|12345)/i.test(password)) {
     return { acceptable: false, firstProblem: 'Choose something less common', score };
   }
   if (password.length < 10) {

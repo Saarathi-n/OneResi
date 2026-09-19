@@ -3,7 +3,7 @@ import {
   COMPLAINT_CATEGORY,
   COMPLAINT_STATUS,
   COMPLAINT_STATUSES,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { action, details, note, para, quote, renderHtml, renderText } from '../document.js';
 import { asObject, date, int, oneOf, optDate, str } from '../decode.js';
 import { formatDate, formatDateTime } from '../format.js';

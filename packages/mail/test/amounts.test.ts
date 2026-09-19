@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, moneyInWords, paise, rupees, type Paise } from '@oneresi/contracts';
+import { formatMoney, moneyInWords, paise, rupees, type Paise } from '@grihaone/contracts';
 import { render } from '../src/render.js';
 import * as templates from '../src/templates/index.js';
 import type { RenderedMail } from '../src/types.js';
 
 /**
  * The amounts assertion from docs/plan/05-testing.md: where a template shows money, the rendered
- * amount matches `formatMoney` from `@oneresi/contracts` to the paisa — the same figure the domain
+ * amount matches `formatMoney` from `@grihaone/contracts` to the paisa — the same figure the domain
  * snapshotted, formatted once at the presentation edge, never re-derived by the template (D-50).
  *
  * The five money-bearing templates are each rendered against amounts chosen to make a formatting

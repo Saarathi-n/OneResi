@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rupees } from '@oneresi/contracts';
+import { rupees } from '@grihaone/contracts';
 import { appOrigin } from '../src/env.js';
 import { PayloadError, RenderError } from '../src/errors.js';
 import { absoluteUrl } from '../src/links.js';
@@ -29,7 +29,7 @@ const cases: readonly { readonly id: TemplateId; readonly rendered: RenderedMail
       {
         applicantId: 41,
         applicantName: 'Ravi Kumar',
-        applicantEmail: 'ravi@oneresi.local',
+        applicantEmail: 'ravi@grihaone.local',
         applicantPhone: '+919876512345',
         home: 'Block A · A-101',
         claimNote: 'Ours is the corner flat facing the park; it was not on the list.',
@@ -278,7 +278,7 @@ describe.each(cases)('$id', ({ rendered }) => {
 
 describe('the September invoice, from the JSON a handler writes', () => {
   const payload = JSON.stringify({
-    to: { email: 'Priya@OneResi.local', name: 'Priya Menon' },
+    to: { email: 'Priya@GrihaOne.local', name: 'Priya Menon' },
     template: 'invoice.raised',
     vars: {
       recipientName: 'Priya Menon',
@@ -292,7 +292,7 @@ describe('the September invoice, from the JSON a handler writes', () => {
 
   it('addresses one person, lower cased', () => {
     const job = decodeMailJob('invoice.raised', payload);
-    expect(job.to.email).toBe('priya@oneresi.local');
+    expect(job.to.email).toBe('priya@grihaone.local');
     expect(job.template).toBe('invoice.raised');
   });
 
@@ -384,8 +384,8 @@ describe('links', () => {
 
   it('has no origin fallback at all (D-22)', () => {
     expect(() => appOrigin({})).toThrow(/APP_ORIGIN/);
-    expect(appOrigin({ APP_ORIGIN: 'https://app.oneresi.in/' })).toBe('https://app.oneresi.in');
-    expect(() => appOrigin({ APP_ORIGIN: 'https://app.oneresi.in/admin' })).toThrow();
+    expect(appOrigin({ APP_ORIGIN: 'https://app.grihaone.in/' })).toBe('https://app.grihaone.in');
+    expect(() => appOrigin({ APP_ORIGIN: 'https://app.grihaone.in/admin' })).toThrow();
   });
 
   it('refuses a path that is not rooted', () => {

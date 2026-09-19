@@ -83,7 +83,7 @@ A small matcher over that table:
 
 ```ts
 await expectMail()
-  .to('priya@oneresi.local')
+  .to('priya@grihaone.local')
   .withTemplate('invoice.raised')
   .withSubject(/Maintenance for September/)
   .withVars({ amount: '₹4,800.00', dueDate: '15 Sep 2026' })

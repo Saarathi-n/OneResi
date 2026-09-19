@@ -1,8 +1,8 @@
 'use client';
 
 import { animate, motion } from 'framer-motion';
-import { formatMoney, paise } from '@oneresi/contracts';
-import type { Paise } from '@oneresi/contracts';
+import { formatMoney, paise } from '@grihaone/contracts';
+import type { Paise } from '@grihaone/contracts';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { cn } from '../internal/cn.js';

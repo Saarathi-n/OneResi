@@ -10,7 +10,7 @@ import {
   StatusPill,
   buttonClass,
   useToast,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import {
   APPROVAL_STATUS,
   formatMoney,
@@ -19,7 +19,7 @@ import {
   paise,
   type COMPLAINT_STATUS,
   type INVOICE_STATUS,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { Icon } from '@/components/icons';
 import { call, useGuardedSession } from '@/lib/session';
 import { useFetch, type FetchState } from '@/lib/useFetch';

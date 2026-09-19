@@ -1,9 +1,9 @@
 @import 'tailwindcss';
-@import '@oneresi/ui/tokens.css';
+@import '@grihaone/ui/tokens.css';
 
 /* The design system's components live outside this app's directory, so Tailwind's automatic
    source detection cannot see them. Without this line their utility classes are never
-   generated and every component in @oneresi/ui renders unstyled. */
+   generated and every component in @grihaone/ui renders unstyled. */
 @source '../../../../packages/ui/src';
 
 /* ---------------------------------------------------------------- app chrome */

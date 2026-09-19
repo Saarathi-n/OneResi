@@ -1,5 +1,5 @@
 {
-  "name": "@oneresi/web",
+  "name": "@grihaone/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,11 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@oneresi/contracts": "workspace:*",
-    "@oneresi/db": "workspace:*",
-    "@oneresi/domain": "workspace:*",
-    "@oneresi/mail": "workspace:*",
-    "@oneresi/ui": "workspace:*",
+    "@grihaone/contracts": "workspace:*",
+    "@grihaone/db": "workspace:*",
+    "@grihaone/domain": "workspace:*",
+    "@grihaone/mail": "workspace:*",
+    "@grihaone/ui": "workspace:*",
     "jose": "6.0.10",
     "next": "15.3.3",
     "react": "19.1.0",

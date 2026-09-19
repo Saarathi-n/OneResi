@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_BOOKING_HOURS } from '@oneresi/contracts';
+import { MAX_BOOKING_HOURS } from '@grihaone/contracts';
 
 interface FacilityRule {
   hourlyRatePaise: number;

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { CalendarDate } from '@oneresi/contracts';
+import { CalendarDate } from '@grihaone/contracts';
 import { services } from '@/server/runtime';
 import { actor, toResponse } from '@/server/http';
 

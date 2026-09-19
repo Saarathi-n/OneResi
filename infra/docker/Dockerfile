@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 #
-# OneResi — one image, two front ends, and a second target that carries the migration toolchain.
+# GrihaOne — one image, two front ends, and a second target that carries the migration toolchain.
 #
 # The previous deployment had no Dockerfile at all. Its task definition pointed at `node:20-alpine`
 # with the comment "Default or your ECR URI", so the container started, found no application, exited,
@@ -55,7 +55,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 # Emits the SQLite and PostgreSQL schema variants from `schema.base.prisma` and generates both clients.
 # The image only ever uses the PostgreSQL one — DB_TARGET is cloud here — but generating both keeps the
 # image and the local checkout identical.
-RUN pnpm --filter @oneresi/db generate
+RUN pnpm --filter @grihaone/db generate
 
 # Recursive run skips packages with no `build` script, so this works before the apps exist.
 RUN pnpm run -r build
@@ -92,8 +92,8 @@ RUN set -eu; \
 FROM node:24-alpine AS runtime
 
 RUN apk add --no-cache openssl \
-    && addgroup --system --gid 1001 oneresi \
-    && adduser --system --uid 1001 --ingroup oneresi oneresi
+    && addgroup --system --gid 1001 grihaone \
+    && adduser --system --uid 1001 --ingroup grihaone grihaone
 
 WORKDIR /app
 
@@ -105,11 +105,11 @@ ENV HOSTNAME=0.0.0.0
 
 # Owned by the unprivileged user in the copy itself, so Next can write its ISR cache without a
 # recursive chown duplicating the whole tree in another layer.
-COPY --from=build --chown=oneresi:oneresi /out ./
+COPY --from=build --chown=grihaone:grihaone /out ./
 COPY --chmod=0755 infra/docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Everything from here runs unprivileged.
-USER oneresi
+USER grihaone
 
 EXPOSE 3000
 

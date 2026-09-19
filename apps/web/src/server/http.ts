@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { z } from 'zod';
 import { services } from './runtime.js';
-import type { Actor, RequestMeta, Result, DomainError, ErrorCode } from '@oneresi/domain';
-import { REFRESH_TOKEN_TTL_SECONDS } from '@oneresi/contracts';
+import type { Actor, RequestMeta, Result, DomainError, ErrorCode } from '@grihaone/domain';
+import { REFRESH_TOKEN_TTL_SECONDS } from '@grihaone/contracts';
 
 /**
  * The HTTP edge every route handler shares: actor resolution, request meta, the one error
@@ -156,9 +156,9 @@ function issuePaths(error: z.ZodError): string[] {
 
 // ---------------------------------------------------------------- refresh cookie
 
-const REFRESH_COOKIE = 'oneresi_rt';
+const REFRESH_COOKIE = 'grihaone_rt';
 
-/** Sets the httpOnly `oneresi_rt` cookie after sign-in or refresh. */
+/** Sets the httpOnly `grihaone_rt` cookie after sign-in or refresh. */
 export function withRefreshCookie(
   response: NextResponse,
   token: string,

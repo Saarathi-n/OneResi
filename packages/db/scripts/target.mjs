@@ -33,7 +33,7 @@ export function resolveTarget(env = process.env) {
 
 /** Default location of the local database file. Kept outside the package so a clean is one rm. */
 export function localDatabaseFile(env = process.env) {
-  return env.LOCAL_DB_FILE ?? join(repoRoot, '.data', 'oneresi.db');
+  return env.LOCAL_DB_FILE ?? join(repoRoot, '.data', 'grihaone.db');
 }
 
 /**

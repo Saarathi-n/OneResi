@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     cloud: redactedCloud(),
-    localFile: existsSync(join(repoRoot(), '.data', 'oneresi.db')),
+    localFile: existsSync(join(repoRoot(), '.data', 'grihaone.db')),
   });
 }
 

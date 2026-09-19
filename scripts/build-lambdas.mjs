@@ -48,17 +48,17 @@ for (const lambda of LAMBDAS) {
     // aliases point each import at the TypeScript source the package's own "exports" names —
     // the same files the apps compile.
     alias: {
-      '@oneresi/mail/worker': join(repoRoot, 'packages/mail/src/worker.ts'),
-      '@oneresi/mail/push-worker': join(repoRoot, 'packages/mail/src/push-worker.ts'),
-      '@oneresi/mail/in-app-worker': join(repoRoot, 'packages/mail/src/in-app-worker.ts'),
-      '@oneresi/mail/providers/ses-events': join(repoRoot, 'packages/mail/src/providers/ses-events.ts'),
-      '@oneresi/mail/providers/webpush': join(repoRoot, 'packages/mail/src/providers/webpush.ts'),
-      '@oneresi/mail': join(repoRoot, 'packages/mail/src/index.ts'),
-      '@oneresi/domain': join(repoRoot, 'packages/domain/src/index.ts'),
-      '@oneresi/db/generated/postgresql': join(repoRoot, 'packages/db/prisma/generated/postgresql/index.js'),
-      '@oneresi/db/generated/sqlite': join(repoRoot, 'packages/db/prisma/generated/sqlite/index.js'),
-      '@oneresi/db': join(repoRoot, 'packages/db/src/index.ts'),
-      '@oneresi/contracts': join(repoRoot, 'packages/contracts/src/index.ts'),
+      '@grihaone/mail/worker': join(repoRoot, 'packages/mail/src/worker.ts'),
+      '@grihaone/mail/push-worker': join(repoRoot, 'packages/mail/src/push-worker.ts'),
+      '@grihaone/mail/in-app-worker': join(repoRoot, 'packages/mail/src/in-app-worker.ts'),
+      '@grihaone/mail/providers/ses-events': join(repoRoot, 'packages/mail/src/providers/ses-events.ts'),
+      '@grihaone/mail/providers/webpush': join(repoRoot, 'packages/mail/src/providers/webpush.ts'),
+      '@grihaone/mail': join(repoRoot, 'packages/mail/src/index.ts'),
+      '@grihaone/domain': join(repoRoot, 'packages/domain/src/index.ts'),
+      '@grihaone/db/generated/postgresql': join(repoRoot, 'packages/db/prisma/generated/postgresql/index.js'),
+      '@grihaone/db/generated/sqlite': join(repoRoot, 'packages/db/prisma/generated/sqlite/index.js'),
+      '@grihaone/db': join(repoRoot, 'packages/db/src/index.ts'),
+      '@grihaone/contracts': join(repoRoot, 'packages/contracts/src/index.ts'),
     },
   });
 

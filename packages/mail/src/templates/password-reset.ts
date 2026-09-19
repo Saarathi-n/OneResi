@@ -44,7 +44,7 @@ function compose(vars: PasswordResetVars): Block[] {
   ];
 }
 
-export const subject = (): string => 'Reset your OneResi password';
+export const subject = (): string => 'Reset your GrihaOne password';
 
 export const text = (vars: PasswordResetVars, context: RenderContext): string =>
   renderText(compose(vars), context);

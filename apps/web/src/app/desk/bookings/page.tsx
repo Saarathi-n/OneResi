@@ -12,7 +12,7 @@ import {
   Textarea,
   useToast,
   type SortState,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import {
   BOOKING_STATUS,
   UNIT_TYPE,
@@ -20,7 +20,7 @@ import {
   type BookingStatus,
   type UnitType,
   formatCalendarDate,
-} from '@oneresi/contracts';
+} from '@grihaone/contracts';
 import { call } from '@/lib/session';
 import { useFetch } from '@/lib/useFetch';
 

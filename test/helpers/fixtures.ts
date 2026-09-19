@@ -1,5 +1,5 @@
-import { rupees } from '@oneresi/contracts';
-import type { Db } from '@oneresi/db';
+import { rupees } from '@grihaone/contracts';
+import type { Db } from '@grihaone/db';
 
 /**
  * One fixture factory, shared by both database targets. The previous build had two divergent sets
@@ -38,7 +38,7 @@ export async function aUser(
   return db.residentUser.create({
     data: {
       name: overrides.name ?? `Person ${n}`,
-      email: overrides.email ?? `person${n}@oneresi.test`,
+      email: overrides.email ?? `person${n}@grihaone.test`,
       phone: `+9198765${String(10000 + n).slice(-5)}`,
       passwordHash: '$2b$12$notarealhashusedonlyinfixtures.....................',
       role: overrides.role ?? 'R',

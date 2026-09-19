@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Logo, Skeleton } from '@oneresi/ui';
+import { Logo, Skeleton } from '@grihaone/ui';
 import { roleHome, useSession } from '@/lib/session';
 
 /**

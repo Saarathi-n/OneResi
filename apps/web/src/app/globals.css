@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@import '@oneresi/ui/tokens.css';
+@import '@grihaone/ui/tokens.css';
 
 /*
  * The ui package's components render from packages/ui/src, which sits outside this project

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Card, useToast } from '@oneresi/ui';
+import { Button, Card, useToast } from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { rowStyle } from '@/lib/motion';

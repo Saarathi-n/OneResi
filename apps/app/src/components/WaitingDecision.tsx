@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { Badge, Button, Card } from '@oneresi/ui';
+import { Badge, Button, Card } from '@grihaone/ui';
 import { Icon } from '@/components/icons';
 import { simple } from '@/lib/api';
 import { rowStyle } from '@/lib/motion';

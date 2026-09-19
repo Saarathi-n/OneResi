@@ -1,4 +1,4 @@
-import { ANNOUNCEMENT_CATEGORIES, ANNOUNCEMENT_CATEGORY } from '@oneresi/contracts';
+import { ANNOUNCEMENT_CATEGORIES, ANNOUNCEMENT_CATEGORY } from '@grihaone/contracts';
 import {
   action,
   details,

@@ -1,4 +1,4 @@
-import type * as C from '@oneresi/contracts';
+import type * as C from '@grihaone/contracts';
 
 /**
  * What the API actually puts on the wire, as this app receives it. The domain's view types

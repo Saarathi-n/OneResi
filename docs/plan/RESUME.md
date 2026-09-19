@@ -5,12 +5,12 @@ Session paused 2026-09-05. Everything below is on disk and committed.
 ## One command to get running again
 
 ```
-cd "C:\Developer\Code\OneResi - Copy"
+cd "C:\Developer\Code\GrihaOne - Copy"
 pnpm install          # picks up ui / mail / domain deps added since the last install
 pnpm typecheck        # THIS IS THE FIRST REAL GATE — see "Start here" below
 ```
 
-The local database already exists at `.data/oneresi.db`, migrated and seeded. To rebuild it from
+The local database already exists at `.data/grihaone.db`, migrated and seeded. To rebuild it from
 nothing: `pnpm db:reset && pnpm db:migrate && pnpm db:seed`.
 
 Seeded accounts, password printed by the seed (generated, not hardcoded):
@@ -58,7 +58,7 @@ Phase 4 (the two front ends, 25% of the whole and the only part with a screen) h
 Not blocking, but each one is an assumption currently baked in.
 
 1. **Is this repo the clean slate?** It has only `docs/` plus what was built. The previous
-   implementation is untouched at `C:\Developer\Code\OneResi`. Assumed yes.
+   implementation is untouched at `C:\Developer\Code\GrihaOne`. Assumed yes.
 2. **ADR 0003** is still marked Proposed. Assumed accepted, with the amendments in defect D-46.
 3. **The five open decisions** answered in `docs/plan/02-architecture.md` — role is single-valued,
    first committee account is seeded then staff are invited, six occupants per unit, unit types

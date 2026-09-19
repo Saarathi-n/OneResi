@@ -9,7 +9,7 @@ import {
   Skeleton,
   useToast,
   buttonClass,
-} from '@oneresi/ui';
+} from '@grihaone/ui';
 import { onSessionChange, signOut, useGuardedSession, call } from '@/lib/session';
 import { useEffect, useState } from 'react';
 
@@ -71,7 +71,7 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-20 border-b border-border bg-surface-raised/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex items-center gap-4 lg:gap-6 min-w-0">
-            <Link href="/home" aria-label="OneResi home" className="shrink-0 flex items-center">
+            <Link href="/home" aria-label="GrihaOne home" className="shrink-0 flex items-center">
               <Logo variant="wordmark" size={24} />
             </Link>
             <nav aria-label="Resident" className="hidden items-center gap-1 md:flex overflow-x-auto py-1">
