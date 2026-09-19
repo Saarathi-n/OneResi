@@ -474,7 +474,10 @@ async function main() {
   const decided = await api(resident, 'POST', `/api/visitors/walk-ins/${walkIn.body.logId}/decision`, { json: { logId: walkIn.body.logId, decision: 'APPROVE' } });
   check('the resident approves from their phone', decided.status === 200, JSON.stringify(decided.body)?.slice(0, 120));
   const waitingAfter = await api(gate, 'GET', '/api/visitors/waiting');
-  check('the queue no longer holds them', !(waitingAfter.body ?? []).some((w) => w.name === 'Meera Nair'), JSON.stringify(waitingAfter.body)?.slice(0, 120));
+  // The gate's queue keeps approved visitors on site until they leave (the kiosk's check-in/out
+  // lifecycle), so "decided" reads as approvalStatus no longer PENDING — not as invisibility.
+  const meeraAfter = (waitingAfter.body ?? []).find((w) => w.name === 'Meera Nair');
+  check('the decision landed — the gate queue no longer waits on the resident', meeraAfter === undefined || meeraAfter.approvalStatus !== 'PENDING', JSON.stringify(meeraAfter));
 
   const override = await api(gate, 'POST', '/api/gate/walk-ins', { json: { unitId, visitorName: 'Arun Kumar', purpose: 'Water tanker', guardOverride: { reason: 'Tanker cannot wait; resident reached by phone.' } } });
   check('a guard override names itself and is accepted', override.status === 200, JSON.stringify(override.body)?.slice(0, 160));
