@@ -9,12 +9,14 @@ Work them in any order; each ends verified.
 ## Standing rules (baked into every prompt, stated once here)
 
 > You are restyling ONE page of OneResi, a residential society app for Indian gated communities.
-> Hard rules: (1) every color, radius, shadow and type size comes from `packages/ui/src/tokens.css`
-> — a hex literal in a page is a bug; (2) the copy gate (`pnpm check:copy`) fails the build if any
-> user-visible string contains UC-xx, D-xx, BCSE, 24BCE, Seeded, Mock, Simulated or Coursework —
-> the UI must read like a real product; (3) money is `paise` integers rendered through the `Money`
-> component (₹ with Indian digit grouping), dates through `formatCalendarDate`/`formatPeriod` from
-> `@oneresi/contracts`, relative times through `RelativeTime`; (4) every interactive state exists:
+> Hard rules: (0) before implementing or modifying any UI, inspect the corresponding visual reference
+> in `docs/reference-images/` (cataloged in `docs/reference-images/README.md`) as the gold standard for
+> layout, spacing, and hierarchy; (1) every color, radius, shadow and type size comes from
+> `packages/ui/src/tokens.css` — a hex literal in a page is a bug; (2) the copy gate (`pnpm check:copy`)
+> fails the build if any user-visible string contains UC-xx, D-xx, BCSE, 24BCE, Seeded, Mock, Simulated
+> or Coursework — the UI must read like a real product; (3) money is `paise` integers rendered through
+> the `Money` component (₹ with Indian digit grouping), dates through `formatCalendarDate`/`formatPeriod`
+> from `@oneresi/contracts`, relative times through `RelativeTime`; (4) every interactive state exists:
 > loading (`Skeleton`), empty (`EmptyState` that teaches a first action), error (`ErrorState` with
 > retry); (5) motion has weight — use the existing `useMotion()` and transition variants, extend
 > them, never invent a second motion system, and respect `prefers-reduced-motion`; (6) finish with
@@ -27,6 +29,7 @@ Work them in any order; each ends verified.
 ## WEBSITE — apps/web
 
 ### 1. The marketing landing — `/` (`apps/web/src/app/page.tsx`)
+*Visual reference:* `docs/reference-images/01-marketing-landing.jpg`
 
 **Job:** convince a society committee in 30 seconds that this is a real product their residents
 will actually open.
@@ -83,6 +86,7 @@ calm body type, never a warning color.
 ## RESIDENT WEB — apps/web `/home/*`
 
 ### 5. Resident overview — `/home`
+*Visual reference:* `docs/reference-images/05-resident-overview.jpg`
 
 **Job:** the answer to "anything needing me?" in one glance.
 
@@ -98,6 +102,7 @@ nothing needs them, the whole "Needing you" column becomes a single beautiful em
 "Nothing needs you today" — make that state gorgeous, it is the reward.
 
 ### 6. Payments — `/home/invoices`
+*Visual reference:* `docs/reference-images/06-resident-payments.jpg`
 
 **Job:** see what's owed, pay it, keep the receipt.
 
@@ -112,6 +117,7 @@ transforms into the receipt confirmation — number, amount in words, a subtle c
 highlight pulse on the receipt number.
 
 ### 7. Visitors — `/home/visitors`
+*Visual reference:* `docs/reference-images/07-resident-visitors.jpg`
 
 **Job:** issue passes, see today's expected, answer the door question, read the household log.
 
@@ -174,6 +180,7 @@ keyboard-first, Ctrl-K palette as the soul. Tabular numerals for every figure
 over cards where the data is tabular, and one accent color used only for "needs a decision."
 
 ### 12. Overview — `/desk`
+*Visual reference:* `docs/reference-images/12-committee-desk.jpg`
 
 **Job:** the society's morning briefing.
 
@@ -253,6 +260,7 @@ size exists), high contrast, zero hover-dependence, every action reachable with 
 nothing that times out mid-entry.
 
 ### 21. Verify — `/gate`
+*Visual reference:* `docs/reference-images/21-gate-kiosk.jpg`
 
 **Direction:** one giant input, the six-digit code entered as a segmented OTP-style field
 (the `OtpInput` exists) at kiosk scale; the verdict arrives as a full-screen state — ADMIT in
@@ -268,6 +276,7 @@ the waiting queue as large cards with a "call this flat" phone affordance; the l
 clearly-labeled path with the reason required — the exception that names itself.
 
 ### 23. The receipt — `/receipts/[receiptNo]`
+*Visual reference:* `docs/reference-images/23-physical-receipt.jpg`
 
 **Direction — "the physical till receipt, perfected."** A5 sheet, monospace receipt number
 and reference, the society wordmark, amount in words under the figure, a subtle perforated
@@ -284,6 +293,7 @@ header, and the bottom tab bar (exists in layout) as home base. The PWA's home s
 product's face — it must feel native, not like a shrunken website.
 
 ### 24. Resident home — `/a/home`
+*Visual reference:* `docs/reference-images/24-pwa-mobile-home.jpg`
 
 **Direction — "the morning glance."** A header with name, home and the notification bell
 (pulsing once when unread rises). A dues card at top when overdue — amount big, Pay button
