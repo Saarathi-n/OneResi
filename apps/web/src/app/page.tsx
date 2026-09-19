@@ -47,6 +47,32 @@ type TabId = (typeof TABS)[number]['id'];
 
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const [wtName, setWtName] = useState('');
+  const [wtSociety, setWtSociety] = useState('');
+  const [wtRole, setWtRole] = useState('Committee Member');
+  const [wtEmail, setWtEmail] = useState('');
+  const [wtDate, setWtDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+  const [wtSubmitted, setWtSubmitted] = useState(false);
+  const [wtTicketNo, setWtTicketNo] = useState('');
+
+  function handleWalkthroughSubmit(e: React.FormEvent): void {
+    e.preventDefault();
+    if (!wtName || !wtSociety || !wtEmail) return;
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+    setWtTicketNo(`WT-2026-${randomCode}`);
+    setWtSubmitted(true);
+  }
+
+  function handleCloseWalkthrough(): void {
+    setIsWalkthroughOpen(false);
+    setTimeout(() => {
+      setWtSubmitted(false);
+      setWtName('');
+      setWtSociety('');
+      setWtEmail('');
+    }, 200);
+  }
 
   return (
     <div className="min-h-dvh bg-surface text-content scroll-smooth">
@@ -93,16 +119,20 @@ export default function LandingPage() {
                 Centralize billing, security, and amenities in one elegant digital hub, built for modern residential life.
               </p>
 
-              <div className="flex flex-wrap items-center gap-4 pt-2">
-                <Link href="/register" className={buttonClass('primary', 'lg')}>
-                  Book a walkthrough
+              <div className="flex flex-wrap items-center gap-3.5 pt-2">
+                <Link href="/register" className={buttonClass('primary', 'lg', 'shadow-xs')}>
+                  Join Society
                 </Link>
-                <a href="/api/auth/demo?role=resident" className={buttonClass('secondary', 'lg')}>
-                  Resident tour
-                </a>
-                <a href="/api/auth/demo?role=committee" className={buttonClass('ghost', 'lg')}>
-                  Committee demo
-                </a>
+                <Link href="/sign-in" className={buttonClass('secondary', 'lg')}>
+                  Sign In
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setIsWalkthroughOpen(true)}
+                  className={buttonClass('secondary', 'lg', 'border-border-strong hover:bg-surface-sunken')}
+                >
+                  Book a walkthrough
+                </button>
               </div>
 
               <div className="flex items-center gap-6 pt-4 text-content-subtle type-micro">
@@ -165,12 +195,12 @@ export default function LandingPage() {
                             <div className="text-xs font-bold text-content">Gulmohar Court</div>
                             <div className="text-[10px] text-content-muted">Flat A-101 · Resident View</div>
                           </div>
-                          <a
-                            href="/api/auth/demo?role=resident"
+                          <Link
+                            href="/sign-in"
                             className="text-[10px] rounded-full bg-accent text-accent-on px-2.5 py-1 font-medium hover:bg-accent-hover transition-colors"
                           >
-                            Open live →
-                          </a>
+                            Sign in to view →
+                          </Link>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -441,9 +471,9 @@ export default function LandingPage() {
                 <Link href="/register" className={buttonClass('primary', 'lg', 'w-full text-center')}>
                   Get started for your society
                 </Link>
-                <a href="/api/auth/demo?role=committee" className={buttonClass('secondary', 'lg', 'w-full text-center')}>
-                  Explore committee desk demo
-                </a>
+                <Link href="/sign-in" className={buttonClass('secondary', 'lg', 'w-full text-center')}>
+                  Sign in to Society Portal
+                </Link>
               </div>
             </div>
 
@@ -577,18 +607,18 @@ export default function LandingPage() {
 
           <div className="mt-12 rounded-2xl border border-border bg-surface-raised p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="space-y-1 text-center sm:text-left">
-              <h4 className="type-title text-lg font-bold text-content">Experience the difference live</h4>
+              <h4 className="type-title text-lg font-bold text-content">Ready to upgrade your society?</h4>
               <p className="type-body text-sm text-content-muted">
-                Take a self-guided walkthrough as either a resident or a committee administrator right now.
+                Join cooperative housing societies running modern billing, verified gate passes, and conflict-free amenities.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <a href="/api/auth/demo?role=resident" className={buttonClass('primary', 'sm')}>
-                Resident tour
-              </a>
-              <a href="/api/auth/demo?role=committee" className={buttonClass('secondary', 'sm')}>
-                Committee demo
-              </a>
+              <Link href="/register" className={buttonClass('primary', 'sm')}>
+                Register Society
+              </Link>
+              <Link href="/sign-in" className={buttonClass('secondary', 'sm')}>
+                Sign in to your flat
+              </Link>
             </div>
           </div>
         </div>
@@ -609,6 +639,182 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Interactive Walkthrough Modal */}
+      {isWalkthroughOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="walkthrough-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+        >
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface-raised p-6 sm:p-7 shadow-e4 edge-light text-left">
+            <button
+              type="button"
+              onClick={handleCloseWalkthrough}
+              className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full text-content-subtle hover:bg-surface-sunken hover:text-content transition-colors"
+              aria-label="Close walkthrough modal"
+            >
+              ✕
+            </button>
+
+            {!wtSubmitted ? (
+              <form onSubmit={handleWalkthroughSubmit} className="space-y-4">
+                <div className="space-y-1">
+                  <span className="type-micro text-accent font-semibold uppercase tracking-wider">
+                    Interactive Scheduling
+                  </span>
+                  <h3 id="walkthrough-title" className="type-title text-xl font-bold text-content">
+                    Book a society walkthrough
+                  </h3>
+                  <p className="type-body text-xs text-content-muted leading-relaxed">
+                    We will prepare a live guided session demonstrating billing ledgers, gate kiosk check-ins, and committee governance for your society.
+                  </p>
+                </div>
+
+                <div className="space-y-3 pt-1">
+                  <div className="space-y-1">
+                    <label htmlFor="wt-name" className="type-label text-xs font-semibold text-content block">
+                      Your Full Name
+                    </label>
+                    <input
+                      id="wt-name"
+                      type="text"
+                      required
+                      placeholder="e.g. Aarav Sharma"
+                      value={wtName}
+                      onChange={(e) => setWtName(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-content focus:border-accent focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label htmlFor="wt-society" className="type-label text-xs font-semibold text-content block">
+                      Society / Apartment Name
+                    </label>
+                    <input
+                      id="wt-society"
+                      type="text"
+                      required
+                      placeholder="e.g. Gulmohar Court CHS"
+                      value={wtSociety}
+                      onChange={(e) => setWtSociety(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-content focus:border-accent focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label htmlFor="wt-email" className="type-label text-xs font-semibold text-content block">
+                      Email Address
+                    </label>
+                    <input
+                      id="wt-email"
+                      type="email"
+                      required
+                      placeholder="e.g. aarav@gulmoharcourt.in"
+                      value={wtEmail}
+                      onChange={(e) => setWtEmail(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-content focus:border-accent focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label htmlFor="wt-role" className="type-label text-xs font-semibold text-content block">
+                        Your Role
+                      </label>
+                      <select
+                        id="wt-role"
+                        value={wtRole}
+                        onChange={(e) => setWtRole(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-content focus:border-accent focus:outline-none"
+                      >
+                        <option value="Committee Member">Committee Admin</option>
+                        <option value="Resident">Resident</option>
+                        <option value="Facility Manager">Manager</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label htmlFor="wt-date" className="type-label text-xs font-semibold text-content block">
+                        Preferred Date
+                      </label>
+                      <input
+                        id="wt-date"
+                        type="date"
+                        required
+                        value={wtDate}
+                        onChange={(e) => setWtDate(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-content focus:border-accent focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleCloseWalkthrough}
+                    className={buttonClass('ghost', 'sm')}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={buttonClass('primary', 'sm', 'shadow-xs')}
+                  >
+                    Request Walkthrough
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4 text-center py-2">
+                <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-positive-soft border border-positive-border text-positive">
+                  ✓
+                </div>
+                <div className="space-y-1">
+                  <h4 className="type-title text-xl font-bold text-content">
+                    Walkthrough Scheduled!
+                  </h4>
+                  <p className="type-body text-xs text-content-muted">
+                    We have recorded your session request for <span className="font-semibold text-content">{wtSociety}</span>.
+                  </p>
+                </div>
+
+                {/* Paper Confirmation Docket */}
+                <div className="rounded-xl border border-border bg-surface p-4 text-left space-y-2 text-xs">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
+                    <span className="text-content-muted">Reference Code</span>
+                    <span className="font-mono font-bold text-accent">{wtTicketNo}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-content-muted">Scheduled For</span>
+                    <span className="font-medium text-content">{wtDate}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-content-muted">Contact</span>
+                    <span className="font-medium text-content">{wtEmail}</span>
+                  </div>
+                </div>
+
+                <p className="type-micro text-content-subtle">
+                  A society presentation docket has been queued for your email address.
+                </p>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCloseWalkthrough}
+                    className={buttonClass('primary', 'sm', 'w-full')}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

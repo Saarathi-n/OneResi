@@ -18,6 +18,29 @@ interface StoredSession {
 
 type Listener = (person: PersonView | null) => void;
 
+const SESSION_KEY = 'oneresi.active.session';
+
+function hydrateFromStorage(): void {
+  if (typeof window === 'undefined') return;
+  if (accessToken !== null) return;
+  try {
+    const raw = window.sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return;
+    const session = JSON.parse(raw) as StoredSession;
+    if (session.accessExpiresAt && new Date(session.accessExpiresAt).getTime() > Date.now()) {
+      accessToken = session.accessToken;
+      person = session.person;
+    } else {
+      window.sessionStorage.removeItem(SESSION_KEY);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// Hydrate immediately upon script execution
+hydrateFromStorage();
+
 let accessToken: string | null = null;
 let person: PersonView | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
@@ -28,6 +51,7 @@ function notify(): void {
 }
 
 export function onSessionChange(listener: Listener): () => void {
+  hydrateFromStorage();
   listeners.add(listener);
   listener(person);
   return () => {
@@ -36,6 +60,7 @@ export function onSessionChange(listener: Listener): () => void {
 }
 
 export function currentPerson(): PersonView | null {
+  hydrateFromStorage();
   return person;
 }
 
@@ -50,12 +75,26 @@ export function roleHome(role: PersonView['role']): string {
 export function adoptSession(session: StoredSession): void {
   accessToken = session.accessToken;
   person = session.person;
+  try {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    }
+  } catch {
+    // Ignore storage write issues
+  }
   notify();
 }
 
 function dropSession(): void {
   accessToken = null;
   person = null;
+  try {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(SESSION_KEY);
+    }
+  } catch {
+    // Ignore
+  }
   notify();
 }
 
@@ -99,6 +138,7 @@ export async function call<T>(
   path: string,
   init: RequestInit & { json?: unknown; retried?: boolean } = {},
 ): Promise<CallResult<T>> {
+  hydrateFromStorage();
   const headers = new Headers(init.headers);
   if (accessToken !== null) headers.set('authorization', `Bearer ${accessToken}`);
   if (init.json !== undefined) headers.set('content-type', 'application/json');
@@ -154,6 +194,10 @@ export function authHeaders(): Record<string, string> | null {
 
 /** Loads the session at mount from the refresh cookie. Null when there is nobody. */
 export async function loadSession(): Promise<PersonView | null> {
+  hydrateFromStorage();
+  if (person !== null && accessToken !== null) {
+    return person;
+  }
   const ok = await refresh();
   return ok ? person : null;
 }

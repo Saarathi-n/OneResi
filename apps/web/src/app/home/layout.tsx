@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import {
-  Badge,
   Button,
   Logo,
   Skeleton,
@@ -27,7 +26,6 @@ const NAV = [
   { href: '/home/complaints', label: 'Complaints' },
   { href: '/home/facilities', label: 'Facilities' },
   { href: '/home/notices', label: 'Notices' },
-  { href: '/gate', label: 'Gate Terminal' },
 ] as const;
 
 const MOBILE_NAV = NAV;
@@ -69,28 +67,31 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface">
-      <header className="sticky top-0 z-20 border-b border-border bg-surface-raised">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-          <Link href="/home" aria-label="OneResi home">
-            <Logo variant="wordmark" size={24} />
-          </Link>
-          <nav aria-label="Resident" className="hidden items-center gap-1 md:flex">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={buttonClass(pathname === item.href ? 'secondary' : 'ghost', 'sm')}
-                aria-current={pathname === item.href ? 'page' : undefined}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="ml-auto flex items-center gap-3">
+    <div className="flex min-h-dvh flex-col bg-surface overflow-x-hidden">
+      <header className="sticky top-0 z-20 border-b border-border bg-surface-raised/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+          <div className="flex items-center gap-4 lg:gap-6 min-w-0">
+            <Link href="/home" aria-label="OneResi home" className="shrink-0 flex items-center">
+              <Logo variant="wordmark" size={24} />
+            </Link>
+            <nav aria-label="Resident" className="hidden items-center gap-1 md:flex overflow-x-auto py-1">
+              {NAV.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={buttonClass(pathname === item.href ? 'secondary' : 'ghost', 'sm', 'whitespace-nowrap shrink-0')}
+                  aria-current={pathname === item.href ? 'page' : undefined}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link
               href="/home/notifications"
-              className={buttonClass('ghost', 'sm', 'rounded-full')}
+              className="relative flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-border bg-surface hover:bg-surface-sunken text-content transition-colors shrink-0"
               aria-label={
                 unread === null
                   ? 'Notifications'
@@ -99,37 +100,47 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
                     : 'Notifications'
               }
             >
+              <svg className="size-4 text-content" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
               {unread !== null && unread > 0 ? (
-                <Badge tone="critical" emphasis="solid" size="sm">
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-critical text-[10px] font-bold text-critical-on">
                   {unread}
-                </Badge>
-              ) : null}
-              <span className="hidden sm:inline">Notifications</span>
-            </Link>
-            <span className="hidden text-right sm:block">
-              <span className="type-label block text-content">{person.name}</span>
-              {home !== null ? (
-                <span className="type-micro block text-content-subtle">
-                  {home.blockName} · {home.label}
                 </span>
               ) : null}
-            </span>
+            </Link>
+
             {person.role === 'A' ? (
-              <Link href="/desk" className={buttonClass('secondary', 'sm')}>
+              <Link href="/desk" className={buttonClass('secondary', 'sm', 'hidden lg:inline-flex whitespace-nowrap')}>
                 Committee desk
               </Link>
             ) : null}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                void handleSignOut().then(() => {
-                  toast.show({ title: 'Signed out', description: 'See you soon.' });
-                });
-              }}
-            >
-              Sign out
-            </Button>
+
+            {/* Resident Profile Pill */}
+            <div className="flex items-center gap-2 rounded-full border border-border bg-surface pl-2.5 pr-1.5 py-1 text-left shadow-xs">
+              <div className="hidden sm:block leading-tight text-right pr-1">
+                <span className="type-label block text-xs font-semibold text-content whitespace-nowrap">
+                  {person.name.split(' ')[0]}
+                </span>
+                {home !== null ? (
+                  <span className="type-micro block text-[10px] text-content-subtle whitespace-nowrap">
+                    {home.label}
+                  </span>
+                ) : null}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs rounded-full"
+                onClick={() => {
+                  void handleSignOut().then(() => {
+                    toast.show({ title: 'Signed out', description: 'See you soon.' });
+                  });
+                }}
+              >
+                Sign out
+              </Button>
+            </div>
           </div>
         </div>
         {/* The phone navigation: a scrollable strip under the wordmark. */}

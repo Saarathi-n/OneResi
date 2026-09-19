@@ -48,6 +48,27 @@ export function webOrigin(): string {
 
 // ---------------------------------------------------------------- token plumbing
 
+const APP_SESSION_KEY = 'oneresi.app.session';
+
+function hydrateFromStorage(): void {
+  if (typeof window === 'undefined') return;
+  if (accessToken !== null) return;
+  try {
+    const raw = window.sessionStorage.getItem(APP_SESSION_KEY);
+    if (!raw) return;
+    const session = JSON.parse(raw) as SessionWire;
+    if (session.accessExpiresAt && new Date(session.accessExpiresAt).getTime() > Date.now()) {
+      accessToken = session.accessToken;
+    } else {
+      window.sessionStorage.removeItem(APP_SESSION_KEY);
+    }
+  } catch {
+    // Ignore storage issues
+  }
+}
+
+hydrateFromStorage();
+
 let accessToken: string | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
 
@@ -67,16 +88,37 @@ export function onSessionDropped(listener: DropListener): () => void {
 
 function dropSession(): void {
   accessToken = null;
+  try {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(APP_SESSION_KEY);
+    }
+  } catch {
+    // Ignore
+  }
   for (const listener of dropListeners) listener();
 }
 
 /** Called by the session layer after sign-in, refresh, or bootstrap hands back a session. */
 export function adoptSession(session: SessionWire): void {
   accessToken = session.accessToken;
+  try {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(APP_SESSION_KEY, JSON.stringify(session));
+    }
+  } catch {
+    // Ignore
+  }
 }
 
 export function clearAccessToken(): void {
   accessToken = null;
+  try {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(APP_SESSION_KEY);
+    }
+  } catch {
+    // Ignore
+  }
 }
 
 async function tryRefresh(): Promise<boolean> {
@@ -120,6 +162,7 @@ export interface CallInit {
  * else is the API's own error shape.
  */
 export async function call<T>(path: string, init: CallInit = {}): Promise<CallOutcome<T>> {
+  hydrateFromStorage();
   const headers: Record<string, string> = {};
   if (accessToken !== null) headers.authorization = `Bearer ${accessToken}`;
   if (init.json !== undefined) headers['content-type'] = 'application/json';
