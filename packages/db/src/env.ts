@@ -94,7 +94,13 @@ export function assertRuntimeConfig(env: NodeJS.ProcessEnv = process.env): void 
     problems.push('JWT_SECRET must be set and at least 32 bytes; there is no fallback');
   }
   if (env.APP_ORIGIN === undefined || !env.APP_ORIGIN.startsWith('https://')) {
-    problems.push('APP_ORIGIN must be an https origin — the session cookie is Secure');
+    // The one sanctioned exception: a stack serving straight from the load balancer because the
+    // account cannot create a CloudFront distribution yet (AWS verification pending). Terraform
+    // sets this flag only when enable_cloudfront is false; the cookie loses its Secure mark for
+    // that deployment and nothing else changes.
+    if (env.ALLOW_HTTP_ORIGIN !== 'true') {
+      problems.push('APP_ORIGIN must be an https origin — the session cookie is Secure');
+    }
   }
 
   if (problems.length > 0) {

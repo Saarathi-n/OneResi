@@ -84,12 +84,20 @@ RUN set -eu; \
       fi; \
     done; \
     cp infra/docker/start.mjs /out/bin/start.mjs; \
+    for engine in packages/db/prisma/generated/postgresql/libquery_engine-*.so.node; do \
+      cp "$engine" /out/bin/libquery_engine.so.node; \
+    done; \
     echo "$found application(s) in the image"
 
 ########################################################################################################
 # runtime — what the service runs
 ########################################################################################################
 FROM node:24-alpine AS runtime
+
+# Prisma's query engine, at a fixed name beside the app: Next's standalone trace carries the
+# generated client's JavaScript but not the engine binary, and without this the first query on
+# the deployed container answers "could not locate the Query Engine".
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/bin/libquery_engine.so.node
 
 RUN apk add --no-cache openssl \
     && addgroup --system --gid 1001 grihaone \

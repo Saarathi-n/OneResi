@@ -297,6 +297,18 @@ variable "route53_zone_name" {
   }
 }
 
+variable "enable_cloudfront" {
+  type        = bool
+  default     = true
+  description = <<-EOT
+    CloudFront in front of the load balancer. New AWS accounts cannot create CloudFront
+    distributions until AWS Support verifies the account (a 403 at apply time), and a test
+    cycle should not wait on that: set false to serve straight from the ALB over HTTP. The
+    app is fully functional; the browser-only extras that require HTTPS (the installable
+    app, web push) are what is lost until the account is verified and this is true again.
+  EOT
+}
+
 variable "app_domain" {
   type        = string
   default     = ""

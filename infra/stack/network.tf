@@ -141,7 +141,7 @@ data "aws_ec2_managed_prefix_list" "cloudfront_origin" {
 
 resource "aws_security_group" "alb" {
   name        = "${local.name_prefix}-alb"
-  description = "Load balancer. Reachable from CloudFront's origin-facing ranges only."
+  description = "Load balancer. Reachable from CloudFront origin-facing ranges only."
   vpc_id      = aws_vpc.main.id
 
   tags = { Name = "${local.name_prefix}-alb" }
@@ -152,12 +152,27 @@ resource "aws_security_group" "alb" {
 # CloudFront only speaks HTTPS to the browser. This prefix list is around 55 entries and each counts
 # as a rule against the group's 60-rule quota, which is why it is the only rule here.
 resource "aws_vpc_security_group_ingress_rule" "alb_from_cloudfront" {
+  count = var.enable_cloudfront ? 1 : 0
+
   security_group_id = aws_security_group.alb.id
   description       = "HTTP from CloudFront edge locations"
   ip_protocol       = "tcp"
   from_port         = 80
   to_port           = 80
   prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront_origin.id
+}
+
+# The same port without the CDN in front: the load balancer is the public edge, so it answers
+# the internet directly. One of the two rules exists, never both.
+resource "aws_vpc_security_group_ingress_rule" "alb_from_internet" {
+  count = var.enable_cloudfront ? 0 : 1
+
+  security_group_id = aws_security_group.alb.id
+  description       = "HTTP from the internet - no CDN in front (enable_cloudfront is false)"
+  ip_protocol       = "tcp"
+  from_port         = 80
+  to_port           = 80
+  cidr_ipv4         = "0.0.0.0/0"
 }
 
 resource "aws_vpc_security_group_egress_rule" "alb_to_app" {

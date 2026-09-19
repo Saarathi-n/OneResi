@@ -66,7 +66,13 @@ resource "aws_lb_listener" "http" {
   }
 }
 
+# With the CDN in front, only CloudFront's secret header is forwarded — anyone who found the
+# load balancer's own hostname gets the default 403 below. Without the CDN (enable_cloudfront =
+# false, the unverified-account path) the load balancer IS the public edge, so this rule forwards
+# everything and the 403 never fires.
 resource "aws_lb_listener_rule" "from_cloudfront" {
+  count = var.enable_cloudfront ? 1 : 0
+
   listener_arn = aws_lb_listener.http.arn
   priority     = 1
 
@@ -79,6 +85,24 @@ resource "aws_lb_listener_rule" "from_cloudfront" {
     http_header {
       http_header_name = "X-Origin-Verify"
       values           = [random_password.origin_verify.result]
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "from_internet" {
+  count = var.enable_cloudfront ? 0 : 1
+
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 1
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["*"]
     }
   }
 }

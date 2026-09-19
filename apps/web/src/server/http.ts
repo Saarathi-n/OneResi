@@ -168,7 +168,10 @@ export function withRefreshCookie(
     httpOnly: true,
     sameSite: 'lax',
     path: '/api/auth',
-    secure: process.env.NODE_ENV === 'production',
+    // Secure unless the load balancer serves the origin directly (ALLOW_HTTP_ORIGIN — the
+    // no-CloudFront path while AWS verifies the account); over plain http a Secure cookie is
+    // silently dropped by every browser, which would look like "sign-in does nothing".
+    secure: process.env.NODE_ENV === 'production' && process.env.ALLOW_HTTP_ORIGIN !== 'true',
     expires: expiresAt,
   });
   return response;
@@ -180,7 +183,10 @@ export function withClearedRefreshCookie(response: NextResponse): NextResponse {
     httpOnly: true,
     sameSite: 'lax',
     path: '/api/auth',
-    secure: process.env.NODE_ENV === 'production',
+    // Secure unless the load balancer serves the origin directly (ALLOW_HTTP_ORIGIN — the
+    // no-CloudFront path while AWS verifies the account); over plain http a Secure cookie is
+    // silently dropped by every browser, which would look like "sign-in does nothing".
+    secure: process.env.NODE_ENV === 'production' && process.env.ALLOW_HTTP_ORIGIN !== 'true',
     maxAge: 0,
   });
   return response;

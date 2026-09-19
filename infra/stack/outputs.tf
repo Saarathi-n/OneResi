@@ -5,7 +5,7 @@ output "app_url" {
 
 output "cloudfront_domain" {
   description = "The distribution's own hostname, whether or not a custom domain is configured."
-  value       = aws_cloudfront_distribution.app.domain_name
+  value       = var.enable_cloudfront ? aws_cloudfront_distribution.app[0].domain_name : ""
 }
 
 output "alb_dns_name" {

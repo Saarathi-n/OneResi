@@ -190,6 +190,9 @@ locals {
     { name = "APP_PORT", value = "3001" },
     { name = "HOSTNAME", value = "0.0.0.0" },
     { name = "APP_ORIGIN", value = local.app_url },
+    # The no-CloudFront path (unverified account): the origin is http, so the boot check and the
+    # session cookie's Secure mark both stand down — set only when enable_cloudfront is false.
+    { name = "ALLOW_HTTP_ORIGIN", value = var.enable_cloudfront ? "false" : "true" },
     { name = "DB_TARGET", value = "cloud" },
     { name = "DB_HOST", value = aws_db_instance.main.address },
     { name = "DB_PORT", value = tostring(local.db_port) },
@@ -360,7 +363,10 @@ resource "terraform_data" "migrate" {
   }
 
   provisioner "local-exec" {
-    command = "node \"${abspath(path.module)}/scripts/run-migrate.mjs\""
+    # node as the interpreter, not cmd.exe: the repository path contains spaces, and a shell
+    # re-parsing a quoted Windows path is how the script name became garbage on Windows.
+    interpreter = ["node"]
+    command = "${abspath(path.module)}/scripts/run-migrate.mjs"
 
     environment = {
       AWS_REGION      = var.aws_region
