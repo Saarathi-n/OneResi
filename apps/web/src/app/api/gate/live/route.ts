@@ -33,9 +33,13 @@ export async function GET(request: NextRequest) {
 
       const send = (event: string, data: unknown): void => {
         if (closed) return;
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-        );
+        try {
+          controller.enqueue(
+            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+          );
+        } catch {
+          close();
+        }
       };
 
       const close = (): void => {
@@ -71,7 +75,11 @@ export async function GET(request: NextRequest) {
       }, POLL_INTERVAL_MS);
       const heartbeatTimer: ReturnType<typeof setInterval> = setInterval(() => {
         if (closed) return;
-        controller.enqueue(encoder.encode(': heartbeat\n\n'));
+        try {
+          controller.enqueue(encoder.encode(': heartbeat\n\n'));
+        } catch {
+          close();
+        }
       }, HEARTBEAT_MS);
 
       request.signal.addEventListener('abort', close);

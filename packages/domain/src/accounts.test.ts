@@ -297,7 +297,7 @@ class MemoryStore implements AccountStore {
   }
 
   applyRegistrationDecision(
-    input: { userId: number; approve: boolean; reason: string | null; claim: ClaimResolution | null },
+    input: { userId: number; approve: boolean; reason: string | null; claim: ClaimResolution | null; decidedById?: number | null },
     events: readonly OutboxEventInput[],
   ): Promise<StoredAccount | null> {
     if (this.forceNextDecisionNull) {
@@ -694,6 +694,8 @@ describe('refresh rotation and family revocation', () => {
 
     // The thief replays the grandparent. Every descendant — including the one the real user
     // now holds — must die, or the thief simply waits for the next rotation.
+    // Advance past the 15-second grace window (D-24).
+    world.clock.advanceMs(20_000);
     await world.service.refresh(first.refreshToken, META);
 
     await expectError(
@@ -704,6 +706,57 @@ describe('refresh rotation and family revocation', () => {
       world.service.refresh(second.value.refreshToken, META),
       'UNAUTHENTICATED',
     );
+  });
+
+  it('does not revoke family when another tab replays an already-revoked token within the 15s grace period', async () => {
+    const world = harness();
+    seededWorld(world.store);
+    const first = await signInOk(world.service, 'asha@example.com');
+
+    // Tab 1 rotates token successfully
+    const second = await world.service.refresh(first.refreshToken, META);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+
+    // Tab 2 sends the old token 2 seconds later (within 15s grace window)
+    world.clock.advanceMs(2000);
+    const tab2Refresh = await world.service.refresh(first.refreshToken, META);
+    expect(tab2Refresh.ok).toBe(false);
+
+    // Tab 1's newly issued session is STILL alive!
+    const third = await world.service.refresh(second.value.refreshToken, META);
+    expect(third.ok).toBe(true);
+  });
+
+  it('does not revoke family when concurrent rotation loses the race within grace period (Bug 25)', async () => {
+    const world = harness();
+    seededWorld(world.store);
+    const first = await signInOk(world.service, 'asha@example.com');
+
+    let revokeCalled = false;
+    const originalRevoke = world.store.revokeRefreshFamily.bind(world.store);
+    world.store.revokeRefreshFamily = async (tokenId: number, revokedAt: Date) => {
+      revokeCalled = true;
+      return originalRevoke(tokenId, revokedAt);
+    };
+
+    // Simulate concurrent refresh: Request 2 reads active token, but rotateRefreshToken fails because another request just won
+    let readCount = 0;
+    const origFind = world.store.findRefreshTokenByHash.bind(world.store);
+    world.store.findRefreshTokenByHash = async (hash: string) => {
+      const found = await origFind(hash);
+      if (!found) return null;
+      readCount += 1;
+      if (readCount === 1) {
+        return { ...found, revokedAt: null };
+      }
+      return { ...found, revokedAt: new Date(world.clock.now().getTime() - 1000) };
+    };
+    world.store.rotateRefreshToken = () => Promise.resolve(null);
+
+    const res = await world.service.refresh(first.refreshToken, META);
+    expect(res.ok).toBe(false);
+    expect(revokeCalled).toBe(false);
   });
 
   it('refuses an expired refresh token', async () => {

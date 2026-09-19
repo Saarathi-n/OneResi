@@ -19,6 +19,7 @@ export interface ApiError {
   readonly message: string;
   readonly field?: string;
   readonly fields?: string[];
+  readonly status?: number;
 }
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
@@ -106,7 +107,13 @@ export function adoptSession(session: SessionWire): void {
   accessToken = session.accessToken;
   try {
     if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem(APP_SESSION_KEY, JSON.stringify(session));
+      const sanitized = {
+        accessToken: session.accessToken,
+        person: session.person,
+        accessExpiresAt: session.accessExpiresAt,
+        refreshExpiresAt: session.refreshExpiresAt,
+      };
+      window.sessionStorage.setItem(APP_SESSION_KEY, JSON.stringify(sanitized));
     }
   } catch {
     // Ignore
@@ -131,7 +138,9 @@ async function tryRefresh(): Promise<boolean> {
       credentials: 'include',
     });
     if (!response.ok) {
-      dropSession();
+      if (response.status === 401 || response.status === 403) {
+        dropSession();
+      }
       return false;
     }
     const session = (await response.json()) as SessionWire;
@@ -210,9 +219,11 @@ export async function call<T>(path: string, init: CallInit = {}): Promise<CallOu
     let error: ApiError = {
       code: `HTTP_${response.status}`,
       message: 'Something went wrong on our side. Please try again.',
+      status: response.status,
     };
     try {
-      error = (await response.json()) as ApiError;
+      const parsed = (await response.json()) as ApiError;
+      error = { ...parsed, status: response.status };
     } catch {
       // Not the error shape; the fallback stands.
     }

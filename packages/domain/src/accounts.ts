@@ -270,10 +270,13 @@ export function accountsService(deps: AccountsDeps): AccountsService {
       }
 
       if (record.revokedAt !== null) {
-        // Replay of an already-rotated token. The family the sign-in created is revoked — every
-        // descendant, not just this row — because a replay is the signature of a stolen token,
-        // and a thief who holds a parent likely holds a child (D-24).
-        await deps.store.revokeRefreshFamily(record.id, now);
+        // Replay of an already-rotated token. If rotated within the last 15 seconds
+        // (concurrency race on page load across tabs), fail this request without killing the newly issued family.
+        // If outside grace window, a replay is the signature of a stolen token, so revoke the family (D-24).
+        const withinGrace = now.getTime() - record.revokedAt.getTime() < 15_000;
+        if (!withinGrace) {
+          await deps.store.revokeRefreshFamily(record.id, now);
+        }
         return errors.unauthenticated();
       }
 
@@ -300,11 +303,19 @@ export function accountsService(deps: AccountsDeps): AccountsService {
         userAgent: meta.userAgent,
       };
 
-      // Null return = someone else rotated this row between our two awaits. Same answer as a
-      // replay: kill the family and ask for a fresh sign-in.
+      // Null return = someone else rotated this row between our two awaits. If it was rotated
+      // within the last 15 seconds (concurrency race on page load), don't kill the newly issued
+      // family; otherwise treat as a malicious replay and revoke the entire family.
       const rotated = await deps.store.rotateRefreshToken(record.id, now, replacement);
       if (rotated === null) {
-        await deps.store.revokeRefreshFamily(record.id, now);
+        const recheck = await deps.store.findRefreshTokenByHash(C.hashToken(refreshToken));
+        const withinGrace =
+          recheck !== null &&
+          recheck.revokedAt !== null &&
+          now.getTime() - recheck.revokedAt.getTime() < 15_000;
+        if (!withinGrace) {
+          await deps.store.revokeRefreshFamily(record.id, now);
+        }
         return errors.unauthenticated();
       }
 
@@ -638,6 +649,7 @@ export function accountsService(deps: AccountsDeps): AccountsService {
           approve: input.decision === 'APPROVE',
           reason: input.reason ?? null,
           claim: resolution,
+          decidedById: actor.userId,
         },
         [
           mailEvent(

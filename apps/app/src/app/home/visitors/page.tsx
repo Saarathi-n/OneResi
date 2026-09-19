@@ -13,7 +13,7 @@ import { RESIDENT_TABS } from '@/lib/tabs';
 import { useAsync } from '@/hooks/useAsync';
 import { usePolling } from '@/hooks/usePolling';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { enqueue } from '@/lib/replay-queue';
+import { enqueue, newIdempotencyKey } from '@/lib/replay-queue';
 import { rowStyle } from '@/lib/motion';
 import { formatDay, formatWeekday, todayInput, tomorrowInput } from '@/lib/format';
 import type { EntryLogWire, PassWire, WaitingVisitorWire } from '@/lib/types';
@@ -382,7 +382,8 @@ function IssuePassSheet({
     setErrors({});
     setPending(true);
 
-    const body = { visitorName: visitorName.trim(), purpose: purpose.trim(), validDate };
+    const idempotencyKey = newIdempotencyKey();
+    const body = { visitorName: visitorName.trim(), purpose: purpose.trim(), validDate, idempotencyKey };
 
     const outcome = await call<PassWire>('/api/visitors/passes', { method: 'POST', json: body });
     if (outcome.ok) {

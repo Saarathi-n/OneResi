@@ -10,8 +10,9 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { call, simple } from '@/lib/api';
 import { screenClass } from '@/lib/motion';
 import type { RegistrationOptionsWire } from '@/lib/types';
-import { readWalkInPrefill, writeWalkInPrefill } from '../lib/checkin-store';
+import { addOpenCheckIn, readWalkInPrefill, writeWalkInPrefill } from '../lib/checkin-store';
 import { formatTimeOfDay } from '../lib/time';
+import { enqueue, newIdempotencyKey } from '@/lib/replay-queue';
 
 /**
  * The walk-in form: a visitor with no pass code. Two paths, and the guard picks one with a thumb
@@ -139,6 +140,29 @@ export default function WalkInPage(): ReactNode {
 
     if (outcome.ok) {
       writeWalkInPrefill({ blockId: Number(blockId), unitId: Number(unitId) });
+      if (decision === 'OVERRIDE') {
+        const logId = (outcome.data as { logId: number }).logId;
+        const idempotencyKey = newIdempotencyKey();
+        const entryOutcome = await call('/api/gate/entry', {
+          method: 'POST',
+          json: { walkInLogId: logId, action: 'CHECK_IN', idempotencyKey },
+        });
+        if ('network' in entryOutcome && entryOutcome.network) {
+          enqueue({
+            path: '/api/gate/entry',
+            method: 'POST',
+            body: { walkInLogId: logId, action: 'CHECK_IN', idempotencyKey },
+            description: `Check-in for ${trimmedName}`,
+          });
+        }
+        addOpenCheckIn({
+          passId: -logId,
+          visitorName: trimmedName,
+          purpose: trimmedPurpose,
+          destination: unitLabel ?? '',
+          checkedInAt: new Date().toISOString(),
+        });
+      }
       setSubmitted({
         name: trimmedName,
         unitLabel: unitLabel ?? '',

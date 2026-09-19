@@ -214,6 +214,9 @@ const holder = globalThis as { __grihaoneWebRuntime?: Promise<BuiltRuntime> };
 
 /** Every service, wired. Memoized on globalThis so a dev-server hot reload reuses the same client. */
 export function services(): Promise<BuiltRuntime> {
-  holder.__grihaoneWebRuntime ??= buildRuntime();
+  holder.__grihaoneWebRuntime ??= buildRuntime().catch((err) => {
+    delete holder.__grihaoneWebRuntime;
+    throw err;
+  });
   return holder.__grihaoneWebRuntime;
 }

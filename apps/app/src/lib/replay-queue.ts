@@ -140,6 +140,12 @@ async function flushQueue(): Promise<void> {
       return;
     }
 
+    // 5xx server errors or 429 rate limit: the server is down or throttling; do NOT drop the write!
+    const status = outcome.error.status;
+    if (status !== undefined && (status >= 500 || status === 429)) {
+      return;
+    }
+
     // The server answered and refused the write (validation, state, conflict). Retrying will
     // not fix it — drop it rather than blocking everything behind it forever.
     persist(read().filter((item) => item.id !== first.id));
@@ -147,7 +153,15 @@ async function flushQueue(): Promise<void> {
 }
 
 if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === STORAGE_KEY) {
+      cache = null;
+      for (const listener of listeners) listener(read());
+    }
+  });
   window.addEventListener('online', () => {
     void flush();
   });
+  // Flush on startup as well
+  void flush();
 }

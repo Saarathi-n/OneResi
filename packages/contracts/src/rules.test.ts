@@ -7,6 +7,7 @@ import {
   USER_STATUSES,
 } from './enums.js';
 import { BOOKING_TRANSITIONS, COMPLAINT_TRANSITIONS, INVOICE_TRANSITIONS, PASS_TRANSITIONS, USER_TRANSITIONS, MAX_PHOTO_BYTES, photoVerdict, PHOTO_KEY_SHAPE } from './rules.js';
+import { RaiseComplaintInput } from './schemas.js';
 
 /**
  * A status change is a permitted transition, not an assigned string.
@@ -181,5 +182,31 @@ describe('photoVerdict', () => {
     expect(PHOTO_KEY_SHAPE.test('../../etc/passwd')).toBe(false);
     expect(PHOTO_KEY_SHAPE.test('uploads/complaints/not-a-uuid.jpg')).toBe(false);
     expect(PHOTO_KEY_SHAPE.test('uploads/complaints/0d2f5f1e-4c8b-4a6f-9a1e-2b3c4d5e6f70.gif')).toBe(false);
+  });
+
+  it('RaiseComplaintInput rejects photo keys with newlines or carriage returns (Bug 5)', () => {
+    const valid = RaiseComplaintInput.safeParse({
+      title: 'Water Leak',
+      description: 'Major leak in bathroom pipe.',
+      category: 'PLUMBING',
+      photoKeys: ['uploads/complaints/key1.jpg', 'uploads/complaints/key2.jpg'],
+    });
+    expect(valid.success).toBe(true);
+
+    const injection = RaiseComplaintInput.safeParse({
+      title: 'Water Leak',
+      description: 'Major leak in bathroom pipe.',
+      category: 'PLUMBING',
+      photoKeys: ['uploads/key1.jpg\nuploads/key2.jpg\nuploads/key3.jpg\nuploads/key4.jpg'],
+    });
+    expect(injection.success).toBe(false);
+
+    const crInjection = RaiseComplaintInput.safeParse({
+      title: 'Water Leak',
+      description: 'Major leak in bathroom pipe.',
+      category: 'PLUMBING',
+      photoKeys: ['uploads/key1.jpg\ruploads/key2.jpg'],
+    });
+    expect(crInjection.success).toBe(false);
   });
 });

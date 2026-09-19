@@ -45,22 +45,31 @@ function isEntry(value: unknown): value is OpenCheckIn {
 }
 
 function readDay(): StoredDay {
-  if (typeof window === 'undefined') return { date: dayKey(new Date()), entries: [] };
+  const today = dayKey(new Date());
+  if (typeof window === 'undefined') return { date: today, entries: [] };
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw === null) return { date: dayKey(new Date()), entries: [] };
+    if (raw === null) return { date: today, entries: [] };
     const parsed = JSON.parse(raw) as Partial<StoredDay>;
-    if (
-      typeof parsed.date !== 'string' ||
-      parsed.date !== dayKey(new Date()) ||
-      !Array.isArray(parsed.entries)
-    ) {
-      // A new day, or a shape we do not recognise: start clean rather than guessing.
-      return { date: dayKey(new Date()), entries: [] };
+    if (typeof parsed !== 'object' || parsed === null || !Array.isArray(parsed.entries)) {
+      return { date: today, entries: [] };
     }
-    return { date: parsed.date, entries: parsed.entries.filter(isEntry) };
+    const validEntries = parsed.entries.filter(isEntry);
+    if (parsed.date !== today) {
+      // Midnight rollover: preserve open entries from the previous day so overnight visitors
+      // can still be checked out. Discard entries older than 24 hours.
+      const now = Date.now();
+      const openOvernight = validEntries.filter((entry) => {
+        const time = new Date(entry.checkedInAt).getTime();
+        return !Number.isNaN(time) && now - time < 86_400_000;
+      });
+      const nextDay: StoredDay = { date: today, entries: openOvernight };
+      writeDay(nextDay);
+      return nextDay;
+    }
+    return { date: parsed.date, entries: validEntries };
   } catch {
-    return { date: dayKey(new Date()), entries: [] };
+    return { date: today, entries: [] };
   }
 }
 
