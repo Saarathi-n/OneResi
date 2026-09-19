@@ -55,6 +55,13 @@ write — everyone after the first account queues as PENDING (D-01).
 | GET | `/api/applications` | — | `accounts.pendingApplications(actor)` | role A |
 | POST | `/api/applications/decision` | `C.DecideRegistrationInput` | `accounts.decideRegistration(actor, input, meta)` | role A |
 
+## Mail log (committee)
+
+| Method | Path | Contract | Service call | Who |
+|---|---|---|---|---|
+| GET | `/api/mail` | — | `mailLog(actor)` (server/mail seam) | role A |
+| POST | `/api/mail` | `{ action: 'requeue' }` | `requeueFailedMail(actor)` — the resend path, one more attempt per FAILED row | role A |
+
 ## Billing
 
 | Method | Path | Contract | Service call | Who |

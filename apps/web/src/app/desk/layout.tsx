@@ -31,6 +31,7 @@ const OPERATIONS_NAV = [
   { href: '/desk/facilities', label: 'Amenities', key: 'f' },
   { href: '/desk/reports', label: 'Reports', key: 'r' },
   { href: '/desk/applications', label: 'Applications', key: 'n' },
+  { href: '/desk/mail', label: 'Mail log', key: 'm' },
 ] as const;
 
 const ALL_NAV = [...PRIMARY_NAV, ...OPERATIONS_NAV] as const;
