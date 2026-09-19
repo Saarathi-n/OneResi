@@ -35,6 +35,7 @@
     "test:e2e": "node scripts/e2e-local.mjs",
     "test:mail:live": "tsx scripts/mail-live.mjs",
     "test:parity": "node scripts/run-parity.mjs",
+    "lambdas:build": "node scripts/build-lambdas.mjs",
     "verify": "pnpm typecheck && pnpm lint && pnpm check:copy && pnpm check:enums && pnpm test:parity"
   },
   "devDependencies": {
@@ -48,6 +49,7 @@
     "globals": "16.0.0",
     "prettier": "3.5.3",
     "tsx": "4.19.3",
+    "esbuild": "0.25.0",
     "typescript": "5.8.3",
     "typescript-eslint": "8.29.1",
     "vitest": "3.1.1"

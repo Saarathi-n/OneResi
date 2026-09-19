@@ -11,6 +11,7 @@ import type {
   VisitorLog,
 } from '../../prisma/generated/postgresql/index.js';
 import type { Db, Prisma } from '../client.js';
+import { announceEvents } from '../events.js';
 import type {
   OutboxEventInput,
   StoredAccount,
@@ -147,6 +148,10 @@ export async function writeEvents(
       correlationId: event.correlationId,
     })),
   });
+  // On AWS this is the tap that wakes the notifier Lambda (EVENT_DRIVER=sns); locally it is a
+  // no-op and the in-process timers drain instead. Announced inside the callback — see the
+  // function's own comment for why that is the safe direction to be wrong in.
+  await announceEvents(events);
 }
 
 // ---------------------------------------------------------------- mappers
